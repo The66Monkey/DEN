@@ -1,0 +1,7 @@
+*.env
+!config/example.env
+*.log
+*.key
+*.conf
+!templates/*.conf
+.test-tools/

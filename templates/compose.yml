@@ -1,0 +1,211 @@
+name: den
+
+x-service: &service
+  restart: unless-stopped
+  logging:
+    driver: local
+    options:
+      max-size: 10m
+      max-file: '3'
+  networks: [home]
+
+services:
+  traefik:
+    <<: *service
+    image: traefik:v3.7.17@sha256:30ff62491aacdb862ceb8c9edcf2627da638d7deafdd4b6dab32fe34f8aa3e90
+    command:
+      - --providers.file.filename=/etc/traefik/routes.json
+      - --providers.file.watch=true
+      - --entrypoints.web.address=:80
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.websecure.transport.respondingtimeouts.readtimeout=600s
+      - --certificatesresolvers.home.acme.email=${EMAIL:?required}
+      - --certificatesresolvers.home.acme.storage=/certificates/acme.json
+      - --certificatesresolvers.home.acme.httpchallenge.entrypoint=web
+      - --ping=true
+      - --log.level=WARN
+    ports:
+      - '${LAN_IP:?required}:80:80'
+      - '${LAN_IP:?required}:443:443'
+    volumes:
+      - ./routes.json:/etc/traefik/routes.json:ro
+      - /srv/den/traefik:/certificates
+    networks:
+      home:
+        ipv4_address: 172.30.44.2
+    healthcheck:
+      test: [CMD, traefik, healthcheck, --ping]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+  jellyfin:
+    <<: *service
+    image: jellyfin/jellyfin:12.4@sha256:fea863d0cd9ec445985d9c75fc6ed64e38a1d2766cf0c250a33d553f4fc1b771
+    user: '1000:1000'
+    environment:
+      JELLYFIN_PublishedServerUrl: https://media.${DOMAIN:?required}
+    volumes:
+      - /srv/den/jellyfin:/config
+      - /srv/den/cache/jellyfin:/cache
+      - /srv/den/media:/media:ro
+    healthcheck:
+      test: [CMD, curl, -fsS, http://localhost:8096/health]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 120s
+
+  immich-server:
+    <<: *service
+    image: ghcr.io/immich-app/immich-server:v3.3.5@sha256:485d546a2e31d6a8b4db8423fcba5c109de8c218d93410af115fd1ccfc4352a6
+    environment:
+      DB_HOSTNAME: immich-db
+      DB_USERNAME: immich
+      DB_DATABASE_NAME: immich
+      DB_PASSWORD: ${DB_PASSWORD:?required}
+      REDIS_HOSTNAME: immich-redis
+      IMMICH_MACHINE_LEARNING_URL: http://immich-machine-learning:3003
+    volumes:
+      - /srv/den/immich/library:/data
+      - /etc/localtime:/etc/localtime:ro
+    depends_on:
+      immich-db:
+        condition: service_healthy
+      immich-redis:
+        condition: service_healthy
+    healthcheck:
+      disable: false
+
+  immich-machine-learning:
+    <<: *service
+    image: ghcr.io/immich-app/immich-machine-learning:v3.3.5@sha256:5b28c9352c8374b8a1ed96fbdd8d6755fea6e43510ec43fdf6538aa02ea40f56
+    volumes:
+      - /srv/den/cache/immich:/cache
+    healthcheck:
+      disable: false
+
+  immich-redis:
+    <<: *service
+    image: valkey/valkey:9@sha256:c123e3715db63d06d4ad6964884037aa0d5d4d703939b9929954112889708e1d
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+  immich-db:
+    <<: *service
+    image: ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0@sha256:bcf63357191b76a916ae5eb93464d65c07511da41e3bf7a8416db519b40b1c23
+    shm_size: 128mb
+    environment:
+      POSTGRES_USER: immich
+      POSTGRES_DB: immich
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?required}
+      POSTGRES_INITDB_ARGS: --data-checksums
+    volumes:
+      - /srv/den/immich/database:/var/lib/postgresql/data
+    healthcheck:
+      disable: false
+
+  nextcloud-db:
+    <<: *service
+    image: postgres:17@sha256:31ba9c94a03ada9988f2bb493a22a75eef3a185884533e5cdbcd498ea835b08f
+    environment:
+      POSTGRES_USER: nextcloud
+      POSTGRES_DB: nextcloud
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?required}
+    volumes:
+      - /srv/den/nextcloud/database:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD, pg_isready, -U, nextcloud, -d, nextcloud]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  nextcloud-redis:
+    <<: *service
+    image: valkey/valkey:9@sha256:c123e3715db63d06d4ad6964884037aa0d5d4d703939b9929954112889708e1d
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+  nextcloud:
+    <<: *service
+    image: nextcloud:33.0.10-apache@sha256:5ded1127972ea84c29792215f0621c71929ed315cc47be946b489c7a1c1ad305
+    environment:
+      POSTGRES_HOST: nextcloud-db
+      POSTGRES_USER: nextcloud
+      POSTGRES_DB: nextcloud
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?required}
+      NEXTCLOUD_ADMIN_USER: admin
+      NEXTCLOUD_ADMIN_PASSWORD: ${NEXTCLOUD_ADMIN_PASSWORD:?required}
+      NEXTCLOUD_TRUSTED_DOMAINS: files.${DOMAIN:?required}
+      REDIS_HOST: nextcloud-redis
+      TRUSTED_PROXIES: 172.30.44.2
+      APACHE_DISABLE_REWRITE_IP: '1'
+      OVERWRITEHOST: files.${DOMAIN:?required}
+      OVERWRITEPROTOCOL: https
+      OVERWRITECLIURL: https://files.${DOMAIN:?required}
+      PHP_UPLOAD_LIMIT: 16G
+      APACHE_BODY_LIMIT: '0'
+    volumes:
+      - /srv/den/nextcloud/html:/var/www/html
+    depends_on:
+      nextcloud-db:
+        condition: service_healthy
+      nextcloud-redis:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD-SHELL, 'curl -fsS http://localhost/status.php | grep -q ''"installed":true''']
+      interval: 30s
+      timeout: 10s
+      retries: 20
+      start_period: 180s
+
+  nextcloud-cron:
+    <<: *service
+    image: nextcloud:33.0.10-apache@sha256:5ded1127972ea84c29792215f0621c71929ed315cc47be946b489c7a1c1ad305
+    entrypoint: /cron.sh
+    volumes:
+      - /srv/den/nextcloud/html:/var/www/html
+    depends_on:
+      nextcloud:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD-SHELL, 'kill -0 1']
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+  forgejo:
+    <<: *service
+    image: codeberg.org/forgejo/forgejo:17.0.1@sha256:fcd19ff4ebc85fb098a67e8e1d0d5a84d07dd6e8a23edcfdfd5b71a6178953be
+    environment:
+      USER_UID: '1000'
+      USER_GID: '1000'
+      FORGEJO__database__DB_TYPE: sqlite3
+      FORGEJO__server__DOMAIN: git.${DOMAIN:?required}
+      FORGEJO__server__ROOT_URL: https://git.${DOMAIN:?required}/
+      FORGEJO__server__DISABLE_SSH: 'true'
+      FORGEJO__service__DISABLE_REGISTRATION: 'true'
+      FORGEJO__security__INSTALL_LOCK: 'true'
+      FORGEJO__actions__ENABLED: 'false'
+    volumes:
+      - /srv/den/forgejo:/data
+    healthcheck:
+      test: [CMD, wget, -q, --spider, http://localhost:3000/api/healthz]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
+networks:
+  home:
+    ipam:
+      config:
+        - subnet: 172.30.44.0/24

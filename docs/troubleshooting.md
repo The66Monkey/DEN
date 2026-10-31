@@ -1,0 +1,24 @@
+# Troubleshooting
+
+Start with `sudo den status`, `sudo den check`, and `systemctl --failed`. Keep your generated `.env` and data; do not delete them to retry setup.
+
+| Symptom | Check |
+| --- | --- |
+| Installer rejects OS | Debian 13 Stable on x86_64 is the only initial target. |
+| CPU rejected or ML exits | Immich 3 requires x86-64-v2. A VM may need host CPU passthrough. Do not use an unsupported old Immich release just to suppress the check. |
+| TCP port conflict | Stop the old web/proxy service or use a fresh server. DEN does not choose alternative ports. |
+| Wrong or unassigned address | Reserve the server's address and compare `ip -4 address` with `LAN_IP`. |
+| HTTPS warning | Check public A records, remove AAAA records, forward TCP 80/443, check CAA policy permits Let's Encrypt, then inspect `sudo den logs traefik`. Never click through and treat setup as complete. |
+| Works outside but not at home | Set LAN DNS overrides for all four application names; clients may be bypassing router DNS. |
+| LAN application returns 403 | Check actual client IPv4 and `LAN_CIDR`, DNS overrides, and whether a proxy is obscuring source addresses. Do not broaden the allowlist to `0.0.0.0/0`. |
+| Internet application does not return 403 | Stop port forwards. Remove upstream proxy/CDN or router source NAT that makes WAN users appear local before restoring access. |
+| WireGuard has no handshake | Check apex A record, WAN IPv4/CGNAT, UDP 51820, mobile-data test, and `sudo wg show`. |
+| VPN handshake but no app | Check profile DNS, local subnet overlap, `systemctl status den-dns`, client encrypted-DNS settings, and firewall forwarding rules. |
+| Nextcloud stays unready | Read `sudo den logs nextcloud` and `sudo den logs nextcloud-db`; initial setup can be slow. Check disk space. |
+| Media not found | Jellyfin sees `/media/...`, not the host `/srv/den/media/...`; UID 1000 must be able to read it. |
+| Backup fails | Check `mountpoint /mnt/den-backup`, available space, and `journalctl -u den-backup.service`. Never initialize a new repo to hide a password mismatch. |
+| Another operation is running | Wait for backup/update/restore to finish; the shared lock prevents conflicting maintenance. |
+| Monitoring failure banner | Run `sudo den check`; a successful check clears the banner. Read the failed unit journal before resetting failure state. |
+| Update did not become healthy | Keep the pre-update snapshot and follow `backup.md`; do not downgrade images over migrated data. |
+
+If initial provisioning failed after `.env` was written, `sudo den start` can restart already prepared containers but cannot repair host steps that were never installed. Inspect `systemctl status docker wg-quick@wg0 den-dns den` and installed files to identify the missing step. Full automatic interrupted-install resume remains a known limitation.

@@ -1,0 +1,15 @@
+# Security Boundaries
+
+DEN reduces setup work; it does not eliminate administration or guarantee immunity from compromise.
+
+- Applications are private by default through LAN/VPN IPv4 allowlisting. Public HTTPS listeners still exist for certificate issuance and must be tested for external 403 responses. Source-NATing all WAN traffic, adding a CDN/proxy, or exposing extra ports invalidates this boundary.
+- HTTPS certificates are obtained and renewed by Traefik with HTTP-01. No insecure-dashboard/API option is enabled, and Traefik has no Docker socket. Client-forwarded headers are not trusted at the entrypoint. Nextcloud trusts only Traefik's fixed bridge IPv4.
+- Docker administration is root-equivalent. DEN does not add users to the Docker group. Application containers share a network; compromise of one can put other application services at risk. It is a household framework, not a hardened hostile multi-tenant environment.
+- Configuration is parsed as data, not sourced from user files. Generated passwords are random 192-bit hex values. `.env`, VPN profiles, and recovery kit directories are root-only. Runtime container environment inspection is still available to root/Docker administrators; these are not hardware-backed secrets.
+- Each WireGuard device gets a separate private key and `/32` address. Profiles are credentials. Revoke lost devices with `den vpn-remove`; restoring an older snapshot can restore revoked peers, which must then be revoked again.
+- Nextcloud's administrator is generated automatically. Forgejo registrations are disabled and its initial administrator is created interactively. Immich and Jellyfin use their own first-user interfaces; finish those immediately before sharing LAN/VPN access. Enable application MFA where supported and use ordinary accounts for day-to-day activity.
+- DEN enables IPv4 forwarding and adds WireGuard forwarding/NAT rules, but is not a general host firewall manager. Fresh Debian/router defaults are assumed; review any existing nftables/iptables policy. Do not expose host SSH to the WAN. VPN DNS listens only on the WireGuard address, not public interfaces.
+- Backups are encrypted, but a compromised root account can read passwords and destroy an attached backup disk. Maintain a private off-site copy and protect the recovery kit separately. No encryption-at-rest for live data is provisioned; use Debian disk encryption if your physical-risk model requires it.
+- Images are frozen by digest. DEN releases must be maintained for security fixes; unreviewed auto-updaters are intentionally absent. Update Debian separately. Repositories and registry endpoints are supply-chain trust dependencies.
+
+Do not post `.env`, `acme.json`, WireGuard profiles, recovery kits, container inspection output, or unredacted logs in support requests. This initial release still needs real-host acceptance testing before it should hold irreplaceable data.

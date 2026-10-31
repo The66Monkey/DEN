@@ -1,0 +1,16 @@
+[Unit]
+Description=DEN home server containers
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/den start
+ExecStop=/usr/local/bin/den stop
+TimeoutStartSec=1000
+TimeoutStopSec=300
+
+[Install]
+WantedBy=multi-user.target

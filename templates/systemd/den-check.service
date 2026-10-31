@@ -1,0 +1,8 @@
+[Unit]
+Description=DEN container and backup health check
+After=docker.service
+OnFailure=den-alert.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/den check

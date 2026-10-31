@@ -1,0 +1,93 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
+source "$ROOT/lib/core.sh"
+source "$ROOT/lib/deploy.sh"
+source "$ROOT/lib/backup.sh"
+source "$ROOT/lib/maintenance.sh"
+DEPLOY_DIR=/opt/den
+DATA_DIR=/srv/den
+
+usage() {
+    cat <<'EOF'
+DEN: Digital Environment for Networking
+Usage: sudo den <command>
+  start                            Start and wait for all services
+  stop                             Stop services without deleting data
+  status                           Show service state and service URLs
+  check                            Check services, VPN, backup age and disk
+  logs [service]                   Show the last 100 log lines
+  backup                           Take an encrypted, consistent snapshot
+  snapshots                        List DEN snapshots
+    verify-backup                    Read and verify the encrypted repository
+    prune                            Keep 7 daily, 4 weekly, 6 monthly snapshots
+  restore <snapshot-id> <new-dir>   Verify a restore into a staging directory
+  recovery-kit <external-dir>      Save private disaster-recovery settings
+  update <trusted-release-dir>     Back up, then apply a reviewed DEN release
+  git-admin                        Create the initial Forgejo administrator
+    vpn-add <device-name>            Create a separate private VPN profile
+    vpn-remove <device-name>         Revoke a lost or retired VPN device
+  help                             Show this help
+EOF
+}
+
+ACTION="${1:-help}"
+[[ $# == 0 ]] || shift
+case "$ACTION" in help|--help|-h) usage; exit 0 ;; esac
+[[ "$EUID" == 0 ]] || fail 'Run DEN commands with sudo.'
+umask 077
+if [[ "$ACTION" == alert ]]; then
+    [[ $# == 0 ]] || fail 'alert takes no arguments.'
+    install -d -m 755 /etc/motd.d
+    printf 'DEN needs attention: run sudo den check and systemctl --failed.\n' > /etc/motd.d/den
+    logger -p daemon.err 'DEN maintenance failed; run sudo den check and systemctl --failed.'
+    exit 0
+fi
+exec 9>/run/lock/den.lock
+if ! flock -n 9; then
+    if [[ "$ACTION" == check ]]; then
+        log 'Health check skipped while maintenance is running.'
+        exit 0
+    fi
+    fail 'Another DEN operation is running; try again when it finishes.'
+fi
+read_settings "$DEPLOY_DIR/.env"
+for secret in DB_PASSWORD NEXTCLOUD_ADMIN_PASSWORD RESTIC_PASSWORD; do
+    [[ -n "${!secret:-}" ]] || fail "Missing deployment secret: $secret"
+done
+case "$ACTION" in
+    start|stop|status|check|backup|snapshots|verify-backup|prune|git-admin)
+        [[ $# == 0 ]] || fail "$ACTION takes no arguments."
+        ;;
+    logs) [[ $# -le 1 ]] || fail 'logs takes at most one service.' ;;
+    restore) [[ $# == 2 ]] || fail 'restore needs an explicit snapshot ID and a new directory.' ;;
+    recovery-kit|update) [[ $# == 1 ]] || fail "$ACTION needs one directory." ;;
+    vpn-add|vpn-remove) [[ $# == 1 ]] || fail "$ACTION needs one device name." ;;
+    *) usage; fail "Unknown command: $ACTION" ;;
+esac
+case "$ACTION" in
+    start) start_stack ;;
+    stop) compose stop --timeout 120 ;;
+    status) compose ps --all; show_summary ;;
+    check) health_check ;;
+    logs)
+        if [[ $# == 1 ]]; then
+            compose config --services | grep -Fxq -- "$1" || fail 'Unknown service.'
+        fi
+        compose logs --tail 100 "$@"
+        ;;
+    backup) backup_stack ;;
+    snapshots) ensure_backup_mount; restic_cmd snapshots --host den --tag den-v1 ;;
+    verify-backup) ensure_backup_mount; restic_cmd check --read-data ;;
+    prune)
+        ensure_backup_mount
+        restic_cmd forget --host den --tag den-v1 --group-by host,paths \
+            --keep-daily 7 --keep-weekly 4 --keep-monthly 6 --prune
+        ;;
+    restore) restore_snapshot "$1" "$2" ;;
+    recovery-kit) recovery_kit "$1" ;;
+    update) update_release "$1" ;;
+    git-admin) git_admin ;;
+    vpn-add) vpn_add "$1" ;;
+    vpn-remove) vpn_remove "$1" ;;
+esac

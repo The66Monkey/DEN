@@ -1,0 +1,6 @@
+[Unit]
+Description=DEN visible maintenance warning
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/den alert

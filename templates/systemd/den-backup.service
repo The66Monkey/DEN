@@ -1,0 +1,11 @@
+[Unit]
+Description=DEN consistent encrypted backup
+Requires=den.service
+After=den.service
+OnFailure=den-alert.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/den backup
+TimeoutStartSec=infinity
+UMask=0077
