@@ -27,9 +27,10 @@ read_settings() { :; }
 fluxer_upgrade() { printf 'fluxer\n' >> "$CALLS"; }
 mktemp() { command mktemp -d "$TEMP/stage.XXXXXX"; }
 automatic_releases() { printf 'releases\n' >> "$CALLS"; [[ "$FAIL_RELEASE" == false ]]; }
+fedora_version_id() { printf '43\n'; }
 curl() {
     local current next version
-    current="$(. /etc/os-release; printf '%s' "$VERSION_ID")"
+    current="$(fedora_version_id)"
     next=$((current + 1))
     if [[ "$OS_UPGRADE" == true ]]; then version="$next"; else version="$next Beta"; fi
     jq -n --arg version "$version" '[{version:$version, arch:"x86_64", variant:"Server"}]' > "${@: -1}"
@@ -71,7 +72,7 @@ FLUXER_ENABLED=yes
 : > "$CALLS"
 automatic_update >/dev/null
 grep -Fxq fluxer "$CALLS"
-grep -q '^dnf -y system-upgrade download --releasever ' "$CALLS"
+grep -Fxq 'dnf -y system-upgrade download --releasever 44' "$CALLS"
 grep -Fxq 'dnf -y offline reboot' "$CALLS"
 [[ "$(grep -c '^backup$' "$CALLS")" == 2 ]]
 if grep -q -- '--allowerasing' "$CALLS"; then fail 'Automatic upgrade may erase required packages.'; fi

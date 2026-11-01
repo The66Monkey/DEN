@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 
+fedora_version_id() (
+    . /etc/os-release
+    printf '%s\n' "$VERSION_ID"
+)
+
 automatic_releases() (
     local stage tag version current
     stage="$(mktemp -d /opt/den-upstream.XXXXXX)" || return 1
@@ -52,7 +57,7 @@ automatic_update() (
     trap 'rm -rf "$stage"' EXIT
     curl -fsSL --retry 3 --connect-timeout 30 --max-time 180 \
         https://fedoraproject.org/releases.json -o "$stage/releases.json" || return 1
-    current="$(. /etc/os-release; printf '%s\n' "$VERSION_ID")"
+    current="$(fedora_version_id)" || return 1
     [[ "$current" =~ ^[0-9]+$ ]] || fail 'Fedora VERSION_ID is not numeric.'
     next=$((current + 1))
     jq -e 'type == "array" and length > 0 and all(.[]; (.version | type) == "string" and (.arch | type) == "string" and (.variant | type) == "string")' "$stage/releases.json" >/dev/null || fail 'Invalid Fedora release metadata.'
