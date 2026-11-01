@@ -8,7 +8,7 @@ After=den-immich-db-local.service den-valkey-local.service den-immich-ml-local.s
 Image=ghcr.io/immich-app/immich-server:v3.3.5@sha256:485d546a2e31d6a8b4db8423fcba5c109de8c218d93410af115fd1ccfc4352a6
 ContainerName=den-immich-local
 Network=den-local.network
-PublishPort=192.168.50.109:2283:2283
+PublishPort=192.168.50.109:35127:2283
 Environment=DB_HOSTNAME=immich-db DB_USERNAME=immich DB_DATABASE_NAME=immich REDIS_HOSTNAME=valkey
 Environment=IMMICH_MACHINE_LEARNING_URL=http://immich-machine-learning:3003
 EnvironmentFile=%h/.config/den-local/immich.env

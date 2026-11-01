@@ -9,11 +9,11 @@ Network=den-local.network
 UserNS=keep-id
 User=1000
 Group=1000
-PublishPort=192.168.50.109:8081:8081
-Environment=PUID=1000 PGID=1000 TZ=Etc/UTC WEBUI_PORT=8081 TORRENTING_PORT=6881
+PublishPort=192.168.50.109:37952:18427
+Environment=PUID=1000 PGID=1000 TZ=Etc/UTC WEBUI_PORT=18427 TORRENTING_PORT=36419
 Volume=/mnt/Storage/den-local/qbittorrent/config:/config:Z
 Volume=/mnt/Storage/den-local/downloads:/downloads:Z
-HealthCmd=curl -fsS -H Host:192.168.50.109 http://localhost:8081/
+HealthCmd=curl -fsS -H Host:192.168.50.109 http://localhost:18427/
 HealthInterval=30s
 HealthTimeout=10s
 HealthRetries=10

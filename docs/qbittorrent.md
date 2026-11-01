@@ -66,7 +66,7 @@ them again.
 ## Local Rootless Podman Test
 
 The optional Quadlet is separate from the production installer. It uses the
-same pinned image at `http://192.168.50.109:8081`, with persistent storage under
+same pinned image at `http://192.168.50.109:37952`, with persistent storage under
 `/mnt/Storage/den-local`. Adjust UID/GID, LAN IP, and mount path before using the
 example on another machine.
 

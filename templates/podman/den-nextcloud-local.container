@@ -8,11 +8,11 @@ After=den-nextcloud-db-local.service den-nextcloud-redis-local.service
 Image=docker.io/nextcloud:33.0.10-apache@sha256:5ded1127972ea84c29792215f0621c71929ed315cc47be946b489c7a1c1ad305
 ContainerName=den-nextcloud-local
 Network=den-local.network
-PublishPort=192.168.50.109:8080:80
+PublishPort=192.168.50.109:36284:80
 Environment=POSTGRES_HOST=nextcloud-db POSTGRES_USER=nextcloud POSTGRES_DB=nextcloud
 Environment=NEXTCLOUD_ADMIN_USER=admin NEXTCLOUD_TRUSTED_DOMAINS=192.168.50.109
 Environment=REDIS_HOST=nextcloud-redis OVERWRITEPROTOCOL=http
-Environment=OVERWRITECLIURL=http://192.168.50.109:8080 PHP_UPLOAD_LIMIT=16G APACHE_BODY_LIMIT=0
+Environment=OVERWRITECLIURL=http://192.168.50.109:36284 PHP_UPLOAD_LIMIT=16G APACHE_BODY_LIMIT=0
 EnvironmentFile=%h/.config/den-local/nextcloud.env
 Volume=/mnt/Storage/den-local/nextcloud/html:/var/www/html:z
 HealthCmd=curl -fsS http://localhost/status.php | grep -q '"installed":true'

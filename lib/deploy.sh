@@ -89,7 +89,7 @@ EOF
 }
 
 write_routes() {
-    jq -n --arg domain "$DOMAIN" --arg lan "$LAN_CIDR" --arg fluxer "${FLUXER_ENABLED:-no}" --arg torrents "${QBITTORRENT_ENABLED:-no}" '
+    jq -n --arg domain "$DOMAIN" --arg lan "$LAN_CIDR" --arg fluxer "${FLUXER_ENABLED:-no}" --arg torrents "${QBITTORRENT_ENABLED:-no}" --arg qbit "http://qbittorrent:$QBITTORRENT_WEBUI_PORT" --arg chat "http://172.30.44.1:$FLUXER_PROXY_PORT" '
         {http: {
             middlewares: {
                 private: {ipAllowList: {sourceRange: [$lan, "10.44.0.0/24"]}},
@@ -108,8 +108,8 @@ write_routes() {
                 photos: {loadBalancer: {servers: [{url: "http://immich-server:2283"}]}},
                 files: {loadBalancer: {servers: [{url: "http://nextcloud:80"}]}},
                 git: {loadBalancer: {servers: [{url: "http://forgejo:3000"}]}}
-            } + (if $fluxer == "yes" then {chat: {loadBalancer: {servers: [{url: "http://172.30.44.1:8080"}]}}} else {} end)
-              + (if $torrents == "yes" then {downloads: {loadBalancer: {servers: [{url: "http://qbittorrent:8081"}]}}} else {} end))
+            } + (if $fluxer == "yes" then {chat: {loadBalancer: {servers: [{url: $chat}]}}} else {} end)
+              + (if $torrents == "yes" then {downloads: {loadBalancer: {servers: [{url: $qbit}]}}} else {} end))
         }}' > "$DEPLOY_DIR/routes.json"
 }
 
@@ -150,7 +150,7 @@ Accepted=true
 Session\\DefaultSavePath=/downloads/complete/
 Session\\TempPath=/downloads/incomplete/
 Session\\TempPathEnabled=true
-Session\\Port=6881
+Session\\Port=$QBITTORRENT_PEER_PORT
 Session\\UseUPnP=false
 
 [Preferences]
@@ -159,7 +159,7 @@ Downloads\\SavePath=/downloads/complete/
 Downloads\\TempPath=/downloads/incomplete/
 Downloads\\TempPathEnabled=true
 WebUI\\Address=*
-WebUI\\Port=8081
+WebUI\\Port=$QBITTORRENT_WEBUI_PORT
 WebUI\\ServerDomains=$domains
 WebUI\\HostHeaderValidation=true
 WebUI\\CSRFProtection=true
@@ -186,7 +186,7 @@ check_host() {
     ip -4 -o address show | grep -Fq " $LAN_IP/" || fail 'LAN_IP is not assigned to this server.'
     [[ ! -e /etc/wireguard/wg0.conf && ! -e /etc/systemd/system/den.service ]] || fail 'Existing wg0 or DEN installation found.'
     if ss -H -ltn '( sport = :80 or sport = :443 )' | grep -q .; then fail 'TCP 80/443 is already in use.'; fi
-    if ss -H -lun '( sport = :51820 )' | grep -q .; then fail 'UDP 51820 is already in use.'; fi
+    if ss -H -lun "( sport = :$WIREGUARD_PORT )" | grep -q .; then fail "UDP $WIREGUARD_PORT is already in use."; fi
     if [[ "$FLUXER_ENABLED" == yes ]]; then
         if ss -H -ltn '( sport = :7881 )' | grep -q .; then fail 'Fluxer TCP 7881 is already in use.'; fi
         if ss -H -lun '( sport = :7882 )' | grep -q .; then fail 'Fluxer UDP 7882 is already in use.'; fi
@@ -214,7 +214,7 @@ write_vpn() {
     cat > "$DEPLOY_DIR/private/wg0.conf" <<EOF
 [Interface]
 Address = 10.44.0.1/24
-ListenPort = 51820
+ListenPort = $WIREGUARD_PORT
 PrivateKey = $server_key
 PostUp = iptables -I FORWARD 1 -i %i -d $LAN_CIDR -j ACCEPT; iptables -I FORWARD 1 -o %i -s $LAN_CIDR -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT; iptables -t nat -A POSTROUTING -s 10.44.0.0/24 -d $LAN_CIDR -j MASQUERADE
 PostDown = iptables -D FORWARD -i %i -d $LAN_CIDR -j ACCEPT; iptables -D FORWARD -o %i -s $LAN_CIDR -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT; iptables -t nat -D POSTROUTING -s 10.44.0.0/24 -d $LAN_CIDR -j MASQUERADE
@@ -231,7 +231,7 @@ DNS = 10.44.0.1
 
 [Peer]
 PublicKey = $public_key
-Endpoint = $DOMAIN:51820
+Endpoint = $DOMAIN:$WIREGUARD_PORT
 AllowedIPs = 10.44.0.0/24, $LAN_CIDR
 PersistentKeepalive = 25
 EOF
@@ -309,7 +309,7 @@ DNS = 10.44.0.1
 
 [Peer]
 PublicKey = $server_public
-Endpoint = $DOMAIN:51820
+Endpoint = $DOMAIN:$WIREGUARD_PORT
 AllowedIPs = 10.44.0.0/24, $LAN_CIDR
 PersistentKeepalive = 25
 EOF

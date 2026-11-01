@@ -21,7 +21,7 @@ wg() {
 install() { cp "$3" "$TEMP/installed-wg0.conf"; }
 write_vpn
 grep -Fq 'AllowedIPs = 10.44.0.2/32' "$DEPLOY_DIR/private/wg0.conf"
-grep -Fq 'Endpoint = home.example.net:51820' "$DEPLOY_DIR/private/home.conf"
+grep -Fq 'Endpoint = home.example.net:41873' "$DEPLOY_DIR/private/home.conf"
 vpn_add phone >/dev/null
 grep -Fq 'Address = 10.44.0.3/32' "$DEPLOY_DIR/private/phone.conf"
 [[ "$(stat -c %a "$DEPLOY_DIR/private/phone.conf")" == 600 ]]

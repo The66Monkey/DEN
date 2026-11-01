@@ -29,7 +29,7 @@ for enabled in no yes; do
             (.services | length == 12) and
             (.services.qbittorrent.ports == null) and
             (.services.qbittorrent.profiles == ["torrents"]) and
-            (.services.qbittorrent.environment.WEBUI_PORT == "8081") and
+            (.services.qbittorrent.environment.WEBUI_PORT == "18427") and
             (.services.qbittorrent.image | test(":5\\.3\\.0_v2\\.1\\.2-ls485@sha256:[a-f0-9]{64}$")) and
             (.services.qbittorrent.healthcheck.test | index("Host: downloads.home.example.net") != null) and
             ([.services.qbittorrent.volumes[].source] == ["/srv/den/qbittorrent", "/srv/den/downloads"]) and
@@ -40,7 +40,7 @@ for enabled in no yes; do
             (.http.routers.downloads.rule == "Host(`downloads.home.example.net`)") and
             (.http.routers.downloads.tls.certResolver == "home") and
             (.http.routers.downloads.middlewares == ["private", "headers"]) and
-            (.http.services.downloads.loadBalancer.servers[0].url == "http://qbittorrent:8081")
+            (.http.services.downloads.loadBalancer.servers[0].url == "http://qbittorrent:18427")
         ' "$DEPLOY_DIR/routes.json" >/dev/null
     fi
 done

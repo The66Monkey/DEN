@@ -8,8 +8,8 @@ ContainerName=den-jellyfin-local
 UserNS=keep-id
 User=1000
 Group=1000
-PublishPort=192.168.50.109:8096:8096
-Environment=JELLYFIN_PublishedServerUrl=http://192.168.50.109:8096
+PublishPort=192.168.50.109:34861:8096
+Environment=JELLYFIN_PublishedServerUrl=http://192.168.50.109:34861
 Volume=/mnt/Storage/den-local/jellyfin/config:/config:Z
 Volume=/mnt/Storage/den-local/jellyfin/cache:/cache:Z
 Volume=/mnt/Storage/den-local/media:/media:ro,Z

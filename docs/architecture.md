@@ -5,7 +5,7 @@ DEN is one current Fedora Server host. Bash owns provisioning and lifecycle comm
 | Layer | Choice |
 | --- | --- |
 | Public transport | IPv4 TCP 80/443; HTTP-01 certificates and HTTPS |
-| Private access | Traefik LAN/VPN IP allowlist; host WireGuard UDP 51820 |
+| Private access | Traefik LAN/VPN IP allowlist; host WireGuard UDP 41873 |
 | Proxy | Traefik 3.7.17, fixed `172.30.44.2` inside Compose |
 | Containers | Docker CE and Compose v2 from Docker's Fedora repository |
 | Applications | Jellyfin 12.4, Immich 3.3.5, Nextcloud 33.0.10, Forgejo 17.0.1 |

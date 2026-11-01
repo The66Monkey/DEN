@@ -18,13 +18,13 @@ services:
       PUID: '1000'
       PGID: '1000'
       TZ: Etc/UTC
-      WEBUI_PORT: '8081'
-      TORRENTING_PORT: '6881'
+      WEBUI_PORT: '18427'
+      TORRENTING_PORT: '36419'
     volumes:
       - /srv/den/qbittorrent:/config:z
       - /srv/den/downloads:/downloads:z
     healthcheck:
-      test: [CMD, curl, -fsS, -H, 'Host: downloads.${DOMAIN:?required}', http://localhost:8081/]
+      test: [CMD, curl, -fsS, -H, 'Host: downloads.${DOMAIN:?required}', http://localhost:18427/]
       interval: 30s
       timeout: 10s
       retries: 10

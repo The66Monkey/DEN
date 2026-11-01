@@ -2,7 +2,7 @@
 
 fluxer_dir() { printf '%s/fluxer' "$DEPLOY_DIR"; }
 fluxer_domain() { printf 'chat.%s' "$DOMAIN"; }
-fluxer_bind() { printf '172.30.44.1:8080'; }
+fluxer_bind() { printf '172.30.44.1:%s' "$FLUXER_PROXY_PORT"; }
 
 install_rexctl() (
     set -euo pipefail
@@ -75,7 +75,7 @@ fluxer_restore() {
 
 fluxer_health_check() {
     [[ "${FLUXER_ENABLED:-no}" == yes ]] || return 0
-    curl -fsS --connect-timeout 5 --max-time 10 "http://172.30.44.1:8080/_health" >/dev/null || fail 'Fluxer is not healthy through the DEN proxy backend.'
+    curl -fsS --connect-timeout 5 --max-time 10 "http://172.30.44.1:$FLUXER_PROXY_PORT/_health" >/dev/null || fail 'Fluxer is not healthy through the DEN proxy backend.'
 }
 
 fluxer_status() {

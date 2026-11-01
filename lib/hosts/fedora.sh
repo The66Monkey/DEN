@@ -19,7 +19,7 @@ install_packages() {
 
 configure_fedora_host() {
     local port
-    for port in 80/tcp 443/tcp 51820/udp; do
+    for port in 80/tcp 443/tcp "$WIREGUARD_PORT/udp"; do
         firewall-cmd --permanent --add-port="$port"
     done
     if [[ "${FLUXER_ENABLED:-no}" == yes ]]; then

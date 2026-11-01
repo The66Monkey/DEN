@@ -6,7 +6,7 @@ DEN chooses a single model: publicly valid HTTPS names, with application access 
 
 1. Note the server's LAN IPv4 shown by Fedora Server (or run `hostname -I`). Reserve it for the server's network adapter in your router's DHCP settings, for example `192.168.1.10`. This becomes `LAN_IP`; put the home subnet, for example `192.168.1.0/24`, in `LAN_CIDR`.
 2. Use [deSEC](https://desec.io) for public DNS: add your domain and, for your own registered domain, configure its nameservers at your registrar as deSEC instructs. Create public DNS **A** records for your domain and `media`, `photos`, `files`, and `git` beneath it, all pointing to your WAN IPv4, not `LAN_IP`. If `FLUXER_ENABLED=yes`, also add `chat`; if `QBITTORRENT_ENABLED=yes`, add `downloads`. Do not add AAAA records: DEN's published listeners and VPN are IPv4-only. Keep the apex name public; WireGuard uses it as its endpoint. DEN does not require a deSEC API token for certificate issuance.
-3. Forward **TCP 80**, **TCP 443**, and **UDP 51820** to the server. Port 80 is required for Let's Encrypt HTTP-01 issuance and renewal; do not close it after installation. Do not forward Fluxer's TCP 7881 or UDP 7882: voice is for LAN/VPN clients only. Do not forward SSH, database ports, Jellyfin 8096, Immich 2283, Forgejo 3000/22, DNS 53, or Traefik 8080.
+3. Forward **TCP 80**, **TCP 443**, and **UDP 41873** to the server. Port 80 is required for Let's Encrypt HTTP-01 issuance and renewal; do not close it after installation. DEN deliberately uses an uncommon WireGuard port; it is fixed in `lib/core.sh`, so change it there before installing if your network needs another. Do not forward Fluxer's TCP 7881 or UDP 7882: voice is for LAN/VPN clients only. Do not forward SSH, database ports, Jellyfin 8096, Immich 2283, Forgejo 3000/22, DNS 53, or any other application or proxy-backend port.
 4. Add LAN DNS overrides for the four core application names, `chat` when Fluxer is enabled, and `downloads` when qBittorrent is enabled, resolving them to the server's LAN IPv4. Set clients to use that router/local DNS. Routers with NAT loopback can sometimes work without overrides, but explicit local resolution is the recommended setup. DNS overrides are router-specific; DEN does not reconfigure your router.
 5. Verify your WAN address is reachable. CGNAT commonly uses `100.64.0.0/10`, or the router may have another private WAN address. Ask the ISP for public IPv4 if needed. Double NAT requires forwarding at both routers. If you have a changing WAN address, configure a deSEC-compatible DDNS updater on your router or another device for these records; DEN does not install a separate DDNS updater.
 
@@ -73,7 +73,7 @@ The VPN is split-tunnel: only the DEN VPN subnet and your home subnet are routed
 Test from mobile data or a different network, not your own Wi-Fi. A remote network using the same subnet as your home can cause routing conflicts. Client-side encrypted/private DNS may bypass the VPN's DNS; use the WireGuard profile's resolver for DEN names.
 
 qBittorrent uses the server's normal outbound connection, not an anonymizing
-VPN. Do not forward its TCP/UDP 6881 or direct Web UI 8081 ports. Keep automatic
+VPN. Do not forward its TCP/UDP 36419 peer port or direct Web UI 18427 port. Keep automatic
 UPnP/NAT-PMP port mapping disabled.
 
 ## Verify the Privacy Boundary

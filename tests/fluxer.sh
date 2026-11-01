@@ -20,7 +20,7 @@ jq -e '
     .http.routers.chat.rule == "Host(`chat.home.example.net`)" and
     .http.routers.chat.middlewares == ["private", "headers"] and
     .http.middlewares.private.ipAllowList.sourceRange == ["192.168.1.0/24", "10.44.0.0/24"] and
-    .http.services.chat.loadBalancer.servers[0].url == "http://172.30.44.1:8080"
+    .http.services.chat.loadBalancer.servers[0].url == "http://172.30.44.1:29461"
 ' "$DEPLOY_DIR/routes.json" >/dev/null
 
 REXCTL_BIN="$TEMP/rexctl"

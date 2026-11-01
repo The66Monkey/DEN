@@ -76,13 +76,13 @@ mkdir -p ~/.config/containers/systemd
 cp templates/podman/den-jellyfin-local.container ~/.config/containers/systemd/
 systemctl --user daemon-reload
 systemctl --user start den-jellyfin-local.service
-curl --fail http://192.168.50.109:8096/health
+curl --fail http://192.168.50.109:34861/health
 ```
 
-Open `http://192.168.50.109:8096` and complete Jellyfin's first-user setup.
+Open `http://192.168.50.109:34861` and complete Jellyfin's first-user setup.
 Add `/media` as the library path; put sample media in
 `/mnt/Storage/den-local/media` on the host. Test playback from another LAN device.
-If firewalld blocks access, add an incoming TCP 8096 rule restricted to your
+If firewalld blocks access, add an incoming TCP 34861 rule restricted to your
 actual LAN subnet in the interface's active zone; do not forward this port on
 your router.
 
@@ -161,10 +161,10 @@ podman exec -u git den-forgejo-local forgejo admin user create \
 
 | Application | Local URL | Initial account |
 | --- | --- | --- |
-| Jellyfin | `http://192.168.50.109:8096` | First-run wizard |
-| Immich | `http://192.168.50.109:2283` | First signup becomes admin |
-| Nextcloud | `http://192.168.50.109:8080` | `admin`; password in `~/.config/den-local/nextcloud.env` |
-| Forgejo | `http://192.168.50.109:3000` | `denadmin`; password in `~/.config/den-local/forgejo-admin.env` |
+| Jellyfin | `http://192.168.50.109:34861` | First-run wizard |
+| Immich | `http://192.168.50.109:35127` | First signup becomes admin |
+| Nextcloud | `http://192.168.50.109:36284` | `admin`; password in `~/.config/den-local/nextcloud.env` |
+| Forgejo | `http://192.168.50.109:33709` | `denadmin`; password in `~/.config/den-local/forgejo-admin.env` |
 
 Test a photo upload and thumbnail, a Nextcloud upload/download, and an HTTP
 Git push/clone using disposable fixtures. ML models download when first used.
@@ -196,7 +196,7 @@ Before marking a DEN release production-ready, use a fresh Fedora Server VM or d
 1. Time from running the installer to healthy applications. Record download speed, hardware, and first-user setup time; the under-one-hour goal is not validated by the unit tests.
 2. Confirm each pinned image starts on the minimum CPU class, Nextcloud creates its account/database, Immich reaches its matched database and ML worker, and Forgejo admin creation works.
 3. Open all four apps from a LAN client with valid public certificates. Check upload/download, movie playback, a photo thumbnail/search, Nextcloud desktop sync, and HTTPS Git clone/push.
-4. Check TCP 80/443 bindings and UDP 51820. Scan from outside: application HTTPS must be 403 without VPN, and no database, SSH Git, DNS, or dashboard port may be reachable. Test spoofed `X-Forwarded-For` headers too.
+4. Check TCP 80/443 bindings and UDP 41873. Scan from outside: application HTTPS must be 403 without VPN, and no database, SSH Git, DNS, or dashboard port may be reachable. Test spoofed `X-Forwarded-For` headers too.
 5. Import a profile on mobile data. Verify handshake, DNS, app access, separate device profiles, and revocation. Confirm ordinary internet browsing does not go through DEN.
 6. Add known files, users, photos, and Git commits, take a backup, and perform a staged restore. Then run **recover.sh on an empty replacement host** and verify actual databases, accounts, downloads, Git histories, certificates, and VPN keys.
 7. Exercise a reviewed patch update and a sequential Nextcloud major upgrade. Test failed pulls, disconnected backup disk, and failed readiness without losing the pre-update snapshot. Recover the pre-update application state after a migration.

@@ -29,7 +29,7 @@ DEN deploys a fixed core stack on one Fedora Server PC: media, photos, files, pr
    | --- | --- | --- |
    | TCP | 80 | HTTPS certificate issuance and renewal; leave open |
    | TCP | 443 | HTTPS application access |
-   | UDP | 51820 | WireGuard remote access |
+   | UDP | 41873 | WireGuard remote access |
 
    **Do not forward SSH (22) or any other application ports.** CGNAT will not
    work: you need a reachable public IPv4 from your ISP. If the WAN IP changes,

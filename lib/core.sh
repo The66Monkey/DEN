@@ -4,6 +4,13 @@ set -euo pipefail
 fail() { printf 'DEN: %s\n' "$*" >&2; exit 1; }
 log() { printf 'DEN: %s\n' "$*"; }
 
+# Deliberately uncommon ports for everything DEN itself chooses. TCP 80/443 stay
+# standard (HTTP-01 and default HTTPS URLs), and Fluxer's voice ports are upstream's.
+WIREGUARD_PORT=41873
+QBITTORRENT_WEBUI_PORT=18427
+QBITTORRENT_PEER_PORT=36419
+FLUXER_PROXY_PORT=29461
+
 read_settings() {
     local file="$1" line key value
     local -A seen=()

@@ -14,7 +14,7 @@ Start with `sudo den status`, `sudo den check`, and `systemctl --failed`. Keep y
 | Works outside but not at home | Set LAN DNS overrides for all four application names; clients may be bypassing router DNS. |
 | LAN application returns 403 | Check actual client IPv4 and `LAN_CIDR`, DNS overrides, and whether a proxy is obscuring source addresses. Do not broaden the allowlist to `0.0.0.0/0`. |
 | Internet application does not return 403 | Stop port forwards. Remove upstream proxy/CDN or router source NAT that makes WAN users appear local before restoring access. |
-| WireGuard has no handshake | Check apex A record, WAN IPv4/CGNAT, UDP 51820, mobile-data test, and `sudo wg show`. |
+| WireGuard has no handshake | Check apex A record, WAN IPv4/CGNAT, UDP 41873, mobile-data test, and `sudo wg show`. |
 | VPN handshake but no app | Check profile DNS, local subnet overlap, `systemctl status den-dns`, client encrypted-DNS settings, and firewall forwarding rules. |
 | Nextcloud stays unready | Read `sudo den logs nextcloud` and `sudo den logs nextcloud-db`; initial setup can be slow. Check disk space. |
 | Media not found | Jellyfin sees `/media/...`, not the host `/srv/den/media/...`; UID 1000 must be able to read it. |
@@ -23,7 +23,7 @@ Start with `sudo den status`, `sudo den check`, and `systemctl --failed`. Keep y
 | Another operation is running | Wait for backup/update/restore to finish; the shared lock prevents conflicting maintenance. |
 | Monitoring failure banner | Run `sudo den check`; a successful check clears the banner. Read the failed unit journal before resetting failure state. |
 | Update did not become healthy | Keep the pre-update snapshot and follow `backup.md`; do not downgrade images over migrated data. |
-| Fluxer is unavailable | Run `sudo den fluxer-status`, `sudo rexctl --dir /opt/den/fluxer doctor`, and inspect `sudo rexctl --dir /opt/den/fluxer logs`. Check that the Traefik backend at `172.30.44.1:8080` is listening and the `chat` DNS override resolves to `LAN_IP`. |
+| Fluxer is unavailable | Run `sudo den fluxer-status`, `sudo rexctl --dir /opt/den/fluxer doctor`, and inspect `sudo rexctl --dir /opt/den/fluxer logs`. Check that the Traefik backend at `172.30.44.1:29461` is listening and the `chat` DNS override resolves to `LAN_IP`. |
 | Fluxer voice does not connect | Confirm the client is on LAN or VPN, `LAN_IP` is advertised by Fluxer, and host TCP 7881/UDP 7882 are allowed. Do not solve this by forwarding voice ports from the WAN. |
 
 If initial provisioning failed after `.env` was written, `sudo den start` can restart already prepared containers but cannot repair host steps that were never installed. Inspect `systemctl status docker wg-quick@wg0 den-dns den` and installed files to identify the missing step. Full automatic interrupted-install resume remains a known limitation.
