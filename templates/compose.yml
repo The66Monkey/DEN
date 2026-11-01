@@ -30,8 +30,8 @@ services:
       - '${LAN_IP:?required}:80:80'
       - '${LAN_IP:?required}:443:443'
     volumes:
-      - ./routes.json:/etc/traefik/routes.json:ro
-      - /srv/den/traefik:/certificates
+      - ./routes.json:/etc/traefik/routes.json:ro,z
+      - /srv/den/traefik:/certificates:z
     networks:
       home:
         ipv4_address: 172.30.44.2
@@ -48,9 +48,9 @@ services:
     environment:
       JELLYFIN_PublishedServerUrl: https://media.${DOMAIN:?required}
     volumes:
-      - /srv/den/jellyfin:/config
-      - /srv/den/cache/jellyfin:/cache
-      - /srv/den/media:/media:ro
+      - /srv/den/jellyfin:/config:z
+      - /srv/den/cache/jellyfin:/cache:z
+      - /srv/den/media:/media:ro,z
     healthcheck:
       test: [CMD, curl, -fsS, http://localhost:8096/health]
       interval: 30s
@@ -69,7 +69,7 @@ services:
       REDIS_HOSTNAME: immich-redis
       IMMICH_MACHINE_LEARNING_URL: http://immich-machine-learning:3003
     volumes:
-      - /srv/den/immich/library:/data
+      - /srv/den/immich/library:/data:z
       - /etc/localtime:/etc/localtime:ro
     depends_on:
       immich-db:
@@ -83,7 +83,7 @@ services:
     <<: *service
     image: ghcr.io/immich-app/immich-machine-learning:v3.3.5@sha256:5b28c9352c8374b8a1ed96fbdd8d6755fea6e43510ec43fdf6538aa02ea40f56
     volumes:
-      - /srv/den/cache/immich:/cache
+      - /srv/den/cache/immich:/cache:z
     healthcheck:
       disable: false
 
@@ -106,7 +106,7 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD:?required}
       POSTGRES_INITDB_ARGS: --data-checksums
     volumes:
-      - /srv/den/immich/database:/var/lib/postgresql/data
+      - /srv/den/immich/database:/var/lib/postgresql/data:z
     healthcheck:
       disable: false
 
@@ -118,7 +118,7 @@ services:
       POSTGRES_DB: nextcloud
       POSTGRES_PASSWORD: ${DB_PASSWORD:?required}
     volumes:
-      - /srv/den/nextcloud/database:/var/lib/postgresql/data
+      - /srv/den/nextcloud/database:/var/lib/postgresql/data:z
     healthcheck:
       test: [CMD, pg_isready, -U, nextcloud, -d, nextcloud]
       interval: 10s
@@ -154,7 +154,7 @@ services:
       PHP_UPLOAD_LIMIT: 16G
       APACHE_BODY_LIMIT: '0'
     volumes:
-      - /srv/den/nextcloud/html:/var/www/html
+      - /srv/den/nextcloud/html:/var/www/html:z
     depends_on:
       nextcloud-db:
         condition: service_healthy
@@ -172,7 +172,7 @@ services:
     image: nextcloud:33.0.10-apache@sha256:5ded1127972ea84c29792215f0621c71929ed315cc47be946b489c7a1c1ad305
     entrypoint: /cron.sh
     volumes:
-      - /srv/den/nextcloud/html:/var/www/html
+      - /srv/den/nextcloud/html:/var/www/html:z
     depends_on:
       nextcloud:
         condition: service_healthy
@@ -196,7 +196,7 @@ services:
       FORGEJO__security__INSTALL_LOCK: 'true'
       FORGEJO__actions__ENABLED: 'false'
     volumes:
-      - /srv/den/forgejo:/data
+      - /srv/den/forgejo:/data:z
     healthcheck:
       test: [CMD, wget, -q, --spider, http://localhost:3000/api/healthz]
       interval: 30s

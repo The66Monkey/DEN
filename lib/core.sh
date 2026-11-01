@@ -8,13 +8,15 @@ read_settings() {
     local file="$1" line key value
     local -A seen=()
     [[ -f "$file" ]] || fail "Config not found: $file"
-    unset DOMAIN EMAIL LAN_IP LAN_CIDR BACKUP_MOUNT DB_PASSWORD NEXTCLOUD_ADMIN_PASSWORD RESTIC_PASSWORD
+    unset DOMAIN EMAIL LAN_IP LAN_CIDR BACKUP_MOUNT KEEPASS_ENABLED FLUXER_ENABLED DB_PASSWORD NEXTCLOUD_ADMIN_PASSWORD RESTIC_PASSWORD
+    KEEPASS_ENABLED=no
+    FLUXER_ENABLED=no
     while IFS= read -r line || [[ -n "$line" ]]; do
         [[ -z "$line" || "$line" == \#* ]] && continue
         [[ "$line" == *=* ]] || fail 'Use unquoted KEY=value lines in config.'
         key="${line%%=*}"; value="${line#*=}"
         case "$key" in
-            DOMAIN|EMAIL|LAN_IP|LAN_CIDR|BACKUP_MOUNT|DB_PASSWORD|NEXTCLOUD_ADMIN_PASSWORD|RESTIC_PASSWORD) ;;
+            DOMAIN|EMAIL|LAN_IP|LAN_CIDR|BACKUP_MOUNT|KEEPASS_ENABLED|FLUXER_ENABLED|DB_PASSWORD|NEXTCLOUD_ADMIN_PASSWORD|RESTIC_PASSWORD) ;;
             *) fail "Unknown config key: $key" ;;
         esac
         [[ ! -v "seen[$key]" ]] || fail "Duplicate config key: $key"
@@ -42,6 +44,8 @@ validate_settings() {
     for key in DOMAIN EMAIL LAN_IP LAN_CIDR BACKUP_MOUNT; do
         [[ -n "${!key:-}" ]] || fail "Missing config key: $key"
     done
+    [[ "$KEEPASS_ENABLED" == yes || "$KEEPASS_ENABLED" == no ]] || fail 'KEEPASS_ENABLED must be yes or no.'
+    [[ "$FLUXER_ENABLED" == yes || "$FLUXER_ENABLED" == no ]] || fail 'FLUXER_ENABLED must be yes or no.'
     [[ ${#DOMAIN} -le 253 && "$DOMAIN" == *.* && "$DOMAIN" != *.local && "$DOMAIN" != *.localhost ]] || fail 'Use a public DNS domain.'
     local -a labels
     IFS=. read -r -a labels <<< "$DOMAIN"
@@ -80,7 +84,7 @@ write_environment() {
     DB_PASSWORD="$(openssl rand -hex 24)"
     NEXTCLOUD_ADMIN_PASSWORD="$(openssl rand -hex 24)"
     RESTIC_PASSWORD="$(openssl rand -hex 24)"
-    for key in DOMAIN EMAIL LAN_IP LAN_CIDR BACKUP_MOUNT; do
+    for key in DOMAIN EMAIL LAN_IP LAN_CIDR BACKUP_MOUNT KEEPASS_ENABLED FLUXER_ENABLED; do
         printf '%s=%s\n' "$key" "${!key}"
     done > "$destination/.env"
     printf 'DB_PASSWORD=%s\nNEXTCLOUD_ADMIN_PASSWORD=%s\nRESTIC_PASSWORD=%s\n' \

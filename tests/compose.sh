@@ -27,7 +27,8 @@ jq -e '
     (.services["immich-server"].image | split("@")[0] | endswith(":v3.3.5")) and
     (.services.nextcloud.environment.TRUSTED_PROXIES == "172.30.44.2") and
     (all(.services[] | .volumes[]?; (.source | contains("docker.sock") | not))) and
-    (all(.services[] | .volumes[]?; .type == "bind"))
+    (all(.services[] | .volumes[]?; .type == "bind")) and
+    (all(.services[] | .volumes[]? | select(.source | startswith("/srv/den/")); .bind.selinux == "z"))
 ' "$DEPLOY_DIR/rendered.json" >/dev/null
 jq -e '
     (.http.routers | length == 4) and

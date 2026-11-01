@@ -18,6 +18,7 @@ health_check() {
     actual="$(compose ps --all --format json | jq -s 'flatten | map(select(.State == "running" and .Health == "healthy")) | length')"
     [[ "$actual" == "$expected" ]] || fail "Only $actual/$expected containers are healthy. Run sudo den status."
     systemctl is-active --quiet wg-quick@wg0 den-dns || fail 'WireGuard or VPN DNS is down.'
+    fluxer_health_check
     ensure_backup_mount
     snapshots="$(restic_cmd snapshots --host den --tag den-v1 --json)"
     newest="$(jq -r 'sort_by(.time) | last | .time // empty' <<< "$snapshots")"
@@ -58,7 +59,7 @@ update_release() (
     install -m 644 "$DEPLOY_DIR/templates/systemd/"* /etc/systemd/system/
     systemctl daemon-reload
     systemctl restart den-dns
-    log 'Update completed. Host packages are updated separately with apt; no unattended container upgrades.'
+    log 'Update completed. Host packages are updated separately with dnf; no unattended container upgrades.'
 )
 
 git_admin() {

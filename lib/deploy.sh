@@ -7,7 +7,7 @@ compose() {
 }
 
 write_routes() {
-    jq -n --arg domain "$DOMAIN" --arg lan "$LAN_CIDR" '
+    jq -n --arg domain "$DOMAIN" --arg lan "$LAN_CIDR" --arg fluxer "${FLUXER_ENABLED:-no}" '
         {http: {
             middlewares: {
                 private: {ipAllowList: {sourceRange: [$lan, "10.44.0.0/24"]}},
@@ -16,17 +16,17 @@ write_routes() {
                     regex: "https://(.*)/.well-known/(?:card|cal)dav",
                     replacement: "https://${1}/remote.php/dav/", permanent: true}}
             },
-            routers: (reduce ["media", "photos", "files", "git"][] as $name ({};
-                .[$name] = {rule: ("Host(`" + $name + "." + $domain + "`)") ,
+            routers: (reduce (["media", "photos", "files", "git"] + (if $fluxer == "yes" then ["chat"] else [] end))[] as $name ({};
+                .[$name] = {rule: ("Host(`" + (if $name == "chat" then "chat." else $name + "." end) + $domain + "`)") ,
                     entryPoints: ["websecure"], service: $name,
                     middlewares: (["private", "headers"] + (if $name == "files" then ["dav"] else [] end)),
                     tls: {certResolver: "home"}})),
-            services: {
+            services: ({
                 media: {loadBalancer: {servers: [{url: "http://jellyfin:8096"}]}},
                 photos: {loadBalancer: {servers: [{url: "http://immich-server:2283"}]}},
                 files: {loadBalancer: {servers: [{url: "http://nextcloud:80"}]}},
                 git: {loadBalancer: {servers: [{url: "http://forgejo:3000"}]}}
-            }
+            } + (if $fluxer == "yes" then {chat: {loadBalancer: {servers: [{url: "http://172.30.44.1:8080"}]}}} else {} end))
         }}' > "$DEPLOY_DIR/routes.json"
 }
 
@@ -45,30 +45,30 @@ prepare_storage() {
 
 check_host() {
     [[ "$EUID" == 0 ]] || fail 'Run installation with sudo.'
-    local ID VERSION_ID flag memory
+    local ID flag memory
     source /etc/os-release
-    [[ "$ID" == debian && "$VERSION_ID" == 13 ]] || fail 'DEN currently targets Debian 13 Stable only.'
+    [[ "$ID" == fedora ]] || fail 'DEN currently targets Fedora Server only.'
     [[ "$(uname -m)" == x86_64 ]] || fail 'DEN currently tests x86_64 PCs only.'
     for flag in cx16 lahf_lm popcnt sse4_1 sse4_2 ssse3; do
         grep -qm1 -w "$flag" /proc/cpuinfo || fail "CPU lacks $flag; Immich needs x86-64-v2 (usually 2012 or newer)."
     done
     memory="$(awk '/MemTotal/ {print $2}' /proc/meminfo)"
     (( memory >= 7500000 )) || fail 'At least 8 GB RAM is required; 16 GB is recommended.'
+    if [[ "$FLUXER_ENABLED" == yes && "$memory" -lt 15000000 ]]; then
+        log 'Fluxer is enabled on a host with under 16 GB RAM; expect resource pressure with Immich.'
+    fi
     ip -4 -o address show | grep -Fq " $LAN_IP/" || fail 'LAN_IP is not assigned to this server.'
     [[ ! -e /etc/wireguard/wg0.conf && ! -e /etc/systemd/system/den.service ]] || fail 'Existing wg0 or DEN installation found.'
     if ss -H -ltn '( sport = :80 or sport = :443 )' | grep -q .; then fail 'TCP 80/443 is already in use.'; fi
     if ss -H -lun '( sport = :51820 )' | grep -q .; then fail 'UDP 51820 is already in use.'; fi
+    if [[ "$FLUXER_ENABLED" == yes ]]; then
+        if ss -H -ltn '( sport = :7881 )' | grep -q .; then fail 'Fluxer TCP 7881 is already in use.'; fi
+        if ss -H -lun '( sport = :7882 )' | grep -q .; then fail 'Fluxer UDP 7882 is already in use.'; fi
+    fi
     mountpoint -q "$BACKUP_MOUNT" || fail 'Mount your separate backup disk first.'
     [[ "$(stat -c %d "$BACKUP_MOUNT")" != "$(stat -c %d /srv)" ]] || fail 'Backup disk must be a different filesystem from /srv.'
     [[ ! -e "$DEPLOY_DIR/.env" ]] || fail 'DEN is already configured.'
     [[ ! -d "$DATA_DIR" || -z "$(find "$DATA_DIR" -mindepth 1 -print -quit)" ]] || fail '/srv/den is not empty; use recovery instead.'
-}
-
-install_packages() {
-    apt-get update
-    DEBIAN_FRONTEND=noninteractive apt-get install -y docker.io docker-compose restic wireguard-tools dnsmasq-base iptables jq openssl curl ca-certificates
-    systemctl enable --now docker
-    docker compose version >/dev/null
 }
 
 write_vpn() {
@@ -121,6 +121,7 @@ install_host_config() {
     install -m 600 "$DEPLOY_DIR/private/wg0.conf" /etc/wireguard/wg0.conf
     printf 'net.ipv4.ip_forward=1\n' > /etc/sysctl.d/90-den.conf
     sysctl -p /etc/sysctl.d/90-den.conf
+    configure_fedora_host
     install -m 644 "$DEPLOY_DIR/templates/systemd/"* /etc/systemd/system/
     systemctl daemon-reload
     systemctl enable --now wg-quick@wg0 den-dns
@@ -138,6 +139,12 @@ show_summary() {
     printf 'VPN profile: /opt/den/private/home.conf (private; use on ONE device).\n'
     printf 'Finish Jellyfin and Immich account setup in your browser. Create Git admin with: sudo den git-admin\n'
     printf 'Save the recovery kit away from this server: sudo den recovery-kit /path/on/another/device\n'
+    if [[ "${KEEPASS_ENABLED:-no}" == yes ]]; then
+        printf 'KeePass vault: /opt/den/private/credentials.kdbx; retrieve its password separately with: sudo den keepass-password\n'
+    fi
+    if [[ "${FLUXER_ENABLED:-no}" == yes ]]; then
+        printf 'Fluxer: https://chat.%s (registration by invite; add invites with rexctl).\n' "$DOMAIN"
+    fi
 }
 
 validate_peer_name() {

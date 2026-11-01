@@ -2,6 +2,7 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$ROOT/lib/core.sh"
+source "$ROOT/lib/fluxer.sh"
 source "$ROOT/lib/backup.sh"
 TEMP="$(mktemp -d)"
 trap 'rm -rf "$TEMP"' EXIT
@@ -9,9 +10,18 @@ DEPLOY_DIR="$TEMP/deployment"
 DATA_DIR="$TEMP/data"
 BACKUP_MOUNT="$TEMP/backup-disk"
 mkdir -p "$DEPLOY_DIR" "$DATA_DIR" "$BACKUP_MOUNT"
+mkdir -p "$DEPLOY_DIR/private"
 printf 'saved-secret\n' > "$DEPLOY_DIR/.env"
 CALLS="$TEMP/calls"
 STOPPED="$TEMP/stopped"
+FLUXER_ENABLED=yes
+REXCTL_BIN="$TEMP/rexctl"
+export CALLS
+cat > "$REXCTL_BIN" <<'EOF'
+#!/usr/bin/env bash
+printf 'rexctl %s\n' "$*" >> "$CALLS"
+EOF
+chmod 700 "$REXCTL_BIN"
 FAIL_BACKUP=false
 FAIL_START=false
 FAIL_PS=false
@@ -41,6 +51,9 @@ restic_cmd() {
 backup_stack
 [[ -f "$DATA_DIR/system/deployment/.env" ]]
 grep -Fq 'compose start --wait --wait-timeout 900 nextcloud immich-server' "$CALLS"
+fluxer_line="$(awk '/rexctl .* backup$/ {print NR; exit}' "$CALLS")"
+restic_line="$(awk '/restic backup / {print NR; exit}' "$CALLS")"
+[[ -n "$fluxer_line" && -n "$restic_line" && "$fluxer_line" -lt "$restic_line" ]] || fail 'Fluxer archive was not taken before the Restic snapshot.'
 FAIL_BACKUP=true
 : > "$CALLS"
 if backup_stack; then fail 'Failed backup returned success.'; fi

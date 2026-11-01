@@ -36,6 +36,10 @@ sudo den git-admin
 
 Open `https://git.your-domain`. Create your account/repository and a personal access token for Git over HTTPS. Public registration, SSH Git, and Actions runners are disabled. You can create other users from the administrator interface. Code editors and build tools stay on your own computer.
 
+## Optional Fluxer Chat
+
+When Fluxer is enabled, use the browser setup token printed by the installer at `https://chat.your-domain` to create the first administrator. Registration is invite-only; create invitations with `sudo rexctl --dir /opt/den/fluxer invites create`. Chat and calls are available only from the LAN or VPN by default.
+
 ## Finish Safely
 
 Import a VPN profile onto your phone and test from mobile data. Then:

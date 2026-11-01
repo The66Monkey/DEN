@@ -4,7 +4,9 @@ Start with `sudo den status`, `sudo den check`, and `systemctl --failed`. Keep y
 
 | Symptom | Check |
 | --- | --- |
-| Installer rejects OS | Debian 13 Stable on x86_64 is the only initial target. |
+| Installer rejects OS | Fedora Server on x86_64 is the supported target. Fedora Workstation can be used for development checks. |
+| Wi-Fi adapter is missing | Identify the chipset with `lsusb` or `lspci -nnk`, then inspect `journalctl -k -b` for firmware or driver errors. DEN does not build third-party modules; check whether the adapter works after a kernel update before depending on it for server access. |
+| Container cannot read its data | Check `sudo ausearch -m AVC -ts recent` for SELinux denials and verify the Compose bind mount uses the shared `z` label. Do not disable SELinux as a workaround. |
 | CPU rejected or ML exits | Immich 3 requires x86-64-v2. A VM may need host CPU passthrough. Do not use an unsupported old Immich release just to suppress the check. |
 | TCP port conflict | Stop the old web/proxy service or use a fresh server. DEN does not choose alternative ports. |
 | Wrong or unassigned address | Reserve the server's address and compare `ip -4 address` with `LAN_IP`. |
@@ -20,5 +22,7 @@ Start with `sudo den status`, `sudo den check`, and `systemctl --failed`. Keep y
 | Another operation is running | Wait for backup/update/restore to finish; the shared lock prevents conflicting maintenance. |
 | Monitoring failure banner | Run `sudo den check`; a successful check clears the banner. Read the failed unit journal before resetting failure state. |
 | Update did not become healthy | Keep the pre-update snapshot and follow `backup.md`; do not downgrade images over migrated data. |
+| Fluxer is unavailable | Run `sudo den fluxer-status`, `sudo rexctl --dir /opt/den/fluxer doctor`, and inspect `sudo rexctl --dir /opt/den/fluxer logs`. Check that the Traefik backend at `172.30.44.1:8080` is listening and the `chat` DNS override resolves to `LAN_IP`. |
+| Fluxer voice does not connect | Confirm the client is on LAN or VPN, `LAN_IP` is advertised by Fluxer, and host TCP 7881/UDP 7882 are allowed. Do not solve this by forwarding voice ports from the WAN. |
 
 If initial provisioning failed after `.env` was written, `sudo den start` can restart already prepared containers but cannot repair host steps that were never installed. Inspect `systemctl status docker wg-quick@wg0 den-dns den` and installed files to identify the missing step. Full automatic interrupted-install resume remains a known limitation.

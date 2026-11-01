@@ -3,6 +3,8 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$ROOT/lib/core.sh"
 source "$ROOT/lib/deploy.sh"
+source "$ROOT/lib/hosts/fedora.sh"
+source "$ROOT/lib/fluxer.sh"
 source "$ROOT/lib/backup.sh"
 source "$ROOT/lib/maintenance.sh"
 DEPLOY_DIR=/opt/den
@@ -28,6 +30,7 @@ compose config --quiet
 compose pull
 install_host_config
 systemctl start den.service
+fluxer_restore
 systemctl enable --now den-backup.timer den-check.timer
 show_summary
 log 'Recovery completed with the versions and keys saved in the snapshot.'

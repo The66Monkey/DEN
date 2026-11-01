@@ -3,6 +3,8 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
 source "$ROOT/lib/core.sh"
 source "$ROOT/lib/deploy.sh"
+source "$ROOT/lib/keepass.sh"
+source "$ROOT/lib/fluxer.sh"
 source "$ROOT/lib/backup.sh"
 source "$ROOT/lib/maintenance.sh"
 DEPLOY_DIR=/opt/den
@@ -23,6 +25,11 @@ Usage: sudo den <command>
     prune                            Keep 7 daily, 4 weekly, 6 monthly snapshots
   restore <snapshot-id> <new-dir>   Verify a restore into a staging directory
   recovery-kit <external-dir>      Save private disaster-recovery settings
+    keepass-export <external-file>   Export the optional encrypted KDBX vault
+    keepass-password                 Display the optional vault master password
+    keepass-sync                     Add newly generated DEN credentials to the vault
+    fluxer-status                    Check the optional Fluxer service
+    fluxer-upgrade                   Back up DEN, then upgrade Fluxer through rexctl
   update <trusted-release-dir>     Back up, then apply a reviewed DEN release
   git-admin                        Create the initial Forgejo administrator
     vpn-add <device-name>            Create a separate private VPN profile
@@ -56,12 +63,12 @@ for secret in DB_PASSWORD NEXTCLOUD_ADMIN_PASSWORD RESTIC_PASSWORD; do
     [[ -n "${!secret:-}" ]] || fail "Missing deployment secret: $secret"
 done
 case "$ACTION" in
-    start|stop|status|check|backup|snapshots|verify-backup|prune|git-admin)
+    start|stop|status|check|backup|snapshots|verify-backup|prune|git-admin|keepass-password|keepass-sync|fluxer-status|fluxer-upgrade)
         [[ $# == 0 ]] || fail "$ACTION takes no arguments."
         ;;
     logs) [[ $# -le 1 ]] || fail 'logs takes at most one service.' ;;
     restore) [[ $# == 2 ]] || fail 'restore needs an explicit snapshot ID and a new directory.' ;;
-    recovery-kit|update) [[ $# == 1 ]] || fail "$ACTION needs one directory." ;;
+    recovery-kit|update|keepass-export) [[ $# == 1 ]] || fail "$ACTION needs one path." ;;
     vpn-add|vpn-remove) [[ $# == 1 ]] || fail "$ACTION needs one device name." ;;
     *) usage; fail "Unknown command: $ACTION" ;;
 esac
@@ -86,6 +93,11 @@ case "$ACTION" in
         ;;
     restore) restore_snapshot "$1" "$2" ;;
     recovery-kit) recovery_kit "$1" ;;
+    keepass-export) keepass_export "$1" ;;
+    keepass-password) keepass_password ;;
+    keepass-sync) keepass_sync_command ;;
+    fluxer-status) fluxer_status ;;
+    fluxer-upgrade) fluxer_upgrade ;;
     update) update_release "$1" ;;
     git-admin) git_admin ;;
     vpn-add) vpn_add "$1" ;;

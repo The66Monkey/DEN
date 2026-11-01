@@ -24,6 +24,7 @@ initialize_backup() {
 backup_stack() (
     set -euo pipefail
     ensure_backup_mount || exit 1
+    fluxer_backup || exit 1
     restic_cmd snapshots >/dev/null || exit 1
     local -a running=()
     local result=0 stopped=false running_services active

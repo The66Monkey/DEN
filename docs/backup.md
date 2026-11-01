@@ -2,7 +2,7 @@
 
 ## What DEN Saves
 
-Restic encrypts backups on the separate mounted disk at `BACKUP_MOUNT/den-restic`. Snapshots contain all of `/srv/den`, including media, photo uploads, both databases, Nextcloud files and config, Jellyfin config, Forgejo SQLite and repositories, and Traefik certificate state. Before each snapshot, DEN copies `/opt/den` into `/srv/den/system/deployment`, including the exact Compose file, version, scripts, passwords, and VPN keys. Only `/srv/den/cache` is excluded because it can be regenerated.
+Restic encrypts backups on the separate mounted disk at `BACKUP_MOUNT/den-restic`. Snapshots contain all of `/srv/den`, including media, photo uploads, both databases, Nextcloud files and config, Jellyfin config, Forgejo SQLite and repositories, Traefik certificate state, and, when enabled, full Fluxer archives. Before each snapshot, DEN requests a full Fluxer archive from `rexctl` and stores it in `/srv/den/fluxer/backups`; if that command fails, DEN does not take a partial snapshot. DEN also copies `/opt/den` into `/srv/den/system/deployment`, including the exact Compose file, version, scripts, passwords, VPN keys, the Rexctl binary, and, when enabled, the KeePass database and its master password. Only `/srv/den/cache` is excluded because it can be regenerated.
 
 DEN stops all stack containers before copying application data into the repository and restarts only the previously running services afterward, including when the backup fails. This is a cold file-level backup, not a live database dump. There is no snapshot if Docker cannot confirm the stack is stopped. VPN and VPN DNS stay up. Downtime depends on changed data size and disk speed; a large first backup can take hours. Recovery uses the saved database image versions rather than trying to import old files into newer databases.
 
@@ -45,7 +45,7 @@ The target must not already exist. Restic verifies the restore and places data a
 
 ## Recover a Failed Server
 
-1. Install a fresh Debian 13 server with the same supported CPU class and LAN IPv4. Reserve that address and point the router forwards at it. Mount the backup disk at the original path. Do **not** run the normal installer first.
+1. Install a fresh Fedora Server host with the same supported CPU class and LAN IPv4. Reserve that address and point the router forwards at it. Mount the backup disk at the original path. Do **not** run the normal installer first.
 2. Attach your saved recovery kit. Run its saved recovery code so the restore uses the backed-up release:
 
 ```bash
@@ -53,10 +53,10 @@ cd /media/recovery-usb/den-recovery-kit
 sudo bash recover.sh /media/recovery-usb/den-recovery-kit/.env SNAPSHOT_ID
 ```
 
-3. DEN installs host dependencies, verifies the restore in a new staging directory, moves the restored data into an empty `/srv/den`, installs the saved deployment and VPN keys, pulls the saved pinned images, and starts services.
-4. Verify HTTPS, users, photo download, media playback, file download, Git clone, and VPN from another network. Run `sudo den backup` and `sudo den check`.
+3. DEN installs host dependencies, verifies the restore in a new staging directory, moves the restored data into an empty `/srv/den`, installs the saved deployment and VPN keys, pulls the saved pinned core images, and starts the core services. When Fluxer is enabled, recovery restores its newest full archive with the saved Rexctl binary.
+4. Verify HTTPS, users, photo download, media playback, file download, Git clone, Fluxer chat/attachments, and VPN from another network. Run `sudo den backup` and `sudo den check`.
 
-Root paths and LAN identity must be unchanged in 0.1.0. Restoring to different subnets/domains requires a migration and is not part of this simple recovery path. Old snapshots may contain subsequently revoked VPN peers; revoke those devices again before enabling remote access. Recovery requires internet access to obtain Debian packages and the pinned container images.
+Root paths and LAN identity must be unchanged in 0.1.0. Restoring to different subnets/domains requires a migration and is not part of this simple recovery path. Old snapshots may contain subsequently revoked VPN peers; revoke those devices again before enabling remote access. Recovery requires internet access to obtain Fedora packages, Docker CE, pinned container images, and (when Fluxer is enabled) its upstream releases.
 
 ## Recover After a Bad Update
 
