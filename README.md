@@ -4,6 +4,47 @@
 
 DEN deploys a fixed core stack on one Fedora Server PC: media, photos, files, private remote access, Git, and encrypted backups. Fluxer chat, qBittorrent downloads, and a KeePassXC-compatible credential vault are optional. DEN takes the Bash-and-Compose approach of BASM and focuses it on home users rather than business infrastructure.
 
+## Quick Prep: Before Installing DEN
+
+1. **Install Fedora Server** on the smaller SSD, with SSH enabled. Use Ethernet
+   if possible. You need an x86-64-v2 PC, at least 8 GB RAM (16 GB recommended),
+   and a separate backup disk. No desktop is needed.
+2. **Lock the server's IP in your router.** Note the LAN IPv4 shown by Fedora
+   Server (or run `hostname -I`). In your router's DHCP settings, reserve that
+   address for the server's network adapter, for example `192.168.1.10`.
+   This is `LAN_IP`; your home subnet, for example `192.168.1.0/24`, is `LAN_CIDR`.
+3. **Set up DNS at [deSEC](https://desec.io).** Add your domain and, if using
+   your own registered domain, set its nameservers at your registrar as deSEC
+   instructs. Create **A records** for the domain itself and `media`, `photos`,
+   `files`, and `git` beneath it, all pointing to your router's **public WAN
+   IPv4**, not the server's LAN IP. Add `chat` or `downloads` only if enabling
+   Fluxer or qBittorrent. Do not create AAAA records or use a CDN/proxy.
+4. **Forward these ports in your router** to the reserved server IP, using the
+   same external and internal port numbers:
+
+   | Protocol | Port | Purpose |
+   | --- | --- | --- |
+   | TCP | 80 | HTTPS certificate issuance and renewal; leave open |
+   | TCP | 443 | HTTPS application access |
+   | UDP | 51820 | WireGuard remote access |
+
+   **Do not forward SSH (22) or any other application ports.** CGNAT will not
+   work: you need a reachable public IPv4 from your ISP. If the WAN IP changes,
+   arrange a deSEC-compatible DDNS updater; DEN does not update public DNS.
+5. **Make the application names work at home.** In your router's local DNS,
+   point `media.YOUR-DOMAIN`, `photos.YOUR-DOMAIN`, `files.YOUR-DOMAIN`, and
+   `git.YOUR-DOMAIN` to the reserved **LAN IP**; include optional names if enabled.
+   Devices must use that local DNS. Keep the domain itself pointing to the
+   public WAN IP for WireGuard. See [router and DNS details](docs/networking.md)
+   if your router lacks local DNS overrides.
+6. **Prepare storage.** Mount the larger data disk at `/mnt/den-storage` and a
+   separate physical backup disk at `/mnt/den-backup`, persistently across
+   reboots. DEN never formats disks. Follow the
+   [disk preparation steps](docs/installation.md#prepare-the-larger-disk-without-a-gui);
+   for a single-disk server, explicitly set `MEDIA_MOUNT=`.
+
+Then [install DEN](#install-den) from the console or SSH on your home network.
+
 | Outcome | DEN's choice | Address |
 | --- | --- | --- |
 | Watch your media | Jellyfin | `https://media.your-domain` |
@@ -18,9 +59,7 @@ DEN deploys a fixed core stack on one Fedora Server PC: media, photos, files, pr
 
 Traefik configures HTTPS automatically. Docker Compose runs the core applications; optional Fluxer is managed by its upstream `rexctl` tool. Fedora Server runs headlessly: install and administer DEN over SSH, and use application browsers on another device. The default example keeps the OS, databases, settings and caches on the small SSD, with Jellyfin media and qBittorrent downloads on a mounted larger HDD. Core data and Fluxer recovery archives remain accessible under `/srv/den`; Fluxer's live Docker volumes remain in Docker's data root. Apps are restricted to your LAN and VPN, not the open internet. Public links remain household/VPN-only.
 
-## Start Here
-
-You need the current Fedora Server release on a 64-bit PC with x86-64-v2 CPU support, at least 8 GB RAM (16 GB recommended), an SSD, a separate mounted backup disk, a domain, and an internet connection that permits inbound ports. CGNAT is not supported. [Prepare the router](docs/networking.md) before installing.
+## Install DEN
 
 From this checkout:
 
