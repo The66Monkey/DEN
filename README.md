@@ -13,12 +13,15 @@ DEN deploys a fixed core stack on one Fedora Server PC: media, photos, files, pr
    Server (or run `hostname -I`). In your router's DHCP settings, reserve that
    address for the server's network adapter, for example `192.168.1.10`.
    This is `LAN_IP`; your home subnet, for example `192.168.1.0/24`, is `LAN_CIDR`.
-3. **Set up DNS at [deSEC](https://desec.io).** Add your domain and, if using
-   your own registered domain, set its nameservers at your registrar as deSEC
-   instructs. Create **A records** for the domain itself and `media`, `photos`,
-   `files`, and `git` beneath it, all pointing to your router's **public WAN
-   IPv4**, not the server's LAN IP. Add `chat` or `downloads` only if enabling
-   Fluxer or qBittorrent. Do not create AAAA records or use a CDN/proxy.
+3. **Set up DNS at [deSEC](https://desec.io).** Create an account and confirm
+   your email. Add a domain you own, such as `example.net`; deSEC hosts DNS,
+   it does not register that domain for you. At your domain registrar, replace
+   the domain's nameservers with the ones deSEC supplies. In deSEC, create
+   **A records** for the domain itself (empty subname) and subnames `media`,
+   `photos`, `files`, and `git`. Give every record your router's **public WAN
+   IPv4**, not Fedora's LAN IP. Set `DOMAIN=example.net` in DEN's config.
+   Add `chat` or `downloads` only if enabling Fluxer or qBittorrent.
+   [Step-by-step DNS example](docs/networking.md#desec-setup).
 4. **Forward these ports in your router** to the reserved server IP, using the
    same external and internal port numbers:
 
@@ -89,14 +92,19 @@ automatic reboots when needed. Application/database majors follow release
 migrations rather than arbitrary image tags. [Maintenance](docs/operations.md)
 explains the default schedule and how to change or disable it.
 
-## Boundaries
-
-DEN values simplicity over flexibility, boring technology over novelty, and recovery over failover. It does not support Kubernetes, clusters, high availability, arbitrary extra applications, mail hosting, or enterprise operations. KeePass is an optional generated encrypted vault, not a server or browser app. Fluxer is optional and separately managed by `rexctl`, with its full backups included in DEN's Restic snapshots. Do not forward Fluxer's voice ports to the internet. No blind image-tag auto-updater, public admin dashboard, Git SSH port, or CI runner is installed. Forgejo is the basic development tool; users write code on their own devices.
-
 ## Project Status
 
-**0.1.0: initial implementation, not yet certified for production.** The target is a fresh server to usable applications in under one hour, assuming DNS/router/storage preparation is complete. This time budget is a goal, not a measured guarantee. Initial account setup remains in the applications' own interfaces.
+**0.1.0: alpha, with passing automated CI.** Headless Fedora deployment,
+HDD-backed media/downloads, encrypted backups, monthly automatic maintenance,
+and optional Fluxer, qBittorrent and KeePass support are implemented.
+The [USB handover guide](docs/handover.txt) is a template to complete for the
+owner, not an automatically generated export.
 
-Automated checks cover config rejection, secret permissions, Compose routing and image pins, optional Fluxer route/backup contracts, KeePass vault behavior, backup failure paths, and a real encrypted Restic backup/verified restore. Live Fedora boot, Wi-Fi firmware, database recovery, Fluxer voice networking, certificates, device VPN connections, and the one-hour experience still require the [acceptance checklist](docs/testing.md). Do not entrust your only copy of family photos to an unverified deployment.
+The automated suite passes on GitHub's Ubuntu runner, including real encrypted
+Restic backup/restore and mocked maintenance failure paths. Full Fedora Server
+deployment, certificates, VPN/voice access, database recovery and unattended OS
+upgrades still need the [live acceptance checks](docs/testing.md). Setup in
+under one hour remains a goal, not a measured guarantee. Keep an independent
+copy of irreplaceable data until your deployment's recovery has been tested.
 
 See [architecture and storage](docs/architecture.md), [security](docs/security.md), and [troubleshooting](docs/troubleshooting.md).

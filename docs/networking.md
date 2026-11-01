@@ -12,6 +12,52 @@ DEN chooses a single model: publicly valid HTTPS names, with application access 
 
 If your router cannot supply local DNS overrides and has no usable NAT loopback, do not proceed until local name resolution is solved. Having no manual *reverse proxy* setup does not remove the need for DNS and router preparation.
 
+## deSEC Setup
+
+Do this in a browser on your own computer, before running the DEN installer.
+You need access to your domain registrar and router as well as deSEC.
+
+1. Create an account at [deSEC](https://desec.io) and confirm the email it sends.
+2. Add the domain you own, for example `example.net`. Creating a DNS zone at
+   deSEC does **not** buy or register a domain. If the domain already hosts
+   other services, copy its existing DNS records into deSEC before switching
+   nameservers so those services keep working.
+3. At the registrar where you registered the domain, change its authoritative
+   nameservers to the ones supplied by deSEC. If DNSSEC is already enabled,
+   coordinate the registrar's DS records with deSEC's DNSSEC instructions;
+   stale DS records can make the entire domain fail to resolve.
+4. Find your router's **public WAN IPv4** on its Internet/status page. This is
+   different from Fedora's reserved LAN address. Create these records in
+   deSEC's record editor, using type **A** and that WAN IPv4 as the value:
+
+   | Subname in deSEC | Full DNS name | Value |
+   | --- | --- | --- |
+   | Empty (zone root) | `example.net` | Your public WAN IPv4 |
+   | `media` | `media.example.net` | Your public WAN IPv4 |
+   | `photos` | `photos.example.net` | Your public WAN IPv4 |
+   | `files` | `files.example.net` | Your public WAN IPv4 |
+   | `git` | `git.example.net` | Your public WAN IPv4 |
+   | `chat` (optional Fluxer) | `chat.example.net` | Your public WAN IPv4 |
+   | `downloads` (optional qBittorrent) | `downloads.example.net` | Your public WAN IPv4 |
+
+   Enter only the subname in the subname field, not the full DNS name. Use the
+   editor's default TTL. Do not create AAAA records for DEN names or put them
+   behind a CDN/proxy. No mail records are needed for DEN.
+5. Set `DOMAIN=example.net` in DEN's install config, without `https://` or a
+   service prefix. `EMAIL` is your existing email address for certificate
+   notices; DEN does not create a mailbox. No deSEC API token is needed by DEN:
+   certificates use HTTP-01 through forwarded TCP 80, not the DNS API.
+6. Allow DNS delegation and records to propagate. If `nslookup` is available,
+   check `nslookup example.net 1.1.1.1` and
+   `nslookup files.example.net 1.1.1.1`: both must return your public WAN IPv4.
+   Separately, querying `files.example.net` using your home DNS must return
+   Fedora's reserved LAN IPv4 after you set the router's local override.
+
+A changing WAN IPv4 needs a deSEC-compatible DDNS updater that keeps **all**
+these public A records current, including the root used by WireGuard. DEN
+does not provide that updater; arrange it before relying on unattended access.
+Keep any updater token private and separate from the non-secret handover guide.
+
 ## Away From Home
 
 Install the WireGuard app and import `/opt/den/private/home.conf` securely onto one device. For another device:
