@@ -74,6 +74,13 @@ sudo bash install.sh /tmp/den.env
 
 There are five required settings, a secondary-storage mount setting and three optional feature switches, with no application-selection wizard. Mount the larger disk at `MEDIA_MOUNT` before installing, or explicitly set `MEDIA_MOUNT=` for a single-disk host. DEN never selects, formats or partitions disks. Read the [short installation guide](docs/installation.md), then [finish your accounts and start using DEN](docs/first-evening.md). [Optional qBittorrent setup](docs/qbittorrent.md) covers its private Web UI, storage, and normal outbound connection.
 
+## Try DEN Locally First
+
+On any Podman-capable Fedora machine, `bin/den-local up` starts a disposable,
+HTTP-only copy of the apps with generated logins, and `bin/den-local test` checks
+it. See [testing](docs/testing.md#one-command-local-test-stack). It is not the
+production install.
+
 ## Everyday Commands
 
 ```bash

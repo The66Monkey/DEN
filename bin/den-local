@@ -1,0 +1,312 @@
+#!/usr/bin/env bash
+# Disposable, rootless, HTTP-only DEN test stack for a workstation (no root needed).
+# It is separate from the production installer: no TLS, VPN, backups or timers.
+set -euo pipefail
+ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
+source "$ROOT/lib/core.sh"
+source "$ROOT/lib/deploy.sh"
+
+QUADLETS="$HOME/.config/containers/systemd"
+CREDS="$HOME/.config/den-local"
+TEMPLATES="$ROOT/templates/podman"
+TEMPLATE_IP=192.168.50.109
+TEMPLATE_STORAGE=/mnt/Storage
+CORE_UNITS=(den-jellyfin-local den-immich-local den-nextcloud-local den-forgejo-local)
+ALL_UNITS=(den-jellyfin-local den-immich-local den-immich-ml-local den-immich-db-local
+    den-nextcloud-cron-local den-nextcloud-local den-nextcloud-db-local den-nextcloud-redis-local
+    den-forgejo-local den-valkey-local den-qbittorrent-local)
+
+usage() {
+    cat <<'EOF'
+DEN local test stack: Digital Environment for Networking, no root needed
+Usage: den-local <command> [--with-qbittorrent] [--yes]
+  up        Create credentials and data, start every app and wait until healthy
+  down      Stop all test containers; data and credentials are kept
+  status    Show container health and URLs
+  creds     Show URLs and logins for first-run exploration
+  test      Run smoke tests (health, Nextcloud upload, Forgejo push, port exposure)
+  reset     Wipe containers, data, credentials and generated units (needs --yes)
+  help      Show this help
+Environment:
+  DEN_LOCAL_IP       Address to publish on (default: this host's primary LAN IPv4)
+  DEN_LOCAL_STORAGE  Directory or mount holding the den-local data folder
+                     (default: /mnt/Storage when mounted, else ~/.local/share)
+EOF
+}
+
+detect_ip() {
+    ip -4 route get 1.1.1.1 2>/dev/null | awk '{for (i = 1; i < NF; i++) if ($i == "src") {print $(i + 1); exit}}'
+}
+
+ACTION="${1:-help}"
+[[ $# == 0 ]] || shift
+QBIT=no YES=no
+for arg in "$@"; do
+    case "$arg" in
+        --with-qbittorrent) QBIT=yes ;;
+        --yes) YES=yes ;;
+        *) usage; fail "Unknown option: $arg" ;;
+    esac
+done
+case "$ACTION" in help|--help|-h) usage; exit 0 ;; esac
+[[ "$EUID" != 0 ]] || fail 'Run den-local as your normal user, not root.'
+command -v podman >/dev/null || fail 'Install podman first.'
+
+IP="${DEN_LOCAL_IP:-$(detect_ip)}"
+[[ "$IP" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]] || fail 'Set DEN_LOCAL_IP to this machine'\''s IPv4 address.'
+if [[ -n "${DEN_LOCAL_STORAGE:-}" ]]; then
+    STORAGE="$DEN_LOCAL_STORAGE"
+elif mountpoint -q "$TEMPLATE_STORAGE" 2>/dev/null; then
+    STORAGE="$TEMPLATE_STORAGE"
+else
+    STORAGE="$HOME/.local/share"
+fi
+[[ "$STORAGE" == /* && "$STORAGE" != *[[:space:]\|\&\\]* ]] || fail 'DEN_LOCAL_STORAGE must be an absolute path without spaces.'
+DATA="$STORAGE/den-local"
+
+units() {
+    local unit
+    for unit in "${ALL_UNITS[@]}"; do
+        [[ "$unit" != den-qbittorrent-local || "$QBIT" == yes || -e "$QUADLETS/$unit.container" ]] || continue
+        printf '%s.service\n' "$unit"
+    done
+}
+
+random_secret() { openssl rand -hex 24; }
+
+write_secret_files() {
+    local group file missing present
+    install -d -m 700 "$CREDS"
+    for group in "immich-db.env immich.env" "nextcloud-db.env nextcloud.env" "forgejo-admin.env"; do
+        missing=0 present=0
+        for file in $group; do
+            if [[ -e "$CREDS/$file" ]]; then present=1; else missing=1; fi
+        done
+        [[ $missing == 0 || $present == 0 ]] || fail "Incomplete credentials in $CREDS; run den-local reset --yes."
+    done
+    (
+        umask 077
+        local immich nextcloud
+        if [[ ! -e "$CREDS/immich.env" ]]; then
+            immich="$(random_secret)"
+            printf 'POSTGRES_PASSWORD=%s\n' "$immich" > "$CREDS/immich-db.env"
+            printf 'DB_PASSWORD=%s\n' "$immich" > "$CREDS/immich.env"
+        fi
+        if [[ ! -e "$CREDS/nextcloud.env" ]]; then
+            nextcloud="$(random_secret)"
+            printf 'POSTGRES_PASSWORD=%s\n' "$nextcloud" > "$CREDS/nextcloud-db.env"
+            printf 'POSTGRES_PASSWORD=%s\nNEXTCLOUD_ADMIN_PASSWORD=%s\n' "$nextcloud" "$(random_secret)" > "$CREDS/nextcloud.env"
+        fi
+        if [[ ! -e "$CREDS/forgejo-admin.env" ]]; then
+            printf 'FORGEJO_ADMIN_PASSWORD=%s\n' "$(random_secret)" > "$CREDS/forgejo-admin.env"
+        fi
+    )
+}
+
+secret() { sed -n "s/^$2=//p" "$CREDS/$1" | head -1; }
+
+install_quadlets() {
+    local file name
+    install -d -m 755 "$QUADLETS"
+    for file in "$TEMPLATES"/*-local.container "$TEMPLATES"/den-local.network; do
+        name="$(basename "$file")"
+        [[ "$name" != den-qbittorrent-local.container || "$QBIT" == yes ]] || continue
+        if mountpoint -q "$STORAGE" 2>/dev/null; then
+            sed -e "s|$TEMPLATE_IP|$IP|g" -e "s|$TEMPLATE_STORAGE|$STORAGE|g" "$file" > "$QUADLETS/$name"
+        else
+            # A plain directory has no mount to wait for.
+            sed -e "s|$TEMPLATE_IP|$IP|g" -e "/^ConditionPathIsMountPoint=/d" -e "s|$TEMPLATE_STORAGE|$STORAGE|g" "$file" > "$QUADLETS/$name"
+        fi
+    done
+}
+
+wait_for() {
+    local description="$1" tries="$2"
+    shift 2
+    while (( tries-- > 0 )); do
+        if "$@" >/dev/null 2>&1; then return 0; fi
+        sleep 5
+    done
+    fail "Timed out waiting for $description."
+}
+
+cmd_up() {
+    systemctl --user show-environment >/dev/null 2>&1 || fail 'A systemd user session is required.'
+    if [[ ! -d "$STORAGE" ]]; then fail "Storage directory does not exist: $STORAGE"; fi
+    [[ ! -L "$DATA" ]] || fail "$DATA cannot be a symlink."
+    local port busy=
+    for port in 8096 2283 8080 3000 $([[ "$QBIT" == yes ]] && echo 8081); do
+        if ss -H -ltn "( sport = :$port )" | grep -q . && ! podman ps --format '{{.Ports}}' | grep -q ":$port->"; then
+            busy+=" $port"
+        fi
+    done
+    [[ -z "$busy" ]] || fail "Ports already in use by another program:$busy"
+
+    mkdir -p "$DATA"/{jellyfin/{config,cache},media,immich/{database,library,cache},nextcloud/{database,html},forgejo}
+    write_secret_files
+    if [[ "$QBIT" == yes ]]; then
+        mkdir -p "$DATA"/qbittorrent/config "$DATA"/downloads/{complete,incomplete}
+        prepare_qbittorrent_config "$DATA/qbittorrent/config" "$IP"
+    fi
+    install_quadlets
+    systemctl --user daemon-reload
+
+    log 'Starting services; first runs pull images and install Nextcloud, which can take several minutes.'
+    local unit
+    for unit in den-forgejo-local den-jellyfin-local den-immich-local den-nextcloud-local $([[ "$QBIT" == yes ]] && echo den-qbittorrent-local); do
+        systemctl --user start "$unit.service" || fail "$unit failed to start; see: journalctl --user -u $unit.service"
+    done
+
+    local forgejo_password output
+    forgejo_password="$(secret forgejo-admin.env FORGEJO_ADMIN_PASSWORD)"
+    if ! output="$(podman exec -u git den-forgejo-local forgejo admin user create --username denadmin \
+        --password "$forgejo_password" --email admin@den.invalid --admin --must-change-password=false 2>&1)" \
+        && [[ "$output" != *'already exists'* ]]; then
+        fail "Forgejo administrator creation failed: $output"
+    fi
+    podman exec -u www-data den-nextcloud-local php occ background:cron >/dev/null
+    systemctl --user start den-nextcloud-cron-local.service
+    log 'DEN local stack is running.'
+    cmd_creds
+}
+
+cmd_down() {
+    local -a list
+    mapfile -t list < <(units)
+    systemctl --user stop "${list[@]}" 2>/dev/null || true
+    log 'Stopped. Data and credentials are kept; run den-local up to resume.'
+}
+
+cmd_status() {
+    podman ps -a --filter name=-local --format 'table {{.Names}}\t{{.Status}}'
+}
+
+cmd_creds() {
+    [[ -e "$CREDS/nextcloud.env" ]] || fail 'No credentials yet; run den-local up.'
+    cat <<EOF
+
+DEN local test stack (HTTP, LAN only; disposable data)
+  Jellyfin   http://$IP:8096   first-run wizard; media folder: $DATA/media
+  Immich     http://$IP:2283   first signup becomes admin
+  Nextcloud  http://$IP:8080   admin / $(secret nextcloud.env NEXTCLOUD_ADMIN_PASSWORD)
+  Forgejo    http://$IP:3000   denadmin / $(secret forgejo-admin.env FORGEJO_ADMIN_PASSWORD)
+EOF
+    if [[ -e "$QUADLETS/den-qbittorrent-local.container" ]]; then
+        echo "  qBittorrent http://$IP:8081  admin / temporary password: podman logs den-qbittorrent-local"
+    fi
+    printf 'Credential files: %s (mode 600). Never reuse these passwords.\n' "$CREDS"
+}
+
+PASS=0 FAILED=0
+check() {
+    local description="$1"
+    shift
+    if "$@" >/dev/null 2>&1; then
+        printf 'PASS  %s\n' "$description"
+        PASS=$((PASS + 1))
+    else
+        printf 'FAIL  %s\n' "$description"
+        FAILED=$((FAILED + 1))
+    fi
+}
+
+all_healthy() {
+    local name
+    for name in $(units | sed 's/\.service$//'); do
+        [[ "$(podman inspect -f '{{.State.Health.Status}}' "$name" 2>/dev/null)" == healthy ]] || return 1
+    done
+}
+
+port_is_private() {
+    ! ss -H -ltn | awk '{print $4}' | grep -Eq '^(0\.0\.0\.0|\*|\[::\]):(5432|6379|3003|8080|8096|2283|3000)$'
+}
+
+nextcloud_roundtrip() {
+    local password file
+    password="$(secret nextcloud.env NEXTCLOUD_ADMIN_PASSWORD)"
+    file="$(mktemp)"
+    printf 'den-local-%s\n' "$RANDOM" > "$file"
+    local url="http://$IP:8080/remote.php/dav/files/admin/den-local-test.txt"
+    curl -fsS -u "admin:$password" -T "$file" "$url" &&
+        curl -fsS -u "admin:$password" "$url" | cmp -s - "$file" &&
+        curl -fsS -u "admin:$password" -X DELETE "$url"
+    local status=$?
+    rm -f "$file"
+    return "$status"
+}
+
+forgejo_roundtrip() {
+    local password work repo=den-local-smoke
+    password="$(secret forgejo-admin.env FORGEJO_ADMIN_PASSWORD)"
+    work="$(mktemp -d)"
+    (
+        set -e
+        trap 'curl -fsS -u "denadmin:$password" -X DELETE "http://$IP:3000/api/v1/repos/denadmin/$repo" >/dev/null 2>&1 || true; rm -rf "$work"' EXIT
+        curl -fsS -u "denadmin:$password" -H 'Content-Type: application/json' \
+            -d "{\"name\":\"$repo\"}" "http://$IP:3000/api/v1/user/repos" >/dev/null
+        cd "$work"
+        git init -q -b main .
+        git config user.email test@den.invalid
+        git config user.name 'DEN test'
+        printf 'hello\n' > README.md
+        git add README.md
+        git commit -qm 'DEN local smoke test'
+        git -c credential.helper= push -q "http://denadmin:$password@$IP:3000/denadmin/$repo.git" main
+        git -c credential.helper= clone -q "http://denadmin:$password@$IP:3000/denadmin/$repo.git" clone
+        test -f clone/README.md
+    )
+}
+
+cmd_test() {
+    [[ -e "$CREDS/nextcloud.env" ]] || fail 'No credentials yet; run den-local up.'
+    command -v curl >/dev/null && command -v git >/dev/null || fail 'curl and git are required for tests.'
+    check 'every container reports healthy' all_healthy
+    check 'Jellyfin answers' curl -fsS "http://$IP:8096/System/Info/Public"
+    check 'Immich API answers' curl -fsS "http://$IP:2283/api/server/ping"
+    check 'Immich machine-learning worker answers' podman exec den-immich-ml-local python3 -c "import urllib.request as u; u.urlopen('http://localhost:3003/ping')"
+    check 'Nextcloud is installed' bash -c "curl -fsS http://$IP:8080/status.php | grep -q '\"installed\":true'"
+    check 'Nextcloud login, upload, download and delete' nextcloud_roundtrip
+    check 'Forgejo answers' curl -fsS "http://$IP:3000/api/healthz"
+    check 'Forgejo login, push and clone' forgejo_roundtrip
+    check 'Forgejo registration and SSH are disabled' bash -c "curl -fsS http://$IP:3000/user/sign_up | grep -q 'Registration is disabled'"
+    check 'databases and caches publish no host ports' bash -c "! podman ps --format '{{.Names}} {{.Ports}}' | grep -E 'db-local|valkey|redis' | grep -q -- '->'"
+    check 'apps listen on the LAN address only' port_is_private
+    if [[ -e "$QUADLETS/den-qbittorrent-local.container" ]]; then
+        check 'qBittorrent Web UI answers' curl -fsS -H "Host: $IP" "http://$IP:8081/"
+    fi
+    printf '\n%d passed, %d failed\n' "$PASS" "$FAILED"
+    [[ "$FAILED" == 0 ]]
+}
+
+cmd_reset() {
+    [[ "$DATA" == /*/den-local ]] || fail 'Refusing to wipe an unexpected path.'
+    if [[ "$YES" != yes ]]; then
+        printf 'This permanently deletes the local test containers, %s and %s.\n' "$DATA" "$CREDS"
+        read -r -p 'Type wipe to continue: ' answer
+        [[ "$answer" == wipe ]] || fail 'Cancelled.'
+    fi
+    local -a list
+    mapfile -t list < <(printf '%s.service\n' "${ALL_UNITS[@]}" den-local-network)
+    systemctl --user stop "${list[@]}" 2>/dev/null || true
+    podman rm -f "${ALL_UNITS[@]}" >/dev/null 2>&1 || true
+    podman network rm -f den-local >/dev/null 2>&1 || true
+    local name
+    for name in "$TEMPLATES"/*-local.container "$TEMPLATES"/den-local.network; do
+        rm -f "$QUADLETS/$(basename "$name")"
+    done
+    systemctl --user daemon-reload
+    # Database files are owned by container sub-UIDs, so remove them inside the user namespace.
+    [[ ! -e "$DATA" ]] || podman unshare rm -rf -- "$DATA"
+    rm -rf -- "$CREDS"
+    log 'Local test stack wiped. Images are kept; run den-local up for a fresh start.'
+}
+
+case "$ACTION" in
+    up) cmd_up ;;
+    down) cmd_down ;;
+    status) cmd_status ;;
+    creds) cmd_creds ;;
+    test) cmd_test ;;
+    reset) cmd_reset ;;
+    *) usage; fail "Unknown command: $ACTION" ;;
+esac

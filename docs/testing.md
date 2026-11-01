@@ -36,6 +36,25 @@ the HDD and confirm Docker/DEN do not write media or downloads onto SSD.
 
 ## Required Live Acceptance
 
+### One-Command Local Test Stack
+
+`bin/den-local` automates the whole local test below as your normal user (no
+root): generated credentials, data folders, Quadlets, startup, first-run admin
+accounts and smoke tests. It auto-detects your LAN IP (override with
+`DEN_LOCAL_IP`) and uses `/mnt/Storage` when mounted, else `~/.local/share`
+(override with `DEN_LOCAL_STORAGE`). Data lives in `den-local` beneath it.
+
+```bash
+bin/den-local up [--with-qbittorrent]   # create and start; prints URLs and logins
+bin/den-local test                      # health, Nextcloud upload, Forgejo push, port exposure
+bin/den-local creds                     # show logins again
+bin/den-local down                      # stop; data kept
+bin/den-local reset --yes               # wipe containers, data, credentials and units
+```
+
+It is HTTP-only test data, not a production rehearsal: no TLS, VPN, DNS,
+backups or timers. The manual steps below describe what it does.
+
 ### Local Rootless Podman Smoke Test
 
 For a disposable LAN-only test on Fedora Workstation, a rootless Podman Quadlet
