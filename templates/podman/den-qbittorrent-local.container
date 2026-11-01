@@ -1,0 +1,28 @@
+[Unit]
+Description=DEN optional local qBittorrent test (HTTP, no outbound VPN)
+ConditionPathIsMountPoint=/mnt/Storage
+
+[Container]
+Image=lscr.io/linuxserver/qbittorrent:5.3.0_v2.1.2-ls485@sha256:236a7a3a81a3706182ae1f12ee55aa3781c753963e680b2d9c8e55541686d0ce
+ContainerName=den-qbittorrent-local
+Network=den-local.network
+UserNS=keep-id
+User=1000
+Group=1000
+PublishPort=192.168.50.109:8081:8081
+Environment=PUID=1000 PGID=1000 TZ=Etc/UTC WEBUI_PORT=8081 TORRENTING_PORT=6881
+Volume=/mnt/Storage/den-local/qbittorrent/config:/config:Z
+Volume=/mnt/Storage/den-local/downloads:/downloads:Z
+HealthCmd=curl -fsS -H Host:192.168.50.109 http://localhost:8081/
+HealthInterval=30s
+HealthTimeout=10s
+HealthRetries=10
+HealthStartPeriod=60s
+Notify=healthy
+
+[Service]
+Restart=on-failure
+TimeoutStartSec=900
+
+[Install]
+WantedBy=default.target

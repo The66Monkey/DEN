@@ -10,6 +10,26 @@ x-service: &service
   networks: [home]
 
 services:
+  qbittorrent:
+    <<: *service
+    profiles: [torrents]
+    image: lscr.io/linuxserver/qbittorrent:5.3.0_v2.1.2-ls485@sha256:236a7a3a81a3706182ae1f12ee55aa3781c753963e680b2d9c8e55541686d0ce
+    environment:
+      PUID: '1000'
+      PGID: '1000'
+      TZ: Etc/UTC
+      WEBUI_PORT: '8081'
+      TORRENTING_PORT: '6881'
+    volumes:
+      - /srv/den/qbittorrent:/config:z
+      - /srv/den/downloads:/downloads:z
+    healthcheck:
+      test: [CMD, curl, -fsS, -H, 'Host: downloads.${DOMAIN:?required}', http://localhost:8081/]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
   traefik:
     <<: *service
     image: traefik:v3.7.17@sha256:30ff62491aacdb862ceb8c9edcf2627da638d7deafdd4b6dab32fe34f8aa3e90

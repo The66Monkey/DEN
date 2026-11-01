@@ -18,6 +18,7 @@ Start with `sudo den status`, `sudo den check`, and `systemctl --failed`. Keep y
 | VPN handshake but no app | Check profile DNS, local subnet overlap, `systemctl status den-dns`, client encrypted-DNS settings, and firewall forwarding rules. |
 | Nextcloud stays unready | Read `sudo den logs nextcloud` and `sudo den logs nextcloud-db`; initial setup can be slow. Check disk space. |
 | Media not found | Jellyfin sees `/media/...`, not the host `/srv/den/media/...`; UID 1000 must be able to read it. |
+| Secondary storage is missing / Docker will not start | Verify `findmnt /mnt/den-storage`, `findmnt /srv/den/media` and `findmnt /srv/den/downloads` (use your configured mount path). Inspect `systemctl status srv-den-media.mount srv-den-downloads.mount docker` and the HDD UUID in `/etc/fstab`. Restore the disk/mounts, then start Docker and DEN; never remove storage dependencies just to start with empty SSD folders. |
 | Backup fails | Check `mountpoint /mnt/den-backup`, available space, and `journalctl -u den-backup.service`. Never initialize a new repo to hide a password mismatch. |
 | Another operation is running | Wait for backup/update/restore to finish; the shared lock prevents conflicting maintenance. |
 | Monitoring failure banner | Run `sudo den check`; a successful check clears the banner. Read the failed unit journal before resetting failure state. |

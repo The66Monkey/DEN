@@ -1,0 +1,10 @@
+[Unit]
+Description=DEN automatic releases and Fedora upgrades
+Wants=network-online.target
+After=network-online.target docker.service
+OnFailure=den-alert.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/den auto-update
+TimeoutStartSec=6h

@@ -6,6 +6,9 @@ ensure_backup_mount() {
     mountpoint -q "$BACKUP_MOUNT" || fail "Backup disk is not mounted: $BACKUP_MOUNT"
     [[ "$(stat -c %d "$BACKUP_MOUNT")" != "$(stat -c %d "$data_filesystem")" ]] || fail 'Backups must be on a separate filesystem.'
     [[ -w "$BACKUP_MOUNT" ]] || fail 'Backup disk is not writable.'
+    if [[ -n "${MEDIA_MOUNT:-}" ]]; then
+        check_media_disk
+    fi
 }
 
 restic_cmd() {
@@ -24,6 +27,9 @@ initialize_backup() {
 backup_stack() (
     set -euo pipefail
     ensure_backup_mount || exit 1
+    if [[ -n "${MEDIA_MOUNT:-}" ]]; then
+        ensure_media_storage || exit 1
+    fi
     fluxer_backup || exit 1
     restic_cmd snapshots >/dev/null || exit 1
     local -a running=()
@@ -71,12 +77,36 @@ restore_snapshot() {
     case "$target/" in
         /|"$DATA_DIR/"*|"$DEPLOY_DIR/"*|"$BACKUP_MOUNT/"*) fail 'Restore into a new staging directory, away from live data and backups.' ;;
     esac
+    if [[ -n "${MEDIA_MOUNT:-}" ]]; then
+        case "$target/" in
+            "$MEDIA_MOUNT/den/"*) fail 'Restore staging cannot be inside live secondary storage.' ;;
+        esac
+    fi
     [[ ! -e "$target" ]] || fail 'Restore target already exists; DEN never overwrites it.'
     mkdir -p "$target"
     chmod 700 "$target"
     restic_cmd restore "$snapshot" --target "$target" --include "$DATA_DIR/**" --verify
     [[ -f "$target$DATA_DIR/system/deployment/.env" ]] || fail 'Restored deployment configuration is missing.'
     log "Verified restore is staged at $target$DATA_DIR; live services were not changed."
+}
+
+promote_restored_data() {
+    local restored="$1" directory
+    [[ -d "$restored" && ! -L "$restored" ]] || fail 'Verified restore directory is missing or a symlink.'
+    if [[ -n "${MEDIA_MOUNT:-}" ]]; then
+        check_media_disk
+        mkdir -p "$MEDIA_MOUNT/den"
+        for directory in media downloads; do
+            [[ ! -L "$restored/$directory" && ! -L "$MEDIA_MOUNT/den/$directory" ]] || fail 'Recovered storage folders cannot be symlinks.'
+            if [[ -d "$restored/$directory" ]]; then
+                [[ ! -e "$MEDIA_MOUNT/den/$directory" ]] || rmdir "$MEDIA_MOUNT/den/$directory"
+                mv "$restored/$directory" "$MEDIA_MOUNT/den/$directory"
+            fi
+        done
+    fi
+    [[ ! -e "$DATA_DIR" ]] || rmdir "$DATA_DIR"
+    mv "$restored" "$DATA_DIR"
+    configure_media_storage
 }
 
 recovery_kit() {

@@ -1,0 +1,20 @@
+[Unit]
+Description=DEN local Immich machine learning
+ConditionPathIsMountPoint=/mnt/Storage
+
+[Container]
+Image=ghcr.io/immich-app/immich-machine-learning:v3.3.5@sha256:5b28c9352c8374b8a1ed96fbdd8d6755fea6e43510ec43fdf6538aa02ea40f56
+ContainerName=den-immich-ml-local
+Network=den-local.network
+NetworkAlias=immich-machine-learning
+Volume=/mnt/Storage/den-local/immich/cache:/cache:Z
+HealthCmd=python /usr/src/healthcheck.py
+HealthInterval=30s
+HealthTimeout=10s
+HealthRetries=10
+HealthStartPeriod=120s
+Notify=healthy
+
+[Service]
+Restart=on-failure
+TimeoutStartSec=900

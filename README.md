@@ -2,7 +2,7 @@
 
 **Digital Environment for Networking. A home server you can deploy in an evening.**
 
-DEN deploys a fixed core stack on one Fedora Server PC: media, photos, files, private remote access, Git, and encrypted backups. Fluxer chat and a KeePassXC-compatible credential vault are optional. DEN takes the Bash-and-Compose approach of BASM and focuses it on home users rather than business infrastructure.
+DEN deploys a fixed core stack on one Fedora Server PC: media, photos, files, private remote access, Git, and encrypted backups. Fluxer chat, qBittorrent downloads, and a KeePassXC-compatible credential vault are optional. DEN takes the Bash-and-Compose approach of BASM and focuses it on home users rather than business infrastructure.
 
 | Outcome | DEN's choice | Address |
 | --- | --- | --- |
@@ -12,10 +12,11 @@ DEN deploys a fixed core stack on one Fedora Server PC: media, photos, files, pr
 | Reach home while away | WireGuard | One profile per device |
 | Keep code and small projects | Forgejo | `https://git.your-domain` |
 | Chat with household and friends (optional) | Fluxer | `https://chat.your-domain` |
+| Download and seed torrents (optional) | qBittorrent | `https://downloads.your-domain` |
 | Recover from a broken disk | Restic | Separate encrypted backup disk |
 | Check the basics | `den status` / `den check` | Terminal and systemd journal |
 
-Traefik configures HTTPS automatically. Docker Compose runs the core applications; optional Fluxer is managed by its upstream `rexctl` tool. Core data and Fluxer recovery archives live under `/srv/den`; Fluxer's live Docker volumes remain in Docker's data root. Apps are restricted to your LAN and VPN, not the open internet. Public links remain household/VPN-only.
+Traefik configures HTTPS automatically. Docker Compose runs the core applications; optional Fluxer is managed by its upstream `rexctl` tool. Fedora Server runs headlessly: install and administer DEN over SSH, and use application browsers on another device. The default example keeps the OS, databases, settings and caches on the small SSD, with Jellyfin media and qBittorrent downloads on a mounted larger HDD. Core data and Fluxer recovery archives remain accessible under `/srv/den`; Fluxer's live Docker volumes remain in Docker's data root. Apps are restricted to your LAN and VPN, not the open internet. Public links remain household/VPN-only.
 
 ## Start Here
 
@@ -25,11 +26,11 @@ From this checkout:
 
 ```bash
 cp config/example.env /tmp/den.env
-nano /tmp/den.env
+vi /tmp/den.env
 sudo bash install.sh /tmp/den.env
 ```
 
-There are five required settings and two optional feature switches, with no application-selection wizard. Read the [short installation guide](docs/installation.md), then [finish your accounts and start using DEN](docs/first-evening.md).
+There are five required settings, a secondary-storage mount setting and three optional feature switches, with no application-selection wizard. Mount the larger disk at `MEDIA_MOUNT` before installing, or explicitly set `MEDIA_MOUNT=` for a single-disk host. DEN never selects, formats or partitions disks. Read the [short installation guide](docs/installation.md), then [finish your accounts and start using DEN](docs/first-evening.md). [Optional qBittorrent setup](docs/qbittorrent.md) covers its private Web UI, storage, and normal outbound connection.
 
 ## Everyday Commands
 
@@ -42,11 +43,16 @@ sudo den logs nextcloud
 sudo den fluxer-status
 ```
 
-Backups run nightly at about 03:00, briefly stopping the stack for a consistent snapshot. Updates are deliberately manual: apply a reviewed DEN release, after an automatic pre-update backup. [Maintenance](docs/operations.md) and [backup and recovery](docs/backup.md) cover the practical procedures.
+Backups run nightly at about 03:00. Monthly automatic maintenance runs on the
+first day at 04:00 (plus up to 30 minutes of jitter): DEN releases, enabled
+Fluxer, Fedora packages, and stable Fedora major upgrades, with backups and
+automatic reboots when needed. Application/database majors follow release
+migrations rather than arbitrary image tags. [Maintenance](docs/operations.md)
+explains the default schedule and how to change or disable it.
 
 ## Boundaries
 
-DEN values simplicity over flexibility, boring technology over novelty, and recovery over failover. It does not support Kubernetes, clusters, high availability, arbitrary extra applications, mail hosting, or enterprise operations. KeePass is an optional generated encrypted vault, not a server or browser app. Fluxer is optional and separately managed by `rexctl`, with its full backups included in DEN's Restic snapshots. Do not forward Fluxer's voice ports to the internet. No container auto-updater, public admin dashboard, Git SSH port, or CI runner is installed. Forgejo is the basic development tool; users write code on their own devices.
+DEN values simplicity over flexibility, boring technology over novelty, and recovery over failover. It does not support Kubernetes, clusters, high availability, arbitrary extra applications, mail hosting, or enterprise operations. KeePass is an optional generated encrypted vault, not a server or browser app. Fluxer is optional and separately managed by `rexctl`, with its full backups included in DEN's Restic snapshots. Do not forward Fluxer's voice ports to the internet. No blind image-tag auto-updater, public admin dashboard, Git SSH port, or CI runner is installed. Forgejo is the basic development tool; users write code on their own devices.
 
 ## Project Status
 

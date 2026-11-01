@@ -74,6 +74,13 @@ for target in "$DATA_DIR" "$DATA_DIR/child" "$DEPLOY_DIR" "$BACKUP_MOUNT/new" / 
     if (restore_snapshot abcdef12 "$target") 2>/dev/null; then fail "Unsafe target accepted: $target"; fi
 done
 if (snapshot_details latest) 2>/dev/null; then fail 'Ambiguous snapshot accepted.'; fi
+MEDIA_MOUNT="$TEMP/media-disk"
+for target in "$MEDIA_MOUNT/den/media/new" "$MEDIA_MOUNT/den/downloads/new"; do
+    : > "$CALLS"
+    if (restore_snapshot abcdef12 "$target") 2>/dev/null; then fail "Live HDD restore target accepted: $target"; fi
+    if grep -Fq 'restic restore' "$CALLS"; then fail 'Live HDD restore target reached Restic.'; fi
+done
+MEDIA_MOUNT=
 mv "$BACKUP_MOUNT" "$TEMP/unmounted"
 : > "$CALLS"
 if backup_stack; then fail 'Unmounted backup disk accepted.'; fi

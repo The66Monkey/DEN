@@ -8,6 +8,11 @@ Open Jellyfin at `https://media.your-domain`. Create its initial administrator, 
 
 Copy media you own into those folders using your existing SSH/SFTP client. Ensure UID 1000 can read directories and files; DEN gives the initial media folders to UID 1000. The media mount is read-only in Jellyfin. Choose clients that can direct-play your files; DEN does not configure GPU acceleration or automatic downloading tools.
 
+With the default secondary-storage setting, those host folders are bind mounts
+of `/mnt/den-storage/den/media` on the larger HDD. Keep using the same library
+paths. The Jellyfin setup wizard runs in your own computer/phone's browser;
+Fedora Server itself needs no GUI.
+
 Finish the setup wizard before giving anyone else LAN/VPN access. Create separate household accounts rather than sharing the administrator login.
 
 ## Put Photos Somewhere Safe

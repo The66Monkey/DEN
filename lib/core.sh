@@ -8,15 +8,18 @@ read_settings() {
     local file="$1" line key value
     local -A seen=()
     [[ -f "$file" ]] || fail "Config not found: $file"
-    unset DOMAIN EMAIL LAN_IP LAN_CIDR BACKUP_MOUNT KEEPASS_ENABLED FLUXER_ENABLED DB_PASSWORD NEXTCLOUD_ADMIN_PASSWORD RESTIC_PASSWORD
+    unset DOMAIN EMAIL LAN_IP LAN_CIDR MEDIA_MOUNT BACKUP_MOUNT KEEPASS_ENABLED FLUXER_ENABLED QBITTORRENT_ENABLED UPDATE_REPOSITORY DB_PASSWORD NEXTCLOUD_ADMIN_PASSWORD RESTIC_PASSWORD
+    MEDIA_MOUNT=
     KEEPASS_ENABLED=no
     FLUXER_ENABLED=no
+    QBITTORRENT_ENABLED=no
+    UPDATE_REPOSITORY=https://github.com/The66Monkey/DEN.git
     while IFS= read -r line || [[ -n "$line" ]]; do
         [[ -z "$line" || "$line" == \#* ]] && continue
         [[ "$line" == *=* ]] || fail 'Use unquoted KEY=value lines in config.'
         key="${line%%=*}"; value="${line#*=}"
         case "$key" in
-            DOMAIN|EMAIL|LAN_IP|LAN_CIDR|BACKUP_MOUNT|KEEPASS_ENABLED|FLUXER_ENABLED|DB_PASSWORD|NEXTCLOUD_ADMIN_PASSWORD|RESTIC_PASSWORD) ;;
+            DOMAIN|EMAIL|LAN_IP|LAN_CIDR|MEDIA_MOUNT|BACKUP_MOUNT|KEEPASS_ENABLED|FLUXER_ENABLED|QBITTORRENT_ENABLED|UPDATE_REPOSITORY|DB_PASSWORD|NEXTCLOUD_ADMIN_PASSWORD|RESTIC_PASSWORD) ;;
             *) fail "Unknown config key: $key" ;;
         esac
         [[ ! -v "seen[$key]" ]] || fail "Duplicate config key: $key"
@@ -46,6 +49,8 @@ validate_settings() {
     done
     [[ "$KEEPASS_ENABLED" == yes || "$KEEPASS_ENABLED" == no ]] || fail 'KEEPASS_ENABLED must be yes or no.'
     [[ "$FLUXER_ENABLED" == yes || "$FLUXER_ENABLED" == no ]] || fail 'FLUXER_ENABLED must be yes or no.'
+    [[ "$QBITTORRENT_ENABLED" == yes || "$QBITTORRENT_ENABLED" == no ]] || fail 'QBITTORRENT_ENABLED must be yes or no.'
+    [[ "$UPDATE_REPOSITORY" =~ ^https://[a-zA-Z0-9.-]+/[a-zA-Z0-9._/-]+\.git$ || "$UPDATE_REPOSITORY" =~ ^git@[a-zA-Z0-9.-]+:[a-zA-Z0-9._/-]+\.git$ ]] || fail 'UPDATE_REPOSITORY must be an HTTPS or SSH Git repository URL without embedded credentials.'
     [[ ${#DOMAIN} -le 253 && "$DOMAIN" == *.* && "$DOMAIN" != *.local && "$DOMAIN" != *.localhost ]] || fail 'Use a public DNS domain.'
     local -a labels
     IFS=. read -r -a labels <<< "$DOMAIN"
@@ -68,6 +73,10 @@ validate_settings() {
     (( (network & mask) != (170655744 & mask) )) || fail 'LAN overlaps the DEN VPN subnet (10.44.0.0/24).'
     (( (network & mask) != (((172 << 24) | (30 << 16) | (44 << 8)) & mask) )) || fail 'LAN overlaps the DEN container subnet (172.30.44.0/24).'
     [[ "$BACKUP_MOUNT" =~ ^/mnt/[a-zA-Z0-9_-]+$ || "$BACKUP_MOUNT" =~ ^/media/[a-zA-Z0-9_-]+$ ]] || fail 'BACKUP_MOUNT must be a simple absolute path under /mnt or /media.'
+    if [[ -n "${MEDIA_MOUNT:-}" ]]; then
+        [[ "$MEDIA_MOUNT" =~ ^/mnt/[a-zA-Z0-9_-]+$ ]] || fail 'MEDIA_MOUNT must be a simple absolute path under /mnt, or empty for single-disk storage.'
+        [[ "$MEDIA_MOUNT" != "$BACKUP_MOUNT" ]] || fail 'Media and backup disks must be separate.'
+    fi
     for key in DB_PASSWORD NEXTCLOUD_ADMIN_PASSWORD RESTIC_PASSWORD; do
         [[ ! -v "$key" || "${!key}" =~ ^[a-f0-9]{48}$ ]] || fail "Invalid generated secret: $key"
     done
@@ -84,7 +93,7 @@ write_environment() {
     DB_PASSWORD="$(openssl rand -hex 24)"
     NEXTCLOUD_ADMIN_PASSWORD="$(openssl rand -hex 24)"
     RESTIC_PASSWORD="$(openssl rand -hex 24)"
-    for key in DOMAIN EMAIL LAN_IP LAN_CIDR BACKUP_MOUNT KEEPASS_ENABLED FLUXER_ENABLED; do
+    for key in DOMAIN EMAIL LAN_IP LAN_CIDR MEDIA_MOUNT BACKUP_MOUNT KEEPASS_ENABLED FLUXER_ENABLED QBITTORRENT_ENABLED UPDATE_REPOSITORY; do
         printf '%s=%s\n' "$key" "${!key}"
     done > "$destination/.env"
     printf 'DB_PASSWORD=%s\nNEXTCLOUD_ADMIN_PASSWORD=%s\nRESTIC_PASSWORD=%s\n' \

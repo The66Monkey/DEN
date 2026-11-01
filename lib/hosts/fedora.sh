@@ -8,7 +8,7 @@ install_packages() {
     dnf install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin \
         docker-compose-plugin container-selinux firewalld restic wireguard-tools \
         dnsmasq iptables-nft jq openssl curl ca-certificates \
-        policycoreutils-python-utils
+        policycoreutils-python-utils git dnf5-plugins
     if [[ "$KEEPASS_ENABLED" == yes ]]; then
         dnf install -y python3-pykeepass
     fi

@@ -15,9 +15,11 @@ read_settings "$1"
 check_host
 install_packages
 STAGING="/srv/den-restore-$(date +%s)"
+if [[ -n "${MEDIA_MOUNT:-}" ]]; then
+    STAGING="$MEDIA_MOUNT/den-restore-$(date +%s)"
+fi
 restore_snapshot "$2" "$STAGING"
-[[ ! -e "$DATA_DIR" ]] || rmdir "$DATA_DIR"
-mv "$STAGING$DATA_DIR" "$DATA_DIR"
+promote_restored_data "$STAGING$DATA_DIR"
 copy_release "$DATA_DIR/system/deployment" "$DEPLOY_DIR"
 cp "$DATA_DIR/system/deployment/.env" "$DEPLOY_DIR/.env"
 cp "$DATA_DIR/system/deployment/compose.yml" "$DEPLOY_DIR/compose.yml"
@@ -32,5 +34,6 @@ install_host_config
 systemctl start den.service
 fluxer_restore
 systemctl enable --now den-backup.timer den-check.timer
+enable_update_timer
 show_summary
 log 'Recovery completed with the versions and keys saved in the snapshot.'

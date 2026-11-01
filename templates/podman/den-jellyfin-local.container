@@ -1,0 +1,27 @@
+[Unit]
+Description=DEN local Jellyfin test (HTTP, no automated backups)
+ConditionPathIsMountPoint=/mnt/Storage
+
+[Container]
+Image=docker.io/jellyfin/jellyfin:12.4@sha256:fea863d0cd9ec445985d9c75fc6ed64e38a1d2766cf0c250a33d553f4fc1b771
+ContainerName=den-jellyfin-local
+UserNS=keep-id
+User=1000
+Group=1000
+PublishPort=192.168.50.109:8096:8096
+Environment=JELLYFIN_PublishedServerUrl=http://192.168.50.109:8096
+Volume=/mnt/Storage/den-local/jellyfin/config:/config:Z
+Volume=/mnt/Storage/den-local/jellyfin/cache:/cache:Z
+Volume=/mnt/Storage/den-local/media:/media:ro,Z
+HealthCmd=curl -fsS http://localhost:8096/health
+HealthInterval=30s
+HealthTimeout=10s
+HealthRetries=10
+HealthStartPeriod=120s
+
+[Service]
+Restart=on-failure
+TimeoutStartSec=900
+
+[Install]
+WantedBy=default.target

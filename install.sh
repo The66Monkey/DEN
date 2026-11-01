@@ -18,8 +18,10 @@ fi
 read_settings "$1"
 check_host
 install_packages
+GIT_TERMINAL_PROMPT=0 git ls-remote --exit-code "$UPDATE_REPOSITORY" refs/heads/main >/dev/null || fail 'Automatic updates need root Git access to UPDATE_REPOSITORY; configure a read-only deploy key before installing.'
 copy_release "$ROOT" "$DEPLOY_DIR"
 write_environment "$DEPLOY_DIR"
+configure_media_storage
 prepare_storage
 cp "$DEPLOY_DIR/templates/compose.yml" "$DEPLOY_DIR/compose.yml"
 write_routes
@@ -34,5 +36,6 @@ systemctl start den.service
 fluxer_install
 backup_stack
 systemctl enable --now den-backup.timer den-check.timer
+enable_update_timer
 show_summary
 log 'DEN is installed. Verify HTTPS and finish first-user setup before inviting your household.'

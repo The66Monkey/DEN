@@ -7,6 +7,8 @@ source "$ROOT/lib/keepass.sh"
 source "$ROOT/lib/fluxer.sh"
 source "$ROOT/lib/backup.sh"
 source "$ROOT/lib/maintenance.sh"
+source "$ROOT/lib/hosts/fedora.sh"
+source "$ROOT/lib/automatic.sh"
 DEPLOY_DIR=/opt/den
 DATA_DIR=/srv/den
 
@@ -31,6 +33,7 @@ Usage: sudo den <command>
     fluxer-status                    Check the optional Fluxer service
     fluxer-upgrade                   Back up DEN, then upgrade Fluxer through rexctl
   update <trusted-release-dir>     Back up, then apply a reviewed DEN release
+  auto-update                     Run monthly releases, host upgrades and reboot if needed
   git-admin                        Create the initial Forgejo administrator
     vpn-add <device-name>            Create a separate private VPN profile
     vpn-remove <device-name>         Revoke a lost or retired VPN device
@@ -51,7 +54,9 @@ if [[ "$ACTION" == alert ]]; then
     exit 0
 fi
 exec 9>/run/lock/den.lock
-if ! flock -n 9; then
+if [[ "$ACTION" == auto-update ]]; then
+    flock -w 21600 9 || fail 'Timed out waiting for another DEN operation.'
+elif ! flock -n 9; then
     if [[ "$ACTION" == check ]]; then
         log 'Health check skipped while maintenance is running.'
         exit 0
@@ -63,7 +68,7 @@ for secret in DB_PASSWORD NEXTCLOUD_ADMIN_PASSWORD RESTIC_PASSWORD; do
     [[ -n "${!secret:-}" ]] || fail "Missing deployment secret: $secret"
 done
 case "$ACTION" in
-    start|stop|status|check|backup|snapshots|verify-backup|prune|git-admin|keepass-password|keepass-sync|fluxer-status|fluxer-upgrade)
+    start|stop|status|check|backup|snapshots|verify-backup|prune|git-admin|keepass-password|keepass-sync|fluxer-status|fluxer-upgrade|auto-update)
         [[ $# == 0 ]] || fail "$ACTION takes no arguments."
         ;;
     logs) [[ $# -le 1 ]] || fail 'logs takes at most one service.' ;;
@@ -99,6 +104,7 @@ case "$ACTION" in
     fluxer-status) fluxer_status ;;
     fluxer-upgrade) fluxer_upgrade ;;
     update) update_release "$1" ;;
+    auto-update) automatic_update ;;
     git-admin) git_admin ;;
     vpn-add) vpn_add "$1" ;;
     vpn-remove) vpn_remove "$1" ;;

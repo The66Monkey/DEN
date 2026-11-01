@@ -1,13 +1,95 @@
 #!/usr/bin/env bash
 
 compose() {
+    local -a profiles=()
+    case "${1:-}" in up|start|run) ensure_media_storage ;; esac
+    [[ "${QBITTORRENT_ENABLED:-no}" != yes ]] || profiles=(--profile torrents)
     env -i PATH="$PATH" HOME="${HOME:-/root}" docker compose \
         --project-name den --project-directory "$DEPLOY_DIR" \
-        --env-file "$DEPLOY_DIR/.env" -f "$DEPLOY_DIR/compose.yml" "$@"
+        --env-file "$DEPLOY_DIR/.env" -f "$DEPLOY_DIR/compose.yml" "${profiles[@]}" "$@"
+}
+
+check_media_disk() {
+    [[ -n "${MEDIA_MOUNT:-}" ]] || return 0
+    [[ "$(realpath -e "$MEDIA_MOUNT")" == "$MEDIA_MOUNT" ]] || fail 'MEDIA_MOUNT cannot contain symlinks.'
+    mountpoint -q "$MEDIA_MOUNT" || fail "Mount the secondary storage disk first: $MEDIA_MOUNT"
+    [[ -w "$MEDIA_MOUNT" ]] || fail 'Secondary storage disk is not writable.'
+    case "$(findmnt -n -o FSTYPE --mountpoint "$MEDIA_MOUNT")" in
+        ext4|xfs|btrfs) ;;
+        *) fail 'Secondary storage needs a local ext4, XFS, or Btrfs filesystem with Linux ownership and SELinux support.' ;;
+    esac
+    [[ "$(stat -c %d "$MEDIA_MOUNT")" != "$(stat -c %d /srv)" ]] || fail 'Secondary storage must be a different filesystem from the OS data root.'
+    [[ "$(stat -c %d "$MEDIA_MOUNT")" != "$(stat -c %d "$BACKUP_MOUNT")" ]] || fail 'Secondary storage and backups must be on different filesystems.'
+}
+
+ensure_media_storage() {
+    [[ -n "${MEDIA_MOUNT:-}" ]] || return 0
+    check_media_disk
+    local directory
+    for directory in media downloads; do
+        mountpoint -q "$DATA_DIR/$directory" || fail "Secondary storage bind mount is missing: $DATA_DIR/$directory"
+        [[ "$(realpath -e "$MEDIA_MOUNT/den/$directory")" == "$MEDIA_MOUNT/den/$directory" ]] || fail 'Secondary storage folders cannot contain symlinks.'
+        [[ "$DATA_DIR/$directory" -ef "$MEDIA_MOUNT/den/$directory" ]] || fail "Wrong secondary storage bind mount: $DATA_DIR/$directory"
+    done
+}
+
+media_mount_unit() {
+    local directory="$1" disk_unit
+    disk_unit="$(systemd-escape --path --suffix=mount "$MEDIA_MOUNT")"
+    cat <<EOF
+[Unit]
+Description=DEN secondary $directory storage
+RequiresMountsFor=$MEDIA_MOUNT/den/$directory
+BindsTo=$disk_unit
+After=$disk_unit
+
+[Mount]
+What=$MEDIA_MOUNT/den/$directory
+Where=$DATA_DIR/$directory
+Type=none
+Options=bind
+
+[Install]
+WantedBy=multi-user.target
+EOF
+}
+
+configure_media_storage() {
+    [[ -n "${MEDIA_MOUNT:-}" ]] || return 0
+    check_media_disk
+    local directory unit units=
+    for directory in media downloads; do
+        [[ ! -L "$DATA_DIR" && ! -L "$DATA_DIR/$directory" ]] || fail 'DEN storage paths cannot be symlinks.'
+        mkdir -p "$MEDIA_MOUNT/den/$directory" "$DATA_DIR/$directory"
+        [[ "$(realpath -e "$MEDIA_MOUNT/den/$directory")" == "$MEDIA_MOUNT/den/$directory" ]] || fail 'Secondary storage folders cannot contain symlinks.'
+        [[ -z "$(find "$DATA_DIR/$directory" -mindepth 1 -print -quit)" ]] || fail 'Existing media/downloads require an explicit migration; DEN will not hide them with a mount.'
+        unit="$(systemd-escape --path --suffix=mount "$DATA_DIR/$directory")"
+        [[ ! -e "/etc/systemd/system/$unit" ]] || fail "Storage mount unit already exists: $unit"
+        units+=" $unit"
+    done
+    for directory in media downloads; do
+        unit="$(systemd-escape --path --suffix=mount "$DATA_DIR/$directory")"
+        media_mount_unit "$directory" > "/etc/systemd/system/$unit"
+        chmod 644 "/etc/systemd/system/$unit"
+    done
+    install -d -m 755 /etc/systemd/system/docker.service.d
+    cat > /etc/systemd/system/docker.service.d/den-storage.conf <<EOF
+[Unit]
+RequiresMountsFor=$DATA_DIR/media $DATA_DIR/downloads
+BindsTo=$units
+After=$units
+EOF
+    chmod 644 /etc/systemd/system/docker.service.d/den-storage.conf
+    systemctl daemon-reload
+    for directory in media downloads; do
+        unit="$(systemd-escape --path --suffix=mount "$DATA_DIR/$directory")"
+        systemctl enable --now "$unit"
+    done
+    ensure_media_storage
 }
 
 write_routes() {
-    jq -n --arg domain "$DOMAIN" --arg lan "$LAN_CIDR" --arg fluxer "${FLUXER_ENABLED:-no}" '
+    jq -n --arg domain "$DOMAIN" --arg lan "$LAN_CIDR" --arg fluxer "${FLUXER_ENABLED:-no}" --arg torrents "${QBITTORRENT_ENABLED:-no}" '
         {http: {
             middlewares: {
                 private: {ipAllowList: {sourceRange: [$lan, "10.44.0.0/24"]}},
@@ -16,7 +98,7 @@ write_routes() {
                     regex: "https://(.*)/.well-known/(?:card|cal)dav",
                     replacement: "https://${1}/remote.php/dav/", permanent: true}}
             },
-            routers: (reduce (["media", "photos", "files", "git"] + (if $fluxer == "yes" then ["chat"] else [] end))[] as $name ({};
+            routers: (reduce (["media", "photos", "files", "git"] + (if $fluxer == "yes" then ["chat"] else [] end) + (if $torrents == "yes" then ["downloads"] else [] end))[] as $name ({};
                 .[$name] = {rule: ("Host(`" + (if $name == "chat" then "chat." else $name + "." end) + $domain + "`)") ,
                     entryPoints: ["websecure"], service: $name,
                     middlewares: (["private", "headers"] + (if $name == "files" then ["dav"] else [] end)),
@@ -26,12 +108,14 @@ write_routes() {
                 photos: {loadBalancer: {servers: [{url: "http://immich-server:2283"}]}},
                 files: {loadBalancer: {servers: [{url: "http://nextcloud:80"}]}},
                 git: {loadBalancer: {servers: [{url: "http://forgejo:3000"}]}}
-            } + (if $fluxer == "yes" then {chat: {loadBalancer: {servers: [{url: "http://172.30.44.1:8080"}]}}} else {} end))
+            } + (if $fluxer == "yes" then {chat: {loadBalancer: {servers: [{url: "http://172.30.44.1:8080"}]}}} else {} end)
+              + (if $torrents == "yes" then {downloads: {loadBalancer: {servers: [{url: "http://qbittorrent:8081"}]}}} else {} end))
         }}' > "$DEPLOY_DIR/routes.json"
 }
 
 prepare_storage() {
     local directory
+    ensure_media_storage
     [[ ! -L "$DATA_DIR" && ! -L "$DEPLOY_DIR" ]] || fail 'DEN roots cannot be symlinks.'
     mkdir -p "$DATA_DIR"
     chmod 755 "$DATA_DIR"
@@ -40,7 +124,49 @@ prepare_storage() {
     done
     chmod 700 "$DATA_DIR/system" "$DATA_DIR/traefik"
     chown 1000:1000 "$DATA_DIR/jellyfin" "$DATA_DIR/cache/jellyfin" "$DATA_DIR/media" "$DATA_DIR/media/"* "$DATA_DIR/forgejo"
+    if [[ "${QBITTORRENT_ENABLED:-no}" == yes ]]; then
+        mkdir -p "$DATA_DIR/qbittorrent" "$DATA_DIR/downloads/incomplete" "$DATA_DIR/downloads/complete"
+        prepare_qbittorrent_config "$DATA_DIR/qbittorrent" "downloads.$DOMAIN"
+        chown 1000:1000 "$DATA_DIR/qbittorrent" "$DATA_DIR/qbittorrent/qBittorrent" \
+            "$DATA_DIR/qbittorrent/qBittorrent/qBittorrent.conf" \
+            "$DATA_DIR/downloads" "$DATA_DIR/downloads/incomplete" "$DATA_DIR/downloads/complete"
+    fi
     [[ -f "$DATA_DIR/traefik/acme.json" ]] || install -m 600 /dev/null "$DATA_DIR/traefik/acme.json"
+}
+
+prepare_qbittorrent_config() {
+    local directory="$1" domains="$2"
+    [[ ! -L "$directory" ]] || fail 'qBittorrent configuration directory cannot be a symlink.'
+    mkdir -p "$directory/qBittorrent"
+    [[ ! -L "$directory/qBittorrent" && ! -L "$directory/qBittorrent/qBittorrent.conf" ]] || fail 'qBittorrent configuration cannot be a symlink.'
+    [[ ! -e "$directory/qBittorrent/qBittorrent.conf" ]] || return 0
+    (
+        umask 077
+        cat > "$directory/qBittorrent/qBittorrent.conf" <<EOF
+[LegalNotice]
+Accepted=true
+
+[BitTorrent]
+Session\\DefaultSavePath=/downloads/complete/
+Session\\TempPath=/downloads/incomplete/
+Session\\TempPathEnabled=true
+Session\\Port=6881
+Session\\UseUPnP=false
+
+[Preferences]
+Connection\\UPnP=false
+Downloads\\SavePath=/downloads/complete/
+Downloads\\TempPath=/downloads/incomplete/
+Downloads\\TempPathEnabled=true
+WebUI\\Address=*
+WebUI\\Port=8081
+WebUI\\ServerDomains=$domains
+WebUI\\HostHeaderValidation=true
+WebUI\\CSRFProtection=true
+WebUI\\LocalHostAuth=true
+WebUI\\AuthSubnetWhitelistEnabled=false
+EOF
+    )
 }
 
 check_host() {
@@ -69,6 +195,13 @@ check_host() {
     [[ "$(stat -c %d "$BACKUP_MOUNT")" != "$(stat -c %d /srv)" ]] || fail 'Backup disk must be a different filesystem from /srv.'
     [[ ! -e "$DEPLOY_DIR/.env" ]] || fail 'DEN is already configured.'
     [[ ! -d "$DATA_DIR" || -z "$(find "$DATA_DIR" -mindepth 1 -print -quit)" ]] || fail '/srv/den is not empty; use recovery instead.'
+    check_media_disk
+    if [[ -n "${MEDIA_MOUNT:-}" ]]; then
+        for flag in media downloads; do
+            [[ ! -L "$MEDIA_MOUNT/den" && ! -L "$MEDIA_MOUNT/den/$flag" ]] || fail 'Secondary storage folders cannot be symlinks.'
+            [[ ! -d "$MEDIA_MOUNT/den/$flag" || -z "$(find "$MEDIA_MOUNT/den/$flag" -mindepth 1 -print -quit)" ]] || fail 'Secondary DEN media/downloads are not empty; use an explicit recovery or migration.'
+        done
+    fi
 }
 
 write_vpn() {
@@ -139,11 +272,18 @@ show_summary() {
     printf 'VPN profile: /opt/den/private/home.conf (private; use on ONE device).\n'
     printf 'Finish Jellyfin and Immich account setup in your browser. Create Git admin with: sudo den git-admin\n'
     printf 'Save the recovery kit away from this server: sudo den recovery-kit /path/on/another/device\n'
+    if [[ -n "${MEDIA_MOUNT:-}" ]]; then
+        printf 'HDD media/downloads: %s/den (mounted at /srv/den/media and /srv/den/downloads).\n' "$MEDIA_MOUNT"
+    fi
     if [[ "${KEEPASS_ENABLED:-no}" == yes ]]; then
         printf 'KeePass vault: /opt/den/private/credentials.kdbx; retrieve its password separately with: sudo den keepass-password\n'
     fi
     if [[ "${FLUXER_ENABLED:-no}" == yes ]]; then
         printf 'Fluxer: https://chat.%s (registration by invite; add invites with rexctl).\n' "$DOMAIN"
+    fi
+    if [[ "${QBITTORRENT_ENABLED:-no}" == yes ]]; then
+        printf 'Downloads: https://downloads.%s (qBittorrent admin; temporary password in sudo den logs qbittorrent).\n' "$DOMAIN"
+        printf 'Set a permanent password immediately. No outbound VPN or torrent port forwarding is configured.\n'
     fi
 }
 
