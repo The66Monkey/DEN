@@ -109,11 +109,15 @@ try:
 
     for port in [22, 80, 443, 9090, 7881, 18427]:
         check("den-client", "192.168.50.20", "192.168.50.58", port)
-        check("den-client", "198.51.100.20", "192.168.50.58", port, expected="deny")
+        check("den-client", "198.51.100.20", "192.168.50.58", port,
+              expected="allow" if port in [443, 7881] else "deny")
         check("den-client", "fd00:50::20", "fd00:50::58", port, expected="deny")
     check("den-client", "198.51.100.20", "192.168.50.58", 41873, "udp")
     check("den-client", "192.168.50.20", "192.168.50.58", 7882, "udp")
-    check("den-client", "198.51.100.20", "192.168.50.58", 7882, "udp", "deny")
+    check("den-client", "198.51.100.20", "192.168.50.58", 7882, "udp")
+    for port in [53, 18427]:
+        check("den-client", "198.51.100.20", "192.168.50.58", port, "udp", "deny")
+    check("den-client", "198.51.100.20", "10.44.0.1", 7881, expected="deny")
     for port in [22, 80, 443, 9090, 7881]:
         check("den-vpn-client", "10.44.0.2", "192.168.50.58", port)
     check("den-vpn-client", "10.44.0.2", "10.44.0.1", 53, "udp")
@@ -121,7 +125,11 @@ try:
     check("den-vpn-client", "10.44.0.2", "192.168.50.58", 18427, expected="deny")
     run("nft", "-f", sys.argv[2])
     check("den-client", "198.51.100.20", "192.168.50.58", 80)
-    check("den-client", "198.51.100.20", "192.168.50.58", 443, expected="deny")
+    check("den-client", "198.51.100.20", "192.168.50.58", 443)
+    run("nft", "-f", sys.argv[3])
+    for port in [80, 443, 7881]:
+        check("den-client", "198.51.100.20", "192.168.50.58", port, expected="deny")
+    check("den-client", "198.51.100.20", "192.168.50.58", 7882, "udp", "deny")
     print("Real LAN/VPN/WAN filtering, IPv6 denial, UDP entry and pre-DNAT protection passed.")
 finally:
     for process in processes:

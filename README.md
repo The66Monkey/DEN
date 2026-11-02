@@ -21,8 +21,9 @@ Use the apps from your phone or computer; no desktop is needed on the server.
 **Optional:** qBittorrent for downloads, Fluxer for chat and calls, and a
 KeePassXC-compatible password vault.
 
-Everything runs on one Fedora Server PC, with access limited to your home
-network and VPN.
+Everything runs on one Fedora Server PC. Photos, files, media, Git and downloads
+stay on your home network/VPN. **Enabling Fluxer makes chat and calls public**
+with invite-only registration; see [router setup](docs/networking.md#port-forwarding).
 
 ## Start Here
 

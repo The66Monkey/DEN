@@ -19,6 +19,9 @@ FLUXER_ENABLED=yes
 write_network_guard > "$TEMP/dns.nft"
 ACME_CHALLENGE=http
 write_network_guard > "$TEMP/http.nft"
+FLUXER_ENABLED=no
+ACME_CHALLENGE=dns-desec
+write_network_guard > "$TEMP/private.nft"
 mkdir -p /run/netns
 mount -t tmpfs tmpfs /run/netns
-python3 "$ROOT/tests/firewall-network.py" "$TEMP/dns.nft" "$TEMP/http.nft"
+python3 "$ROOT/tests/firewall-network.py" "$TEMP/dns.nft" "$TEMP/http.nft" "$TEMP/private.nft"

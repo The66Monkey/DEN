@@ -18,7 +18,8 @@ FLUXER_ENABLED=yes
 write_routes
 jq -e '
     .http.routers.chat.rule == "Host(`chat.home.example.net`)" and
-    .http.routers.chat.middlewares == ["private", "headers"] and
+    .http.routers.chat.middlewares == ["headers"] and
+    (all(.http.routers | to_entries[] | select(.key != "chat"); .value.middlewares[0] == "private")) and
     .http.middlewares.private.ipAllowList.sourceRange == ["192.168.1.0/24", "10.44.0.0/24"] and
     .http.services.chat.loadBalancer.servers[0].url == "http://172.30.44.1:29461"
 ' "$DEPLOY_DIR/routes.json" >/dev/null
@@ -36,6 +37,7 @@ install_rexctl() { :; }
 fluxer_install
 grep -Fq -- "--dir $DEPLOY_DIR/fluxer install --domain chat.$DOMAIN" "$REXCTL_LOG"
 grep -Fq -- '--setup browser' "$REXCTL_LOG"
+if grep -Fq -- '--voice-ip' "$REXCTL_LOG"; then fail 'Voice public IP discovery overridden.'; fi
 if grep -Eq -- '--name|--registration|--sign-in|--skip-email' "$REXCTL_LOG"; then
     fail 'Browser setup received terminal-only options.'
 fi
@@ -48,5 +50,10 @@ printf 'full archive\n' > "$DATA_DIR/fluxer/backups/old.tar.zst"
 printf 'new full archive\n' > "$DATA_DIR/fluxer/backups/new.tar.zst"
 touch -d '2 minutes ago' "$DATA_DIR/fluxer/backups/old.tar.zst"
 fluxer_restore
+grep -Fq -- "--dir $DEPLOY_DIR/fluxer config unset voice.public_ip --yes" "$REXCTL_LOG"
 grep -Fq -- "--dir $DEPLOY_DIR/fluxer restore $DATA_DIR/fluxer/backups/new.tar.zst --confirm chat.$DOMAIN --yes" "$REXCTL_LOG"
+fluxer_command() { return 1; }
+if fluxer_configure_public_voice; then fail 'Voice configuration failure was hidden.'; fi
+FLUXER_ENABLED=no
+fluxer_configure_public_voice
 printf 'Fluxer optional route and backup hooks passed.\n'

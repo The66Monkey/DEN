@@ -16,7 +16,7 @@ Core images are pinned by digest in `templates/compose.yml`.
 | Docker bridge | `172.30.44.0/24`, gateway `.1`, allocation `.128/25` |
 | Traefik | Fixed `172.30.44.2`; host TCP 80/443 bound to `LAN_IP` |
 | Fluxer backend | `172.30.44.1:29461` |
-| Fluxer voice | TCP 7881, UDP 7882, LAN/VPN only |
+| Fluxer voice | TCP 7881, UDP 7882, public when enabled |
 | qBittorrent Web UI | Internal 18427; no published UI/peer ports |
 
 Generated `routes.json` is mounted as `routes.yml` for Traefik's file provider.
@@ -28,6 +28,8 @@ Nextcloud trusts only Traefik's address. VPN DNS listens on `10.44.0.1`.
 The `inet den_guard` prerouting chain runs at -110, before Docker DNAT at -100.
 It permits LAN, scoped VPN, return traffic and essential network control.
 Outside access is limited to WireGuard, plus TCP 80 for HTTP-01 certificates.
+Enabled Fluxer also admits IPv4 TCP 443/7881 and UDP 7882 addressed to `LAN_IP`.
+Only chat omits Traefik's private middleware; the other apps remain allowlisted.
 IPv6 application access is blocked.
 
 Firewalld's `den-vpn` zone accepts traffic admitted by the guard. Internal Docker
@@ -78,6 +80,8 @@ Application snapshots are not an OS rollback.
 
 Fedora maintenance selects the next stable release, not skipped majors or
 Rawhide. Private repository credentials must be configured separately on recovery.
+Fluxer updates/recovery unset the previous `voice.public_ip` LAN override so
+Rexctl/LiveKit discovers the public address; enabled chat becomes public on update.
 
 ## Repository
 

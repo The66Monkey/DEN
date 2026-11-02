@@ -111,7 +111,7 @@ write_routes() {
             routers: (reduce (["media", "photos", "files", "git"] + (if $fluxer == "yes" then ["chat"] else [] end) + (if $torrents == "yes" then ["downloads"] else [] end))[] as $name ({};
                 .[$name] = {rule: ("Host(`" + (if $name == "chat" then "chat." else $name + "." end) + $domain + "`)") ,
                     entryPoints: ["websecure"], service: $name,
-                    middlewares: (["private", "headers"] + (if $name == "files" then ["dav"] else [] end)),
+                    middlewares: ((if $name == "chat" then ["headers"] else ["private", "headers"] end) + (if $name == "files" then ["dav"] else [] end)),
                     tls: {certResolver: "home"}})),
             services: ({
                 media: {loadBalancer: {servers: [{url: "http://jellyfin:8096"}]}},
@@ -291,7 +291,8 @@ show_summary() {
         printf 'KeePass vault: /opt/den/private/credentials.kdbx; retrieve its password separately with: sudo den keepass-password\n'
     fi
     if [[ "${FLUXER_ENABLED:-no}" == yes ]]; then
-        printf 'Fluxer: https://chat.%s (registration by invite; add invites with rexctl).\n' "$DOMAIN"
+        printf 'Fluxer: https://chat.%s (PUBLIC chat/calls; registration by invite).\n' "$DOMAIN"
+        printf 'Forward TCP 443/7881 and UDP 7882 to DEN, plus TCP 80 for HTTP certificates. Voice uses automatic public-IP discovery.\n'
     fi
     if [[ "${QBITTORRENT_ENABLED:-no}" == yes ]]; then
         printf 'Downloads: https://downloads.%s (qBittorrent admin; temporary password in sudo den logs qbittorrent).\n' "$DOMAIN"

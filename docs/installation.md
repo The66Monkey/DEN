@@ -73,8 +73,12 @@ Print it if useful; do not write passwords or tokens on it.
 - [ ] Create a deSEC API token with permission to update those records and
   create/delete certificate challenge TXT records. Keep it ready for installation.
 - [ ] Forward **UDP 41873** to the server's LAN IP. Choose UDP, not TCP.
-  This checklist uses DNS certificates (`dns-desec`), so no TCP web forwards
-  are needed. Leave any other server's TCP 80/443 forwards alone.
+  With DNS certificates (`dns-desec`) and Fluxer disabled, no web forwards are needed.
+- [ ] **If enabling Fluxer:** also forward **TCP 443, TCP 7881 and UDP 7882**
+  directly to DEN. Chat and calls are public; other apps stay private.
+  TCP 443 cannot simultaneously point to another server on the same public IP.
+  If it already serves BASM, postpone public Fluxer until you plan the cutover;
+  this setup does not configure a shared external proxy.
 - [ ] Confirm your ISP gives you a reachable public IPv4. If the router is
   behind CGNAT, ask your ISP before continuing.
 
@@ -119,6 +123,7 @@ Keep `home.DOMAIN` pointing to the public IP.
 
 - [ ] Set optional services to `yes` or leave them `no`:
   `QBITTORRENT_ENABLED`, `FLUXER_ENABLED`, `KEEPASS_ENABLED`.
+  Fluxer is public when enabled, including when upgrading an existing install.
 - [ ] Make sure root can read the configured `UPDATE_REPOSITORY` without prompts.
   A private repository needs a read-only deploy key for root; your normal
   user's Git access is not enough.
@@ -181,7 +186,7 @@ Complete only the services you enabled:
 | [ ] | Nextcloud | `https://files.DOMAIN` | Sign in as `admin` with the password below. |
 | [ ] | Forgejo | `https://git.DOMAIN` | Run `sudo den git-admin` over SSH, then use HTTPS Git. |
 | [ ] | qBittorrent | `https://downloads.DOMAIN` | Sign in as `admin`; get temporary password below and set a permanent one. |
-| [ ] | Fluxer | `https://chat.DOMAIN` | Use setup token below to create admin; registration is invite-only. |
+| [ ] | Fluxer | `https://chat.DOMAIN` | Public chat/calls. Use setup token below to create admin; registration is invite-only. |
 
 Retrieve credentials privately over SSH; run optional commands only if enabled:
 

@@ -40,7 +40,7 @@ fluxer_install() {
     install -d -m 700 "$DATA_DIR/fluxer/backups"
     fluxer_command install --domain "$instance_domain" \
         --behind-proxy --bind "$(fluxer_bind)" --setup browser \
-        --voice-ip "$LAN_IP" --open-firewall=false \
+        --open-firewall=false \
         --confirm "$instance_domain" --yes
     fluxer_command registration set invite
     fluxer_command backup location "$DATA_DIR/fluxer/backups"
@@ -70,7 +70,14 @@ fluxer_restore() {
         install_rexctl
     fi
     fluxer_command restore "$archive" --confirm "$(fluxer_domain)" --yes
+    fluxer_configure_public_voice || return 1
     fluxer_command backup location "$DATA_DIR/fluxer/backups"
+}
+
+fluxer_configure_public_voice() {
+    [[ "${FLUXER_ENABLED:-no}" == yes ]] || return 0
+    # Remove the old LAN-only override; Rexctl/LiveKit discovers the public IP.
+    fluxer_command config unset voice.public_ip --yes
 }
 
 fluxer_health_check() {

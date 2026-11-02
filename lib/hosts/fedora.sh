@@ -40,6 +40,10 @@ EOF
     if [[ "${ACME_CHALLENGE:-http}" == http ]]; then
         printf '        ip daddr %s tcp dport 80 return\n' "$LAN_IP"
     fi
+    if [[ "${FLUXER_ENABLED:-no}" == yes ]]; then
+        printf '        ip daddr %s tcp dport { 443, 7881 } return\n' "$LAN_IP"
+        printf '        ip daddr %s udp dport 7882 return\n' "$LAN_IP"
+    fi
     cat <<EOF
         counter drop
     }

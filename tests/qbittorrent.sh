@@ -54,7 +54,11 @@ for enabled in no yes; do
 done
 FLUXER_ENABLED=yes
 write_routes
-jq -e '(.http.routers | length == 6) and (.http.routers.chat != null) and (.http.routers.downloads != null)' "$DEPLOY_DIR/routes.json" >/dev/null
+jq -e '
+    (.http.routers | length == 6) and
+    (.http.routers.chat.middlewares == ["headers"]) and
+    (all(.http.routers | to_entries[] | select(.key != "chat"); .value.middlewares[0] == "private"))
+' "$DEPLOY_DIR/routes.json" >/dev/null
 
 prepare_qbittorrent_config "$TEMP/config" downloads.home.example.net
 config="$TEMP/config/qBittorrent/qBittorrent.conf"

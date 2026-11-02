@@ -18,6 +18,11 @@ On the first of each month, between 04:00 and 04:30 server time, DEN updates
 itself, enabled Fluxer and Fedora. It takes backups and may reboot.
 Keep the storage disk connected. Missed maintenance runs when the timer resumes.
 
+**Fluxer exposure change:** applying the public-chat update to an enabled
+Fluxer install makes chat/calls public and resets voice IP discovery. Review
+[direct router forwarding and cutover](networking.md#public-chat-and-calls)
+before updating; DEN does not migrate an existing BASM instance.
+
 Check the schedule or recent results:
 
 ```bash

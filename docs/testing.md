@@ -28,6 +28,9 @@ Still to verify:
 - Owner confirmation of normal playback, photo upload, file sync and voice use.
 
 These are follow-up checks, not claims of completed validation.
+The public Fluxer routing change has not been applied to that live host.
+Public chat, cross-network voice/video and a BASM migration/cutover still need
+live acceptance; earlier VPN-only checks do not validate them.
 
 ## Automated Checks
 
@@ -77,14 +80,17 @@ Use a spare host or VM and non-sensitive data:
 
 - Install; verify all enabled apps, valid HTTPS and first-user setup.
 - Test playback, photo upload, file sync and HTTPS Git clone/push.
-- Test mobile VPN handshake/DNS and blocked outside access without VPN.
-  With DNS-01 coexistence, leave the other server's web forwards unchanged.
+- Test mobile VPN handshake/DNS and blocked private apps without VPN.
+  With Fluxer enabled, test public chat login, invites, WebSockets and calls
+  between external networks with VPN off. Confirm other app routes return 403.
+  With Fluxer disabled, public HTTPS/voice must be blocked by the guard.
 - Reload firewalld; confirm LAN/VPN, outbound access and outside denial.
 - Back up and verify a staged restore; recover to an empty host and check
   actual accounts, files, databases and VPN keys.
 - Reboot; verify guard and storage precede Docker and all services return.
   Boot without the HDD: DEN must not write bulk data onto the SSD.
-- Check optional Fluxer chat/voice and recovery, qBittorrent resume/seeding,
+- Check optional Fluxer public voice discovery after update/restore and WAN IP
+  changes, LAN hairpin calls, qBittorrent resume/seeding,
   read-only Jellyfin downloads and KeePass export.
 - Test shared-HDD backup/restore without including the repository itself.
 - Exercise updates, required database migrations, monthly Fedora upgrade/reboot,

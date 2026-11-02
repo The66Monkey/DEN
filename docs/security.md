@@ -1,6 +1,7 @@
 # Access and Privacy
 
-- Apps work only on LAN/VPN and still require their own logins.
+- Photos, files, media, Git and downloads work only on LAN/VPN. Enabled Fluxer
+  chat and calls are public, with invite-only registration and app logins.
 - Use a separate lowercase WireGuard profile for each device. Revoke a lost
   device with `sudo den vpn-remove DEVICE-NAME`.
 - Keep passwords, VPN QR codes, profiles and recovery kits private.
