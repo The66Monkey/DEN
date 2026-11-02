@@ -3,6 +3,32 @@
 For everyday checks, use `sudo den check`. This page is for changes to DEN,
 not a setup checklist for household users.
 
+## Validation Status
+
+The first home-server release was deployed on a bare-metal Fedora Server host.
+Verified during setup:
+
+- All six enabled web apps reachable over trusted HTTPS on LAN.
+- Real WireGuard handshake, VPN DNS, HTTPS and Cockpit access.
+- Outside-source filtering, firewalld reload persistence and outbound connectivity.
+- HDD media/download migration, persistent mount dependencies, read-only
+  Jellyfin download access and writable metadata storage.
+- Real encrypted backups and verified staged restores, including shared-HDD
+  storage without backing up the repository itself.
+- Automated Fedora test suite. An earlier deployment reboot passed before
+  the latest firewall/storage changes.
+
+Still to verify:
+
+- Reboot with the final firewall and HDD mount configuration.
+- Full recovery onto an empty replacement host.
+- End-to-end live validation of the already enabled monthly update job,
+  including a Fedora major upgrade and reboot. Scheduling and update commands
+  are implemented; automated tests cover their ordering and failure paths.
+- Owner confirmation of normal playback, photo upload, file sync and voice use.
+
+These are follow-up checks, not claims of completed validation.
+
 ## Automated Checks
 
 Dependencies: Bash, jq, OpenSSL, ShellCheck, Restic, Python 3 with pykeepass,

@@ -37,5 +37,7 @@ the server to opening your apps. Print it or tick off the steps as you go.
 - [Backup and recovery](docs/backup.md)
 - [Access and privacy](docs/security.md)
 
-**Status: 0.1.0 alpha.** Keep another copy of files you cannot replace.
+**Version 1.0.0 — first home-server release.** Deployed and tested on bare-metal
+Fedora Server. See [validation status](docs/testing.md#validation-status) for
+what was checked and what remains. Keep another copy of files you cannot replace.
 For contributors: [architecture](docs/architecture.md) and [testing](docs/testing.md).
