@@ -39,8 +39,13 @@ jq -e '
     (all(.services[] | .volumes[]? | select(.source | startswith("/srv/den/")); .bind.selinux == "z"))
 ' "$DEPLOY_DIR/rendered.json" >/dev/null
 jq -e '
-    (.http.routers | length == 5) and
-    (all(.http.routers[]; .tls.certResolver == "home" and .middlewares[0] == "private")) and
+    (.http.routers | length == 6) and
+    (all(.http.routers | to_entries[] | select(.key != "home-lan-ip");
+        .value.tls.certResolver == "home" and .value.middlewares[0] == "private")) and
+    (.http.routers["home-lan-ip"].rule == "Host(`192.168.1.10`)") and
+    (.http.routers["home-lan-ip"].service == "home") and
+    (.http.routers["home-lan-ip"].middlewares == ["private", "headers"]) and
+    (.http.routers["home-lan-ip"].tls == {}) and
     (.http.middlewares.private.ipAllowList.sourceRange == ["192.168.1.0/24", "10.44.0.0/24"]) and
     (.http.routers.photos.rule == "Host(`photos.home.example.net`)") and
     (.http.routers.home.rule == "Host(`home.home.example.net`)") and

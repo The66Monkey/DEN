@@ -123,7 +123,7 @@ write_homepage() {
 }
 
 write_routes() {
-    jq -n --arg domain "$DOMAIN" --arg lan "$LAN_CIDR" --arg fluxer "${FLUXER_ENABLED:-no}" --arg torrents "${QBITTORRENT_ENABLED:-no}" --arg qbit "http://qbittorrent:$QBITTORRENT_WEBUI_PORT" --arg chat "http://172.30.44.1:$FLUXER_PROXY_PORT" '
+    jq -n --arg domain "$DOMAIN" --arg ip "$LAN_IP" --arg lan "$LAN_CIDR" --arg fluxer "${FLUXER_ENABLED:-no}" --arg torrents "${QBITTORRENT_ENABLED:-no}" --arg qbit "http://qbittorrent:$QBITTORRENT_WEBUI_PORT" --arg chat "http://172.30.44.1:$FLUXER_PROXY_PORT" '
         {http: {
             middlewares: {
                 private: {ipAllowList: {sourceRange: [$lan, "10.44.0.0/24"]}},
@@ -136,7 +136,11 @@ write_routes() {
                 .[$name] = {rule: ("Host(`" + (if $name == "chat" then "chat." else $name + "." end) + $domain + "`)") ,
                     entryPoints: ["websecure"], service: $name,
                     middlewares: ((if $name == "chat" then ["headers"] else ["private", "headers"] end) + (if $name == "files" then ["dav"] else [] end)),
-                    tls: {certResolver: "home"}})),
+                    tls: {certResolver: "home"}}) + {
+                "home-lan-ip": {
+                    rule: ("Host(`" + $ip + "`)"), entryPoints: ["websecure"],
+                    service: "home", middlewares: ["private", "headers"], tls: {}
+                }}),
             services: ({
                 home: {loadBalancer: {servers: [{url: "http://homepage:80"}]}},
                 media: {loadBalancer: {servers: [{url: "http://jellyfin:8096"}]}},

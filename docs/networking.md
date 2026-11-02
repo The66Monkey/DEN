@@ -126,7 +126,10 @@ Devices must use the router's DNS; browser Secure DNS can bypass it.
 If the router has no local DNS overrides, use WireGuard or add these entries
 to each computer's hosts file.
 
-Open apps by hostname, not IP. A bare IP gives a 404 or certificate error.
+Open apps by hostname, not IP. `https://SERVER-LAN-IP/` serves only the DEN
+home page, still restricted to LAN/VPN. The IP route does not request an ACME
+certificate, so browsers normally show a certificate warning there. For trusted
+HTTPS use `https://home.DOMAIN/` with the local/VPN DNS arrangement above.
 Public DNS may send you to another server, even from home.
 
 ## Verify Access

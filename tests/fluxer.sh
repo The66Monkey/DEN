@@ -10,10 +10,11 @@ DEPLOY_DIR="$TEMP/deployment"
 DATA_DIR="$TEMP/data"
 mkdir -p "$DEPLOY_DIR" "$DATA_DIR"
 DOMAIN=home.example.net
+LAN_IP=192.168.1.10
 LAN_CIDR=192.168.1.0/24
 FLUXER_ENABLED=no
 write_routes
-jq -e '(.http.routers | keys | sort) == ["files", "git", "home", "media", "photos"]' "$DEPLOY_DIR/routes.json" >/dev/null
+jq -e '(.http.routers | keys | sort) == ["files", "git", "home", "home-lan-ip", "media", "photos"]' "$DEPLOY_DIR/routes.json" >/dev/null
 FLUXER_ENABLED=yes
 write_routes
 jq -e '

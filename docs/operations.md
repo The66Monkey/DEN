@@ -25,6 +25,9 @@ In the 2026-11-02 home-lab migration, DEN is on `192.168.50.245` (`br0`,
 physical port `enp3s0`) and BASM on `192.168.50.20` (2 vCPUs, 6 GiB RAM,
 40 GiB disk). The old Mint server remains available until migration sign-off.
 DEN's old `.58` LAN binding and private DNS entry were updated to `.245`.
+The new homepage service has also been deployed, with private hostname and
+LAN-IP routes. IP access uses a default certificate (browser warning); the
+hostname certificate is handled separately through deSEC DNS challenges.
 The deployed production DEN runtime is still Docker; production Podman/Quadlet
 support and its data migration have **not** been implemented. Existing local
 Podman templates do not make a production runtime switch safe.
@@ -36,6 +39,13 @@ TCP 7881 and UDP 7882 on DEN, not both protocols on 7881 on the old Mint host.
 Voice forwarding alone does not restore chat HTTPS. Review
 [coexistence and public chat](networking.md#coexisting-with-another-web-server)
 before enabling both publicly; shared ingress is not configured automatically.
+
+Existing DEN and migrated legacy WireGuard keys were preserved. Moving between
+machines does not require replacing profiles or QR codes if the endpoint,
+port, keys and peer addresses remain valid. DEN has recorded a peer handshake;
+test each required device before retiring the old server. To enroll a new
+device, use `sudo den vpn-add DEVICE-NAME` and follow the private profile/QR
+instructions, rather than sharing one profile across devices.
 
 DEN's backup does not automatically include a libvirt VM or BASM's guest
 repository. Arrange an independent encrypted copy of BASM backups and test
