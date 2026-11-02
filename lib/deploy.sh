@@ -2,11 +2,15 @@
 
 compose() {
     local -a profiles=()
+    local -a files=(-f "$DEPLOY_DIR/compose.yml")
     case "${1:-}" in up|start|run) ensure_media_storage ;; esac
     [[ "${QBITTORRENT_ENABLED:-no}" != yes ]] || profiles=(--profile torrents)
+    if [[ "${ACME_CHALLENGE:-http}" == dns-desec ]]; then
+        files+=(-f "$DEPLOY_DIR/templates/compose.dns.yml")
+    fi
     env -i PATH="$PATH" HOME="${HOME:-/root}" docker compose \
         --project-name den --project-directory "$DEPLOY_DIR" \
-        --env-file "$DEPLOY_DIR/.env" -f "$DEPLOY_DIR/compose.yml" "${profiles[@]}" "$@"
+        --env-file "$DEPLOY_DIR/.env" "${files[@]}" "${profiles[@]}" "$@"
 }
 
 check_media_disk() {

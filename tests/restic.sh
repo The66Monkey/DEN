@@ -31,11 +31,10 @@ compose() {
     esac
 }
 if [[ -n "${RESTIC_BIN:-}" ]]; then
-    restic_cmd() {
-        RESTIC_REPOSITORY="$BACKUP_MOUNT/den-restic" RESTIC_PASSWORD="$RESTIC_PASSWORD" "$RESTIC_BIN" "$@"
-    }
+    restic() { "$RESTIC_BIN" "$@"; }
 fi
 initialize_backup >/dev/null
+(unset HOME XDG_CACHE_HOME; restic_cmd snapshots >/dev/null)
 backup_stack >/dev/null
 SNAPSHOT="$(restic_cmd snapshots --host den --tag den-v1 --json | jq -r 'last.id')"
 restore_snapshot "$SNAPSHOT" "$TEMP/restored" >/dev/null

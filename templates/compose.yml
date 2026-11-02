@@ -34,7 +34,7 @@ services:
     <<: *service
     image: traefik:v3.7.17@sha256:30ff62491aacdb862ceb8c9edcf2627da638d7deafdd4b6dab32fe34f8aa3e90
     command:
-      - --providers.file.filename=/etc/traefik/routes.json
+      - --providers.file.filename=/etc/traefik/routes.yml
       - --providers.file.watch=true
       - --entrypoints.web.address=:80
       - --entrypoints.web.http.redirections.entrypoint.to=websecure
@@ -50,7 +50,7 @@ services:
       - '${LAN_IP:?required}:80:80'
       - '${LAN_IP:?required}:443:443'
     volumes:
-      - ./routes.json:/etc/traefik/routes.json:ro,z
+      - ./routes.json:/etc/traefik/routes.yml:ro,z
       - /srv/den/traefik:/certificates:z
     networks:
       home:
@@ -229,3 +229,5 @@ networks:
     ipam:
       config:
         - subnet: 172.30.44.0/24
+          ip_range: 172.30.44.128/25
+          gateway: 172.30.44.1

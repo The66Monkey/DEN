@@ -38,11 +38,11 @@ fluxer_install() {
     [[ ! -e "$(fluxer_dir)/.rexctl" ]] || fail 'Fluxer already has instance data; use rexctl instead of reinstalling.'
     install_rexctl
     install -d -m 700 "$DATA_DIR/fluxer/backups"
-    fluxer_command install --domain "$instance_domain" --name DEN \
+    fluxer_command install --domain "$instance_domain" \
         --behind-proxy --bind "$(fluxer_bind)" --setup browser \
-        --registration invite --sign-in username --skip-email \
         --voice-ip "$LAN_IP" --open-firewall=false \
         --confirm "$instance_domain" --yes
+    fluxer_command registration set invite
     fluxer_command backup location "$DATA_DIR/fluxer/backups"
     fluxer_command backup
 }

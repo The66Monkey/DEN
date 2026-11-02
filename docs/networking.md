@@ -25,14 +25,30 @@ The apex (`@`, shown as `-` in deSEC) can keep pointing to another server. DEN u
 3. Set `DOMAIN` to the zone name, without `https://` or a service prefix. `EMAIL` is your existing certificate contact address, not a DEN mailbox.
 4. Create a deSEC API token permitted to update DEN's records. The installer prompts for it privately and stores it in root-only `/opt/den/private/ddns.env`.
 
-DEN checks the public IPv4 at installation and every four hours, updating the records when it changes. Certificates use HTTP-01 through TCP 80, not the DNS API. Check updater logs with `sudo journalctl -u den-ddns`.
+DEN checks the public IPv4 at installation and every four hours, updating the records when it changes. Certificates default to HTTP-01 through TCP 80. Check updater logs with `sudo journalctl -u den-ddns`.
+
+### Coexisting with another web server
+
+Set `ACME_CHALLENGE=dns-desec` before installation to issue and renew
+certificates through deSEC DNS-01 instead. The deSEC token must also permit
+creating and deleting TXT records at `_acme-challenge` beneath each enabled
+application name. Traefik receives the token through a protected file, not a
+command-line argument. It waits up to ten minutes for authoritative DNS
+propagation; certificate issuance is not immediate.
+
+With DNS-01 and VPN-only remote access, forward **only UDP 41873** to DEN.
+Leave existing TCP 80/443 forwards pointing to your other server. DEN still
+listens on its own LAN address on standard TCP 80/443; local DNS overrides
+and the WireGuard DNS server direct clients to that address. No alternate
+HTTPS ports are needed. Do not expect a direct public DEN URL to reach DEN
+without the VPN in this mode.
 
 Allow DNS changes to propagate. For example, `nslookup home.<DOMAIN> 1.1.1.1` and `nslookup files.<DOMAIN> 1.1.1.1` must return your WAN IPv4. A local lookup of `files.<DOMAIN>` should return the server's LAN IPv4 after configuring local DNS.
 
 ## Router and local DNS
 
 1. Find the server's LAN IPv4 with `hostname -I` and reserve it in your router. Set `LAN_IP` and your home subnet as `LAN_CIDR` in the install configuration.
-2. Forward **TCP 80**, **TCP 443**, and **UDP 41873** to the server. TCP 80 is needed for certificate issuance and renewal; leave it open. DEN's WireGuard port is fixed in `lib/core.sh`.
+2. Normally, forward **TCP 80**, **TCP 443**, and **UDP 41873** to the server. TCP 80 is needed for HTTP-01 certificate issuance and renewal; leave it open. For `ACME_CHALLENGE=dns-desec` with VPN-only remote access, forward only UDP 41873 as described above. DEN's WireGuard port is fixed in `lib/core.sh`.
 3. Add local DNS overrides for `media`, `photos`, `files`, and `git`, plus enabled optional application names, resolving them to the server's LAN IPv4. Configure clients to use that local DNS. NAT loopback may work instead, but overrides are recommended.
 
 Do not forward application or administration ports, including Fluxer voice (TCP 7881/UDP 7882), SSH, databases, DNS 53, or proxy-backend ports. DEN does not configure router DNS or port forwarding.
@@ -43,7 +59,7 @@ Confirm your router has a public WAN IPv4. CGNAT (`100.64.0.0/10`) or a private 
 
 Test from mobile data or another external network, not your home Wi-Fi:
 
-- With VPN **off**, every enabled HTTPS application must return **403 Forbidden**.
+- With VPN **off**, every enabled HTTPS application must return **403 Forbidden** if forwarding TCP 443 to DEN. In DNS-01 VPN-only mode, public traffic goes to the other server instead and must not reach DEN.
 - With VPN **on**, each URL must show the application or login page with a valid certificate.
 - Fluxer voice ports must not be reachable from mobile data without VPN.
 

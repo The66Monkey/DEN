@@ -4,7 +4,7 @@ Requires=wg-quick@wg0.service
 After=wg-quick@wg0.service network-online.target
 
 [Service]
-ExecStart=/usr/sbin/dnsmasq --keep-in-foreground --conf-file=/opt/den/private/dnsmasq.conf
+ExecStart=/usr/sbin/dnsmasq --keep-in-foreground --pid-file= --conf-file=/opt/den/private/dnsmasq.conf
 Restart=on-failure
 ProtectSystem=strict
 ProtectHome=yes

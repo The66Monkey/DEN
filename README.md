@@ -35,6 +35,9 @@ DEN deploys a fixed core stack on one Fedora Server PC: media, photos, files, pr
    work: you need a reachable public IPv4 from your ISP. If the WAN IP changes,
    DEN's built-in deSEC updater refreshes its records every four hours.
    The installer asks for a deSEC API token; the domain apex is never changed.
+   If another server already uses public TCP 80/443, set
+   `ACME_CHALLENGE=dns-desec` and forward only UDP 41873 for VPN-only access.
+   Certificates then use deSEC DNS validation; see [coexistence setup](docs/networking.md#coexisting-with-another-web-server).
 5. **Make the application names work at home.** In your router's local DNS,
    point `media.YOUR-DOMAIN`, `photos.YOUR-DOMAIN`, `files.YOUR-DOMAIN`, and
    `git.YOUR-DOMAIN` to the reserved **LAN IP**; include optional names if enabled.

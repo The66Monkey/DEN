@@ -36,4 +36,6 @@ if grep -Fq 'AllowedIPs = 10.44.0.3/32' "$DEPLOY_DIR/private/wg0.conf"; then fai
 grep -Fq 'AllowedIPs = 10.44.0.2/32' "$DEPLOY_DIR/private/wg0.conf"
 cmp "$DEPLOY_DIR/private/wg0.conf" "$TEMP/installed-wg0.conf"
 grep -q 'remove$' "$CALLS"
+grep -Fq -- '--pid-file=' "$ROOT/templates/systemd/den-dns.service"
+grep -Fxq 'ProtectSystem=strict' "$ROOT/templates/systemd/den-dns.service"
 printf 'VPN profiles, separate addresses, permissions and revocation checks passed.\n'

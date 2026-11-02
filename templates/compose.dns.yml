@@ -1,0 +1,21 @@
+services:
+  traefik:
+    command:
+      - --providers.file.filename=/etc/traefik/routes.yml
+      - --providers.file.watch=true
+      - --entrypoints.web.address=:80
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.websecure.transport.respondingtimeouts.readtimeout=600s
+      - --certificatesresolvers.home.acme.email=${EMAIL:?required}
+      - --certificatesresolvers.home.acme.storage=/certificates/acme.json
+      - --certificatesresolvers.home.acme.dnschallenge.provider=desec
+      - --certificatesresolvers.home.acme.dnschallenge.resolvers=1.1.1.1:53,1.0.0.1:53
+      - --ping=true
+      - --log.level=WARN
+    environment:
+      DESEC_TOKEN_FILE: /run/secrets/desec-token
+      DESEC_PROPAGATION_TIMEOUT: '600'
+    volumes:
+      - ./private/desec-token:/run/secrets/desec-token:ro,z

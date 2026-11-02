@@ -31,6 +31,15 @@ cat > "$REXCTL_BIN" <<'EOF'
 printf '%s\n' "$*" >> "$REXCTL_LOG"
 EOF
 chmod 700 "$REXCTL_BIN"
+LAN_IP=192.168.1.10
+install_rexctl() { :; }
+fluxer_install
+grep -Fq -- "--dir $DEPLOY_DIR/fluxer install --domain chat.$DOMAIN" "$REXCTL_LOG"
+grep -Fq -- '--setup browser' "$REXCTL_LOG"
+if grep -Eq -- '--name|--registration|--sign-in|--skip-email' "$REXCTL_LOG"; then
+    fail 'Browser setup received terminal-only options.'
+fi
+grep -Fq -- "--dir $DEPLOY_DIR/fluxer registration set invite" "$REXCTL_LOG"
 fluxer_backup
 grep -Fq -- "--dir $DEPLOY_DIR/fluxer backup location $DATA_DIR/fluxer/backups" "$REXCTL_LOG"
 grep -Fq -- "--dir $DEPLOY_DIR/fluxer backup" "$REXCTL_LOG"

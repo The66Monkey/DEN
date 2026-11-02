@@ -4,11 +4,27 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$ROOT/lib/core.sh"
 TEMP="$(mktemp -d)"
 trap 'rm -rf "$TEMP"' EXIT
+printf 'abcdefghijklmnopqrstuvwxyz12\n' > "$TEMP/token"
+chmod 600 "$TEMP/token"
+DESEC_TOKEN_FILE="$TEMP/token"
+request_ddns_token </dev/null
+[[ "$DESEC_TOKEN" == abcdefghijklmnopqrstuvwxyz12 ]]
+chmod 644 "$TEMP/token"
+if (request_ddns_token </dev/null) 2>/dev/null; then fail 'Accepted a public token file.'; fi
+chmod 600 "$TEMP/token"
+ln -s "$TEMP/token" "$TEMP/token-link"
+if (DESEC_TOKEN_FILE="$TEMP/token-link"; request_ddns_token </dev/null) 2>/dev/null; then fail 'Accepted a token symlink.'; fi
+if (DESEC_TOKEN_FILE="$TEMP/missing"; request_ddns_token </dev/null) 2>/dev/null; then fail 'Accepted a missing token file.'; fi
+printf 'invalid token\n' > "$TEMP/token"
+if (request_ddns_token </dev/null) 2>/dev/null; then fail 'Accepted an invalid token file.'; fi
+unset DESEC_TOKEN_FILE DESEC_TOKEN
+if (request_ddns_token </dev/null) 2>/dev/null; then fail 'Accepted noninteractive install without a token file.'; fi
 read_settings "$ROOT/config/example.env"
 [[ "$KEEPASS_ENABLED" == no ]]
 [[ "$FLUXER_ENABLED" == no ]]
 [[ "$QBITTORRENT_ENABLED" == no ]]
 [[ "$MEDIA_MOUNT" == /mnt/den-storage ]]
+[[ "$ACME_CHALLENGE" == http ]]
 DESEC_TOKEN=abcdefghijklmnopqrstuvwxyz12
 write_environment "$TEMP/deployment"
 [[ "$(stat -c %a "$TEMP/deployment/.env")" == 600 ]]
@@ -43,6 +59,15 @@ done
 grep -v 'QBITTORRENT_ENABLED=' "$TEMP/keepass-deployment/.env" > "$TEMP/legacy.env"
 read_settings "$TEMP/legacy.env"
 [[ "$QBITTORRENT_ENABLED" == no ]]
+[[ "$ACME_CHALLENGE" == http ]]
+ACME_CHALLENGE=dns-desec
+DESEC_TOKEN=abcdefghijklmnopqrstuvwxyz12
+write_environment "$TEMP/dns-deployment"
+[[ "$(stat -c %a "$TEMP/dns-deployment/private/desec-token")" == 600 ]]
+grep -Fxq "$DESEC_TOKEN" "$TEMP/dns-deployment/private/desec-token"
+read_settings "$TEMP/dns-deployment/.env"
+[[ "$ACME_CHALLENGE" == dns-desec ]]
+if (ACME_CHALLENGE=invalid; validate_settings) 2>/dev/null; then fail 'Accepted an invalid ACME challenge.'; fi
 for subnet in '10.44.0.0/24' '172.30.44.0/24'; do
     if (LAN_CIDR="$subnet"; LAN_IP="${subnet%0/*}10"; validate_settings) 2>/dev/null; then exit 1; fi
 done

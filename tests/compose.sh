@@ -21,6 +21,11 @@ jq -e '
     ([.services | to_entries[] | select(.value.ports != null) | .key] == ["traefik"]) and
     ([.services.traefik.ports[].published] == ["80", "443"]) and
     (all(.services.traefik.ports[]; .host_ip == "192.168.1.10")) and
+    (.networks.home.ipam.config[0].ip_range == "172.30.44.128/25") and
+    (.networks.home.ipam.config[0].gateway == "172.30.44.1") and
+    (.services.traefik.networks.home.ipv4_address == "172.30.44.2") and
+    (.services.traefik.command | index("--providers.file.filename=/etc/traefik/routes.yml") != null) and
+    (any(.services.traefik.volumes[]; .target == "/etc/traefik/routes.yml" and .read_only == true)) and
     (all(.services[]; .restart == "unless-stopped")) and
     (all(.services[]; .healthcheck != null)) and
     (all(.services[]; (.image | test(":(latest|release|stable)$") | not))) and
@@ -37,4 +42,27 @@ jq -e '
     (.http.middlewares.private.ipAllowList.sourceRange == ["192.168.1.0/24", "10.44.0.0/24"]) and
     (.http.routers.photos.rule == "Host(`photos.home.example.net`)")
 ' "$DEPLOY_DIR/routes.json" >/dev/null
+mkdir -p "$DEPLOY_DIR/templates"
+cp "$ROOT/templates/compose.dns.yml" "$DEPLOY_DIR/templates/"
+if [[ -n "${COMPOSE_BIN:-}" ]]; then
+    "$COMPOSE_BIN" --env-file "$DEPLOY_DIR/.env" -f "$DEPLOY_DIR/compose.yml" \
+        -f "$DEPLOY_DIR/templates/compose.dns.yml" config --format json > "$DEPLOY_DIR/dns.json"
+else
+    ACME_CHALLENGE=dns-desec compose config --format json > "$DEPLOY_DIR/dns.json"
+fi
+jq -e '
+    (.services.traefik.command | index("--certificatesresolvers.home.acme.dnschallenge.provider=desec") != null) and
+    (all(.services.traefik.command[]; contains("httpchallenge") | not)) and
+    (.services.traefik.environment.DESEC_TOKEN_FILE == "/run/secrets/desec-token") and
+    (.services.traefik.environment.DESEC_PROPAGATION_TIMEOUT == "600") and
+    (.services.traefik.environment.DESEC_TOKEN == null) and
+    ([.services.traefik.volumes[] | select(.target == "/run/secrets/desec-token")] |
+        length == 1 and .[0].read_only == true and .[0].bind.selinux == "z" and
+        (.[0].source | endswith("/private/desec-token"))) and
+    ([.services.traefik.ports[].published] == ["80", "443"])
+' "$DEPLOY_DIR/dns.json" >/dev/null
+jq -s -e '
+    (.[0].services.traefik.command | map(select(contains("httpchallenge") | not))) ==
+    (.[1].services.traefik.command | map(select(contains("dnschallenge") | not)))
+' "$DEPLOY_DIR/rendered.json" "$DEPLOY_DIR/dns.json" >/dev/null
 printf 'Compose, storage, routing and private-access checks passed.\n'

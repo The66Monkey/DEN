@@ -12,7 +12,8 @@ ensure_backup_mount() {
 }
 
 restic_cmd() {
-    RESTIC_REPOSITORY="$BACKUP_MOUNT/den-restic" RESTIC_PASSWORD="$RESTIC_PASSWORD" restic "$@"
+    RESTIC_REPOSITORY="$BACKUP_MOUNT/den-restic" RESTIC_PASSWORD="$RESTIC_PASSWORD" \
+        RESTIC_CACHE_DIR="$DATA_DIR/cache/restic" restic "$@"
 }
 
 initialize_backup() {

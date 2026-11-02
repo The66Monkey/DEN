@@ -7,7 +7,7 @@
 3. Keep the OS, databases, app settings and caches on the SSD. Mount a local ext4, XFS or Btrfs filesystem on the **larger HDD** at `/mnt/den-storage` using its UUID in `/etc/fstab` (see below). The example sets `MEDIA_MOUNT=/mnt/den-storage`: DEN scripts persistent bind mounts from its `den/media` and `den/downloads` folders to `/srv/den/media` and `/srv/den/downloads`. Jellyfin's read-only `/media` and qBittorrent's default completed/incomplete download paths therefore use the HDD automatically. Other data, including photos and Nextcloud files, remains on SSD; allow at least 40 GB plus room for those files. Fluxer needs another 20 GB free when enabled. DEN does not format disks, choose disks by size, create RAID, or migrate existing files.
 4. Mount a **separate physical backup disk** at `/mnt/den-backup` using a UUID entry in `/etc/fstab`. Mount it now and verify it stays mounted after reboot. An example entry, after formatting the disk yourself, is `UUID=YOUR-DISK-UUID /mnt/den-backup ext4 defaults,nofail 0 2`. DEN never formats or automatically mounts the disk, and refuses an unmounted destination. Different partitions of the same physical disk are not a disaster backup; DEN can detect different filesystems, not physical failure independence.
 5. Connect over Ethernet where practical. Fedora's newer kernel and firmware can improve support for older Wi-Fi hardware, but some USB adapters still need third-party kernel modules. DEN does not build or maintain out-of-tree Wi-Fi drivers; confirm the adapter works after a Fedora kernel update before relying on it as the server's only network connection.
-6. Complete [router and DNS setup](networking.md). A public domain, WAN IPv4, reachable TCP 80/443 and UDP 41873, and LAN DNS overrides are required. No domain, CGNAT, or an ISP blocking inbound ports means this deployment model is not suitable.
+6. Complete [router and DNS setup](networking.md). A public domain, WAN IPv4, reachable TCP 80/443 and UDP 41873, and LAN DNS overrides are required by default. If another server already uses public TCP 80/443, set `ACME_CHALLENGE=dns-desec` for DNS-01 certificates and forward only UDP 41873 for VPN-only remote access. No domain, CGNAT, or an ISP blocking the required inbound ports means this deployment model is not suitable.
 
 DEN installs Docker CE and Compose from Docker's Fedora repository and Fedora packages for WireGuard, DNS, and backups. It keeps firewalld and SELinux enabled, opens the required host ports, and configures shared SELinux labels on container data. It writes under `/opt/den`, `/srv/den`, `/etc/wireguard`, `/etc/systemd/system`, `/etc/sysctl.d`, and creates `/usr/local/bin/den`. Use a fresh machine, not one already hosting applications.
 
@@ -69,6 +69,21 @@ sudo bash install.sh /tmp/den.env
 
 Keep `KEY=value` values unquoted. Required settings are your domain, certificate contact email, reserved server IPv4, actual LAN subnet, and mounted backup path. The installer will also prompt for a deSEC API token so it can keep DEN's DNS records current; create the records listed in [networking](networking.md) first. Set `KEEPASS_ENABLED=yes` to generate an optional KeePass-compatible credential vault, or `FLUXER_ENABLED=yes` to install optional Fluxer chat; both default to `no`. The VPN uses `10.44.0.0/24`; containers use `172.30.44.0/24`. DEN rejects a LAN overlapping either.
 
+`sudo` prompts for your Fedora login password when needed; no permanent
+passwordless sudo rule is required. The certificate email is your contact
+address for Let's Encrypt; Let's Encrypt does not require an API token.
+For automated SSH installs without an interactive token prompt, put only the
+deSEC token in a root-owned, mode-600 regular file, then run:
+
+```bash
+sudo DESEC_TOKEN_FILE=/root/den-desec-token bash install.sh /tmp/den.env
+```
+
+The installer rejects missing, symlinked, publicly readable or invalid token
+files. Delete the input file after installation; the installed updater keeps
+its own protected copy under `/opt/den/private/ddns.env`. Do not put tokens in
+Git, command-line arguments, or deployment logs.
+
 Set `QBITTORRENT_ENABLED=yes` to add optional [qBittorrent downloads](qbittorrent.md);
 it defaults to `no`. Configure `downloads.DOMAIN` in public and LAN DNS first.
 Its HTTPS Web UI is LAN/VPN-only. No extra router ports or outbound VPN are
@@ -93,7 +108,7 @@ sudo den check
 systemctl list-timers 'den-*'
 ```
 
-From another LAN device, visit the four URLs printed by installation. The browser must show a valid HTTPS certificate, not a certificate warning. Follow [first-evening setup](first-evening.md), create the initial accounts, and make a new backup. Test access from mobile data: without VPN each application must return **403**, and with VPN it must be usable.
+From another LAN device, visit the four URLs printed by installation. The browser must show a valid HTTPS certificate, not a certificate warning. Follow [first-evening setup](first-evening.md), create the initial accounts, and make a new backup. Test access from mobile data: without VPN each application must return **403** when forwarding public HTTPS to DEN, or be unreachable on DEN in DNS-01 VPN-only mode. With VPN it must be usable.
 
 Save a recovery kit on a different device before considering setup complete:
 

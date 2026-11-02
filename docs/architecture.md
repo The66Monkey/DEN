@@ -4,7 +4,7 @@ DEN is one current Fedora Server host. Bash owns provisioning and lifecycle comm
 
 | Layer | Choice |
 | --- | --- |
-| Public transport | IPv4 TCP 80/443; HTTP-01 certificates and HTTPS |
+| Public transport | IPv4 TCP 80/443 by default; optional deSEC DNS-01 for VPN-only coexistence |
 | Private access | Traefik LAN/VPN IP allowlist; host WireGuard UDP 41873 |
 | Proxy | Traefik 3.7.17, fixed `172.30.44.2` inside Compose |
 | Containers | Docker CE and Compose v2 from Docker's Fedora repository |
@@ -21,6 +21,14 @@ DEN is one current Fedora Server host. Bash owns provisioning and lifecycle comm
 | Optional downloads | qBittorrent 5.3.0 in the `torrents` Compose profile, private LAN/VPN route |
 
 All core container images are pinned to manifest digests resolved on 2026-10-31. Immich server and machine learning have the same release. The eleven core containers share one fixed bridge subnet; this is a simplicity tradeoff, not strong isolation between applications. Databases and application listeners have no published host ports. Only Traefik publishes core TCP ports, bound to `LAN_IP`. Optional Fluxer runs in its own Rexctl-managed Docker project and is routed from Traefik through the core bridge gateway; its full archives are saved inside `/srv/den` before every Restic snapshot. Host WireGuard and VPN DNS are outside Compose. Fedora firewalld remains enabled; `wg0` is assigned to its trusted zone for the explicitly allowed VPN-to-LAN path. SELinux remains enabled, with shared labels on DEN's core container bind mounts.
+
+Dynamic container addresses come from `172.30.44.128/25`, leaving Traefik's
+fixed `172.30.44.2` outside the allocator pool. Installed release files take
+the deployment owner's ownership and destination SELinux labels, not labels
+or ownership inherited from a user's checkout. VPN DNS runs in the foreground
+without a PID file so its filesystem can remain read-only.
+Generated JSON routes are mounted as `routes.yml` inside Traefik: JSON is valid
+YAML, but Traefik's file provider requires a YAML or TOML filename extension.
 
 ## Storage Contract
 
@@ -39,6 +47,7 @@ All core container images are pinned to manifest digests resolved on 2026-10-31.
 | `/srv/den/system/deployment` | Deployment copy saved before every backup |
 | `/srv/den/fluxer/backups` | Optional full Fluxer archives included in Restic snapshots |
 | `/srv/den/cache` | Regenerable Jellyfin/Immich caches; not backed up |
+| `/srv/den/cache/restic` | Private Restic cache, independent of login environment; not backed up |
 | `BACKUP_MOUNT/den-restic` | Encrypted backup repository |
 
 Bind mounts, not anonymous application volumes, make the backup boundary visible. Installation creates directories and establishes initial ownership; application images manage their own database/file ownership. DEN does not recursively change ownership of existing application data during recovery.

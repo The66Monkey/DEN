@@ -4,13 +4,15 @@ copy_release() {
     local source_dir="$1" destination="$2" item
     install -d -m 700 "$destination" || return 1
     for item in bin lib templates docs config; do
-        cp -a "$source_dir/$item" "$destination/" || return 1
+        cp -a --no-preserve=ownership,context --context "$source_dir/$item" "$destination/" || return 1
+        chown -R --reference="$destination" "$destination/$item" || return 1
     done
     for item in VERSION README.md install.sh update.sh recover.sh; do
         install -m 600 "$source_dir/$item" "$destination/$item" || return 1
     done
     if [[ -d "$source_dir/migrations" ]]; then
-        cp -a "$source_dir/migrations" "$destination/" || return 1
+        cp -a --no-preserve=ownership,context --context "$source_dir/migrations" "$destination/" || return 1
+        chown -R --reference="$destination" "$destination/migrations" || return 1
     fi
     chmod 755 "$destination/bin/den"
 }

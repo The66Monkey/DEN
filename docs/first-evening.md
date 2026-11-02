@@ -43,7 +43,7 @@ Open `https://git.your-domain`. Create your account/repository and a personal ac
 
 ## Optional Fluxer Chat
 
-When Fluxer is enabled, use the browser setup token printed by the installer at `https://chat.your-domain` to create the first administrator. Registration is invite-only; create invitations with `sudo rexctl --dir /opt/den/fluxer invites create`. Chat and calls are available only from the LAN or VPN by default.
+When Fluxer is enabled, use the browser setup token printed by the installer at `https://chat.your-domain` to create the first administrator. Retrieve the token again privately with `sudo rexctl --dir /opt/den/fluxer setup token`. Choose the instance name and sign-in options in the browser; installation does not pass terminal-only setup flags to browser setup. Registration is invite-only; create invitations with `sudo rexctl --dir /opt/den/fluxer invites create`. Chat and calls are available only from the LAN or VPN by default.
 
 ## Finish Safely
 

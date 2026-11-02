@@ -193,6 +193,11 @@ If enabled, stop it separately with
 
 Before marking a DEN release production-ready, use a fresh Fedora Server VM or dedicated PC and a separate backup disk. Set up a real domain and router as documented. Use non-sensitive fixtures. Fedora Workstation is suitable for development checks, but does not replace Server acceptance.
 
+For the external 403 checks below, DNS-01 VPN-only coexistence is an exception:
+public TCP 80/443 must not reach DEN at all. The other server can return a
+different response. Test DNS-01 certificate issuance and trusted HTTPS on
+LAN/VPN without moving the other server's port forwards.
+
 1. Time from running the installer to healthy applications. Record download speed, hardware, and first-user setup time; the under-one-hour goal is not validated by the unit tests.
 2. Confirm each pinned image starts on the minimum CPU class, Nextcloud creates its account/database, Immich reaches its matched database and ML worker, and Forgejo admin creation works.
 3. Open all four apps from a LAN client with valid public certificates. Check upload/download, movie playback, a photo thumbnail/search, Nextcloud desktop sync, and HTTPS Git clone/push.
