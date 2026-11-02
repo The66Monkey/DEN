@@ -27,6 +27,29 @@ Set `DOMAIN` to the domain alone, without a service prefix or `https://`.
 Do not add AAAA records for DEN names. DEN updates public IPv4 records
 automatically; the domain's root record is left unchanged.
 
+### deSEC Form Fields and Existing Records
+
+Choose **A** under **Record set type**, enter the service prefix (for example
+`media`) under **Subname**, and enter your router's public IPv4 under
+**IPv4 address**. TTL `3600` is suitable for initial setup. Subname is relative
+to your domain: do not enter the full hostname. For a root-domain record,
+deSEC uses a **blank Subname**, not `@`; DEN does not manage that root record.
+
+deSEC requires surrounding double quotation marks for **TXT** content, such
+as `"example text"`. Certificate TXT records under `_acme-challenge` are managed
+by the ACME client in `dns-desec` mode; do not edit or remove them during issuance
+or renewal. A certificate challenge record is not an app's A record.
+
+Do not wipe an existing DNS zone. Keep its NS records and records needed by
+other services, and export the records before migration changes.
+
+DEN and BASM can share a zone with separate API tokens and non-overlapping
+record permissions: DEN owns the names listed above, while BASM normally owns
+the root, `erp`, `mail`, `cloud` and `mx`. If DEN owns `chat`, leave BASM Fluxer
+unselected or choose a distinct BASM hostname. DDNS only updates addresses;
+Postal's MX, SPF, DKIM and DMARC setup belongs to BASM. DNS records alone do not
+solve the shared public HTTPS forwarding limitation described below.
+
 ## Port Forwarding
 
 Reserve the server's LAN IP in your router, then forward:

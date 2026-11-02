@@ -12,6 +12,37 @@ DEN checks health hourly. Problems appear in the system journal and may show
 on SSH login; there are no email or phone alerts.
 If another operation is running, wait for it to finish.
 
+## Hosting a BASM VM
+
+A Fedora DEN host can also run a Debian BASM VM using KVM/libvirt and Cockpit
+Machines. Keep distinct LAN addresses and deployment data. A wired bridge lets
+the VM obtain its own LAN lease; reserve both addresses. Moving the host from
+Wi-Fi to Ethernet may change its IP: review DEN's `LAN_IP`, generated private
+DNS, firewall bindings and router reservations before restarting. Preserve
+configuration backups; do not blindly replace addresses inside application data.
+
+In the 2026-11-02 home-lab migration, DEN is on `192.168.50.245` (`br0`,
+physical port `enp3s0`) and BASM on `192.168.50.20` (2 vCPUs, 6 GiB RAM,
+40 GiB disk). The old Mint server remains available until migration sign-off.
+DEN's old `.58` LAN binding and private DNS entry were updated to `.245`.
+The deployed production DEN runtime is still Docker; production Podman/Quadlet
+support and its data migration have **not** been implemented. Existing local
+Podman templates do not make a production runtime switch safe.
+
+The temporary public HTTPS plan gives BASM TCP 80/443, so DEN Fluxer is not
+yet available externally through that route. DEN WireGuard keeps UDP 41873;
+the separately migrated legacy VPN on BASM uses UDP 51820. LiveKit voice uses
+TCP 7881 and UDP 7882 on DEN, not both protocols on 7881 on the old Mint host.
+Voice forwarding alone does not restore chat HTTPS. Review
+[coexistence and public chat](networking.md#coexisting-with-another-web-server)
+before enabling both publicly; shared ingress is not configured automatically.
+
+DEN's backup does not automatically include a libvirt VM or BASM's guest
+repository. Arrange an independent encrypted copy of BASM backups and test
+guest recovery; neither an unchecked live VM-disk copy nor a VM snapshot on
+the same disk is an independent backup. Schedule Fedora host updates/reboots
+around guest backups and availability requirements.
+
 ## Automatic Monthly Maintenance
 
 On the first of each month, between 04:00 and 04:30 server time, DEN updates
