@@ -213,6 +213,9 @@ sudo rexctl --dir /opt/den/fluxer setup token
   ```
 
   Keep the password separate; record app password changes in the vault yourself.
+  For one canonical server vault and separate family/personal databases, see
+  [password sharing](keepass-sharing.md). The optional private share is a manual
+  integration, not enabled by the installer.
 
 ## 7. Finish
 

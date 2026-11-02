@@ -10,6 +10,8 @@ DATA_DIR="$TEMP/data"
 SOURCE_DIR="$TEMP/release"
 CALLS="$TEMP/calls"
 mkdir -p "$DEPLOY_DIR/private" "$SOURCE_DIR/templates" "$SOURCE_DIR/lib/hosts"
+mkdir -p "$DEPLOY_DIR/vaults/admin"
+printf 'encrypted-vault-fixture\n' > "$DEPLOY_DIR/vaults/admin/credentials.kdbx"
 printf 'secret\n' > "$DEPLOY_DIR/.env"
 printf '{}\n' > "$DEPLOY_DIR/routes.json"
 printf 'nextcloud:33.0.10-apache\n' > "$DEPLOY_DIR/compose.yml"
@@ -61,6 +63,7 @@ FAIL_BACKUP=false
 update_release "$SOURCE_DIR" >/dev/null
 grep -Fq '33.0.11' "$DEPLOY_DIR/compose.yml"
 cmp "$DEPLOY_DIR/.env" <(printf 'secret\n')
+cmp "$DEPLOY_DIR/vaults/admin/credentials.kdbx" <(printf 'encrypted-vault-fixture\n')
 grep -Fxq backup "$CALLS"
 grep -Fxq start "$CALLS"
 grep -Fxq firewall "$CALLS"

@@ -27,7 +27,7 @@ def main():
         (private / "home.conf").write_text("[Interface]\nPrivateKey = client-key\n")
 
         subprocess.run([sys.executable, str(helper), str(deployment)], check=True)
-        database = private / "credentials.kdbx"
+        database = deployment / "vaults/admin/credentials.kdbx"
         master_file = private / "keepass-master-password"
         assert os.stat(private).st_mode & 0o777 == 0o700
         assert os.stat(database).st_mode & 0o777 == 0o600
@@ -54,6 +54,43 @@ def main():
         assert len(vault.find_entries(title="Application database password", group=generated)) == 1
         assert vault.find_entries(title="WireGuard tablet", group=generated, first=True).attachments[0].filename == "tablet.conf"
         assert vault.find_entries(title="Personal entry", first=True).password == "keep-me"
+
+        before = database.read_bytes()
+        lock = database.with_name(database.name + ".lock")
+        lock.touch()
+        result = subprocess.run([sys.executable, str(helper), str(deployment)], capture_output=True)
+        assert result.returncode != 0
+        assert database.read_bytes() == before
+        lock.unlink()
+
+        # Older deployments migrate once and retain a private rollback copy.
+        legacy = private / "credentials.kdbx"
+        database.rename(legacy)
+        subprocess.run([sys.executable, str(helper), str(deployment)], check=True)
+        assert database.is_file() and not legacy.exists()
+        assert (private / "credentials.kdbx.pre-share").read_bytes() == before
+
+        legacy.write_bytes(database.read_bytes())
+        before = database.read_bytes()
+        result = subprocess.run([sys.executable, str(helper), str(deployment)], capture_output=True)
+        assert result.returncode != 0
+        assert database.read_bytes() == before
+        legacy.unlink()
+
+        database.rename(legacy)
+        backup = private / "credentials.kdbx.pre-share"
+        saved_backup = backup.read_bytes()
+        result = subprocess.run([sys.executable, str(helper), str(deployment)], capture_output=True)
+        assert result.returncode != 0
+        assert legacy.read_bytes() == before and not database.exists()
+        assert backup.read_bytes() == saved_backup
+        legacy.rename(database)
+
+        # File replacements must retain a dedicated share account's ownership.
+        if os.geteuid() == 0:
+            os.chown(database, 65534, 65534)
+            subprocess.run([sys.executable, str(helper), str(deployment)], check=True)
+            assert (database.stat().st_uid, database.stat().st_gid) == (65534, 65534)
 
 
 if __name__ == "__main__":

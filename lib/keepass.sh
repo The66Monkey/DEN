@@ -7,7 +7,7 @@ sync_keepass() {
 
 require_keepass() {
     [[ "${KEEPASS_ENABLED:-no}" == yes ]] || fail 'KeePass is not enabled for this DEN installation.'
-    [[ -f "$DEPLOY_DIR/private/credentials.kdbx" && -f "$DEPLOY_DIR/private/keepass-master-password" ]] || fail 'KeePass vault is missing; run sudo den keepass-sync.'
+    [[ ( -f "$DEPLOY_DIR/vaults/admin/credentials.kdbx" || -f "$DEPLOY_DIR/private/credentials.kdbx" ) && -f "$DEPLOY_DIR/private/keepass-master-password" ]] || fail 'KeePass vault is missing; run sudo den keepass-sync.'
 }
 
 keepass_export() {
@@ -17,7 +17,9 @@ keepass_export() {
     parent="$(dirname "$destination")"
     [[ -d "$parent" && ! -L "$parent" ]] || fail 'Export directory must already exist and cannot be a symlink.'
     [[ "$(stat -c %d "$parent")" != "$(stat -c %d "$DEPLOY_DIR")" ]] || fail 'Export the vault to a separate filesystem.'
-    install -m 600 "$DEPLOY_DIR/private/credentials.kdbx" "$destination"
+    local database="$DEPLOY_DIR/vaults/admin/credentials.kdbx"
+    [[ -f "$database" ]] || database="$DEPLOY_DIR/private/credentials.kdbx"
+    install -m 600 "$database" "$destination"
     log "KeePass vault exported to $destination. Retrieve its password separately with sudo den keepass-password."
 }
 

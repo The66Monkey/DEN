@@ -12,6 +12,10 @@ DEN checks health hourly. Problems appear in the system journal and may show
 on SSH login; there are no email or phone alerts.
 If another operation is running, wait for it to finish.
 
+For passwords, use a single owner/admin vault and separate family/personal
+vaults. See [KeePass sharing](keepass-sharing.md). Close a directly shared vault
+before synchronization, upgrades or VPN profile creation.
+
 ## Hosting a BASM VM
 
 A Fedora DEN host can also run a Debian BASM VM using KVM/libvirt and Cockpit

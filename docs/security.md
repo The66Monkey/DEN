@@ -15,6 +15,10 @@
   backup HDD means its failure loses both.
 - Keep a KeePass vault's master password separate from its exported file.
   App passwords changed outside DEN must be updated in the vault manually.
+- Keep owner/admin, family-shared and personal vaults separate. Never share the
+  owner vault to distribute ordinary family credentials. See
+  [password-vault access](keepass-sharing.md) for private shared-file access,
+  permissions, synchronization and recovery limitations.
 
 For administrators: Docker/root access controls the entire server. Containers
 share a network, not strong isolation. Only use a trusted update repository;

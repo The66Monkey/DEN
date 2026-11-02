@@ -318,7 +318,7 @@ show_summary() {
         printf 'HDD media/downloads: %s/den (mounted at /srv/den/media and /srv/den/downloads).\n' "$MEDIA_MOUNT"
     fi
     if [[ "${KEEPASS_ENABLED:-no}" == yes ]]; then
-        printf 'KeePass vault: /opt/den/private/credentials.kdbx; retrieve its password separately with: sudo den keepass-password\n'
+        printf 'KeePass vault: /opt/den/vaults/admin/credentials.kdbx; retrieve its password separately with: sudo den keepass-password\n'
     fi
     if [[ "${FLUXER_ENABLED:-no}" == yes ]]; then
         printf 'Fluxer: https://chat.%s (PUBLIC chat/calls; registration by invite).\n' "$DOMAIN"

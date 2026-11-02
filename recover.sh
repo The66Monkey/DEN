@@ -20,10 +20,7 @@ if [[ -n "${MEDIA_MOUNT:-}" ]]; then
 fi
 restore_snapshot "$2" "$STAGING"
 promote_restored_data "$STAGING$DATA_DIR"
-copy_release "$DATA_DIR/system/deployment" "$DEPLOY_DIR"
-cp "$DATA_DIR/system/deployment/.env" "$DEPLOY_DIR/.env"
-cp "$DATA_DIR/system/deployment/compose.yml" "$DEPLOY_DIR/compose.yml"
-cp -a "$DATA_DIR/system/deployment/private" "$DEPLOY_DIR/"
+restore_deployment "$DATA_DIR/system/deployment" "$DEPLOY_DIR"
 read_settings "$DEPLOY_DIR/.env"
 prepare_storage
 write_homepage

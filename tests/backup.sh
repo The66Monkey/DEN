@@ -4,6 +4,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$ROOT/lib/core.sh"
 source "$ROOT/lib/fluxer.sh"
 source "$ROOT/lib/backup.sh"
+source "$ROOT/lib/maintenance.sh"
 TEMP="$(mktemp -d)"
 trap 'rm -rf "$TEMP"' EXIT
 DEPLOY_DIR="$TEMP/deployment"
@@ -11,6 +12,12 @@ DATA_DIR="$TEMP/data"
 BACKUP_MOUNT="$TEMP/backup-disk"
 mkdir -p "$DEPLOY_DIR" "$DATA_DIR" "$BACKUP_MOUNT"
 mkdir -p "$DEPLOY_DIR/private"
+copy_release "$ROOT" "$DEPLOY_DIR"
+mkdir -p "$DEPLOY_DIR/vaults/admin"
+printf 'encrypted-vault-fixture\n' > "$DEPLOY_DIR/vaults/admin/credentials.kdbx"
+chmod 600 "$DEPLOY_DIR/vaults/admin/credentials.kdbx"
+printf 'saved-master-fixture\n' > "$DEPLOY_DIR/private/keepass-master-password"
+printf 'services: {}\n' > "$DEPLOY_DIR/compose.yml"
 printf 'saved-secret\n' > "$DEPLOY_DIR/.env"
 CALLS="$TEMP/calls"
 STOPPED="$TEMP/stopped"
@@ -50,6 +57,13 @@ restic_cmd() {
 }
 backup_stack
 [[ -f "$DATA_DIR/system/deployment/.env" ]]
+restore_deployment "$DATA_DIR/system/deployment" "$TEMP/recovered"
+cmp "$DEPLOY_DIR/vaults/admin/credentials.kdbx" "$TEMP/recovered/vaults/admin/credentials.kdbx"
+cmp "$DEPLOY_DIR/private/keepass-master-password" "$TEMP/recovered/private/keepass-master-password"
+[[ "$(stat -c %a "$TEMP/recovered/vaults/admin/credentials.kdbx")" == 600 ]]
+mv "$DATA_DIR/system/deployment/vaults" "$TEMP/saved-vaults"
+restore_deployment "$DATA_DIR/system/deployment" "$TEMP/legacy-recovered"
+[[ -d "$TEMP/legacy-recovered/private" && ! -e "$TEMP/legacy-recovered/vaults" ]]
 grep -Fq 'compose start --wait --wait-timeout 900 nextcloud immich-server' "$CALLS"
 fluxer_line="$(awk '/rexctl .* backup$/ {print NR; exit}' "$CALLS")"
 restic_line="$(awk '/restic backup / {print NR; exit}' "$CALLS")"

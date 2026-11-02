@@ -17,6 +17,17 @@ copy_release() {
     chmod 755 "$destination/bin/den"
 }
 
+restore_deployment() {
+    local source_dir="$1" destination="$2"
+    copy_release "$source_dir" "$destination" || return 1
+    cp "$source_dir/.env" "$destination/.env" || return 1
+    cp "$source_dir/compose.yml" "$destination/compose.yml" || return 1
+    cp -a "$source_dir/private" "$destination/" || return 1
+    if [[ -d "$source_dir/vaults" ]]; then
+        cp -a "$source_dir/vaults" "$destination/" || return 1
+    fi
+}
+
 enable_update_timer() {
     local state status=0
     state="$(systemctl is-enabled den-update.timer)" || status=$?

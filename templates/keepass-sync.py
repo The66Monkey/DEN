@@ -39,12 +39,27 @@ def sync(deployment):
     private = deployment / "private"
     private.mkdir(mode=0o700, parents=True, exist_ok=True)
     os.chmod(private, 0o700)
-    database = private / "credentials.kdbx"
+    vault_directory = deployment / "vaults" / "admin"
+    if vault_directory.is_symlink() or (deployment / "vaults").is_symlink():
+        raise ValueError("Symlink vault directories are not supported")
+    vault_directory.mkdir(parents=True, exist_ok=True, mode=0o700)
+    database = vault_directory / "credentials.kdbx"
+    legacy_database = private / "credentials.kdbx"
     master_file = private / "keepass-master-password"
-    if database.is_symlink() or master_file.is_symlink():
+    if database.is_symlink() or legacy_database.is_symlink() or master_file.is_symlink():
         raise ValueError("Symlink credential files are not supported")
-    if database.exists() and not master_file.exists():
+    if (database.exists() or legacy_database.exists()) and not master_file.exists():
         raise ValueError("Existing database has no saved master password")
+    if legacy_database.exists():
+        if legacy_database.with_name(legacy_database.name + ".lock").exists():
+            raise ValueError("Close the legacy KeePass database before migration")
+        if database.exists():
+            raise ValueError("Both legacy and admin databases exist; resolve manually")
+        descriptor = os.open(private / "credentials.kdbx.pre-share",
+                             os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        with os.fdopen(descriptor, "wb") as output:
+            output.write(legacy_database.read_bytes())
+        legacy_database.rename(database)
     if not master_file.exists():
         try:
             create_master_file(master_file)
@@ -54,9 +69,14 @@ def sync(deployment):
     master = master_file.read_text().rstrip("\n")
     if not master:
         raise ValueError("Empty master password")
+    lock_file = database.with_name(database.name + ".lock")
+    if lock_file.exists():
+        raise ValueError("Close KeePassXC before updating the admin vault")
+    original = database.read_bytes() if database.exists() else None
+    owner = database.stat() if database.exists() else None
 
     values = read_environment(deployment / ".env")
-    descriptor, temporary_name = tempfile.mkstemp(prefix=".credentials-", suffix=".kdbx", dir=private)
+    descriptor, temporary_name = tempfile.mkstemp(prefix=".credentials-", suffix=".kdbx", dir=vault_directory)
     os.close(descriptor)
     temporary = Path(temporary_name)
     try:
@@ -84,6 +104,10 @@ def sync(deployment):
 
         vault.save(temporary)
         os.chmod(temporary, 0o600)
+        if owner is not None and (temporary.stat().st_uid, temporary.stat().st_gid) != (owner.st_uid, owner.st_gid):
+            os.chown(temporary, owner.st_uid, owner.st_gid)
+        if lock_file.exists() or (database.read_bytes() if database.exists() else None) != original:
+            raise ValueError("Admin vault changed during synchronization; retry after closing KeePassXC")
         os.replace(temporary, database)
     finally:
         temporary.unlink(missing_ok=True)
