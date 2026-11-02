@@ -27,7 +27,12 @@ configuration backups; do not blindly replace addresses inside application data.
 
 In the 2026-11-02 home-lab migration, DEN is on `192.168.50.245` (`br0`,
 physical port `enp3s0`) and BASM on `192.168.50.20` (2 vCPUs, 6 GiB RAM,
-40 GiB disk). The old Mint server remains available until migration sign-off.
+40 GiB disk). The old Mint server is now powered down with its disks retained
+for rollback; do not restart its application containers alongside BASM.
+BASM workers/scheduling and Postal delivery are enabled. Its health check and
+Nextcloud file roundtrip pass; a real outgoing mail test reached the owner's
+inbox with SPF/DKIM/DMARC passing. External VPN/RustDesk/kiosk tests and
+independent BASM recovery validation still remain.
 DEN's old `.58` LAN binding and private DNS entry were updated to `.245`.
 The new homepage service has also been deployed, with private hostname and
 LAN-IP routes. IP access uses a default certificate (browser warning); the
