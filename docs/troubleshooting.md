@@ -1,30 +1,35 @@
-# Troubleshooting
+# Something Not Working?
 
-Start with `sudo den status`, `sudo den check`, and `systemctl --failed`. Keep your generated `.env` and data; do not delete them to retry setup.
+Connect over SSH and start here:
 
-| Symptom | Check |
+```bash
+sudo den status
+sudo den check
+systemctl --failed
+```
+
+| Problem | Try |
 | --- | --- |
-| Installer rejects OS | Fedora Server on x86_64 is the supported target. Fedora Workstation can be used for development checks. |
-| Wi-Fi adapter is missing | Identify the chipset with `lsusb` or `lspci -nnk`, then inspect `journalctl -k -b` for firmware or driver errors. DEN does not build third-party modules; check whether the adapter works after a kernel update before depending on it for server access. |
-| Container cannot read its data | Check `sudo ausearch -m AVC -ts recent` for SELinux denials and verify the Compose bind mount uses the shared `z` label. Do not disable SELinux as a workaround. |
-| CPU rejected or ML exits | Immich 3 requires x86-64-v2. A VM may need host CPU passthrough. Do not use an unsupported old Immich release just to suppress the check. |
-| TCP port conflict | Stop the old web/proxy service or use a fresh server. DEN does not choose alternative ports. |
-| Wrong or unassigned address | Reserve the server's address and compare `ip -4 address` with `LAN_IP`. |
-| HTTPS warning | Check public A records, remove AAAA records, check CAA policy permits Let's Encrypt, then inspect `sudo den logs traefik`. HTTP-01 needs forwarded TCP 80; `ACME_CHALLENGE=dns-desec` instead needs token permission to manage challenge TXT records. Never click through and treat setup as complete. |
-| Works outside but not at home | Set LAN DNS overrides for all four application names; clients may be bypassing router DNS. |
-| LAN application returns 403 | Check actual client IPv4 and `LAN_CIDR`, DNS overrides, and whether a proxy is obscuring source addresses. Do not broaden the allowlist to `0.0.0.0/0`. |
-| Internet application times out without VPN | Expected: the network guard drops outside web/admin/voice access. In DNS-01 coexistence mode, public traffic can reach your other server instead. If DEN itself is usable without VPN, remove DEN port forwards and investigate source-hiding proxies or router source NAT. |
-| Network guard is down / Docker refuses startup | Run `sudo systemctl status den-firewall` and `sudo nft --check --file /etc/den/network.nft`. Fix the rules and start `den-firewall` before Docker; do not flush the global ruleset or remove its Docker dependency to bypass protection. |
-| WireGuard has no handshake | Check the `home` A record, `sudo journalctl -u den-ddns`, WAN IPv4/CGNAT, UDP 41873, mobile-data test, and `sudo wg show`. |
-| VPN handshake but no app | Check profile DNS, local subnet overlap, `systemctl status den-dns`, client encrypted-DNS settings, and firewall forwarding rules. |
-| Nextcloud stays unready | Read `sudo den logs nextcloud` and `sudo den logs nextcloud-db`; initial setup can be slow. Check disk space. |
-| Media not found | Jellyfin sees `/media/...`, not the host `/srv/den/media/...`; UID 1000 must be able to read it. |
-| Secondary storage is missing / Docker will not start | Verify `findmnt /mnt/den-storage`, `findmnt /srv/den/media` and `findmnt /srv/den/downloads` (use your configured mount path). Inspect `systemctl status srv-den-media.mount srv-den-downloads.mount docker` and the HDD UUID in `/etc/fstab`. Restore the disk/mounts, then start Docker and DEN; never remove storage dependencies just to start with empty SSD folders. |
-| Backup fails | Check `mountpoint /mnt/den-backup`, available space, and `journalctl -u den-backup.service`. Never initialize a new repo to hide a password mismatch. |
-| Another operation is running | Wait for backup/update/restore to finish; the shared lock prevents conflicting maintenance. |
-| Monitoring failure banner | Run `sudo den check`; a successful check clears the banner. Read the failed unit journal before resetting failure state. |
-| Update did not become healthy | Keep the pre-update snapshot and follow `backup.md`; do not downgrade images over migrated data. |
-| Fluxer is unavailable | Run `sudo den fluxer-status`, `sudo rexctl --dir /opt/den/fluxer doctor`, and inspect `sudo rexctl --dir /opt/den/fluxer logs`. Check that the Traefik backend at `172.30.44.1:29461` is listening and the `chat` DNS override resolves to `LAN_IP`. |
-| Fluxer voice does not connect | Confirm the client is on LAN or VPN, `LAN_IP` is advertised by Fluxer, and host TCP 7881/UDP 7882 are allowed. Do not solve this by forwarding voice ports from the WAN. |
+| App URL fails on LAN or shows a TLS error | Enable WireGuard, or point the app's local DNS name to DEN's LAN IP. Use the hostname, not the bare IP. |
+| Certificate is not ready | Wait a few minutes, then run `sudo den logs traefik`. Check [DNS and certificate setup](networking.md). |
+| WireGuard will not connect | Forward **UDP**, not TCP, port 41873. Test on mobile data. Check the `home` DNS record and `sudo wg show`. |
+| VPN connects but names fail | Disable browser/device Secure DNS that bypasses VPN DNS. Check `systemctl status den-dns`. |
+| Profile was not created | Use a lowercase device name and the same name in every command. See [profile download](installation.md#import-wireguard-on-another-computer). |
+| Outside access fails without VPN | Expected. DEN apps are private to LAN/VPN. |
+| Completed movies are missing | Add `/downloads/complete` as a Jellyfin library, then scan. Other media uses `/media/movies`, `/media/tv` or `/media/music`. |
+| qBittorrent password stopped working | Set a permanent password; the initial temporary one changes after restart. Find it with `sudo den logs qbittorrent`. |
+| Nextcloud is still starting | Allow several minutes, check free space, then `sudo den logs nextcloud`. |
+| Fluxer is unavailable | Run `sudo den fluxer-status` and `sudo rexctl --dir /opt/den/fluxer doctor`. Check the `chat` DNS name. |
+| Calls fail | Both devices need LAN/VPN access. Do not forward extra voice ports at the router. |
+| Another operation is running | Wait for the backup or update to finish. |
+| Backup fails or disk is full | Check `df -h` and `journalctl -u den-backup.service -n 50`. See [backups](backup.md). |
+| HDD missing / Docker will not start | Reconnect the configured HDD. Check `findmnt /srv/den/media` and `findmnt /srv/den/downloads`, then `systemctl status srv-den-media.mount srv-den-downloads.mount docker`. |
+| Update failed | Read `journalctl -u den-update.service -n 50`. Do not remove its marker or downgrade database images; see [recovery](backup.md#recover-after-a-bad-update). |
 
-If initial provisioning failed after `.env` was written, `sudo den start` can restart already prepared containers but cannot repair host steps that were never installed. Inspect `systemctl status docker wg-quick@wg0 den-dns den` and installed files to identify the missing step. Full automatic interrupted-install resume remains a known limitation.
+Do not delete `/opt/den/.env`, data folders or backups to retry setup.
+Do not disable SELinux or the firewall. Failed installation does not yet support
+automatic resume: `sudo den start` starts prepared apps but cannot complete
+missing host configuration. Save the error and ask for help.
+
+For deeper diagnosis, [architecture](architecture.md) lists paths and firewall
+commands. Redact passwords, tokens and VPN keys before sharing logs.

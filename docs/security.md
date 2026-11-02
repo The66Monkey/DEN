@@ -1,21 +1,21 @@
-# Security Boundaries
+# Access and Privacy
 
-DEN reduces setup work; it does not eliminate administration or guarantee immunity from compromise.
+- Apps work only on LAN/VPN and still require their own logins.
+- Use a separate lowercase WireGuard profile for each device. Revoke a lost
+  device with `sudo den vpn-remove DEVICE-NAME`.
+- Keep passwords, VPN QR codes, profiles and recovery kits private.
+  Logs can contain passwords; redact them before sharing.
+- Finish initial admin setup before sharing access. Use personal accounts daily.
+  Email password resets are not configured.
+- Keep firewalld and SELinux enabled. Forward only the [documented ports](networking.md#port-forwarding).
+- qBittorrent uses your normal internet connection. WireGuard does not hide
+  downloads from trackers or peers.
+- Backups are encrypted; DEN does not encrypt live files. Sharing a media and
+  backup HDD means its failure loses both.
+- Keep a KeePass vault's master password separate from its exported file.
+  App passwords changed outside DEN must be updated in the vault manually.
 
-- Applications are private by default through a pre-DNAT nftables network guard and Traefik LAN/VPN IPv4 allowlisting. Outside web/admin/voice access is dropped before Docker port forwarding; HTTP-01 retains a TCP 80 certificate-challenge exception. DNS-01 VPN-only deployments do not forward public TCP 80/443 to DEN at all. Source-NATing WAN traffic to a trusted LAN address or adding a source-hiding CDN/proxy invalidates the source-address boundary.
-- HTTPS certificates are obtained and renewed by Traefik with HTTP-01 by default, or deSEC DNS-01 when `ACME_CHALLENGE=dns-desec`. DNS-01 mounts a separate root-only token file read-only into Traefik; its token must permit challenge TXT changes as well as DEN's A-record updates. No insecure-dashboard/API option is enabled, and Traefik has no Docker socket. Client-forwarded headers are not trusted at the entrypoint. Nextcloud trusts only Traefik's fixed bridge IPv4.
-- Docker administration is root-equivalent. DEN does not add users to the Docker group. Application containers share a network; compromise of one can put other application services at risk. It is a household framework, not a hardened hostile multi-tenant environment.
-- Configuration is parsed as data, not sourced from user files. Generated passwords are random 192-bit hex values. `.env`, the deSEC DDNS token, VPN profiles, and recovery kit directories are root-only. Runtime container environment inspection is still available to root/Docker administrators; these are not hardware-backed secrets.
-- The optional KeePass database and its generated master password are both root-only on the host and included in the DEN backup/recovery copy. Export the KDBX and password through separate channels; anyone with both can read the stored credentials. KeePassXC runs on the user's own device, not as a server service.
-- Optional Fluxer uses DEN's private Traefik allowlist for web/API access and starts invite-only. Rexctl's voice media ports are opened on the host for LAN/VPN clients, but must not be forwarded by the router; the instance advertises `LAN_IP` for voice. Calls are direct traffic and do not pass through Traefik's HTTP allowlist.
-- Optional qBittorrent has a private HTTPS route, no published peer or direct Web UI ports, and initially disables UPnP/NAT-PMP. Authentication, CSRF, and host-header validation remain enabled. Set a permanent password immediately; its initial temporary password appears in private service logs. It uses the normal outbound connection: trackers and peers can see the server's public IP. DEN's WireGuard is not an outbound VPN or kill switch.
-- DEN downloads Rexctl from Fluxer's official release index and verifies the archive SHA-256 before installation. Fluxer images are maintained and upgraded by the upstream Rexctl release, separately from DEN's pinned core Compose images.
-- Each WireGuard device gets a separate private key and `/32` address. Profiles are credentials. Revoke lost devices with `den vpn-remove`; restoring an older snapshot can restore revoked peers, which must then be revoked again.
-- Nextcloud's administrator is generated automatically. Forgejo registrations are disabled and its initial administrator is created interactively. Immich and Jellyfin use their own first-user interfaces; finish those immediately before sharing LAN/VPN access. Enable application MFA where supported and use ordinary accounts for day-to-day activity.
-- DEN enables IPv4 forwarding and adds WireGuard forwarding/NAT rules. Fedora firewalld remains enabled; its dedicated `den-vpn` zone accepts only traffic admitted by the earlier network guard. VPN devices can reach the configured LAN and specified server web, SSH, Cockpit, DNS and enabled voice ports, not arbitrary host listeners. LAN devices do not need VPN. `den-firewall.service` is required before Docker starts and is checked by `den check`. Docker bridges remain trusted internally. Do not expose host SSH to the WAN. VPN DNS listens only on the WireGuard address, not public interfaces.
-- SELinux remains enabled. DEN labels its container bind mounts and applies a persistent DNS configuration file context; do not disable SELinux to work around an AVC denial. Inspect and resolve the denial instead.
-- Backups are encrypted; live data is not encrypted by DEN. Root can read credentials and delete attached backups. Keep the recovery kit private.
-- Media/downloads and snapshots can share one HDD with `ALLOW_SHARED_MEDIA_BACKUP=yes`. Disk failure loses both; keep another copy of anything you cannot replace.
-- Images are frozen by digest and updated through monthly DEN releases rather than independent moving tags. Monthly maintenance also upgrades Fedora packages and the next stable Fedora release, with automatic reboots and backup gates. `UPDATE_REPOSITORY`, its migration scripts, Fedora metadata, and registry endpoints are supply-chain trust dependencies. A private source needs root-scoped, read-only Git credentials configured once; do not embed credentials in its URL. Application backups are not a full OS rollback.
-
-Do not post `.env`, `acme.json`, WireGuard profiles, recovery kits, container inspection output, or unredacted logs in support requests.
+For administrators: Docker/root access controls the entire server. Containers
+share a network, not strong isolation. Only use a trusted update repository;
+its code runs as root. Source-hiding proxies or router source NAT can undermine
+LAN restrictions. See [architecture](architecture.md) for implementation details.
