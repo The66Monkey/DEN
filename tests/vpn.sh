@@ -22,8 +22,13 @@ wg() {
 install() { cp "$3" "$TEMP/installed-wg0.conf"; }
 write_vpn
 grep -Fq 'AllowedIPs = 10.44.0.2/32' "$DEPLOY_DIR/private/wg0.conf"
-grep -Fq 'Endpoint = home.home.example.net:41873' "$DEPLOY_DIR/private/home.conf"
+grep -Fq 'Endpoint = vpn.home.example.net:41873' "$DEPLOY_DIR/private/home.conf"
+grep -Fxq 'host-record=media.home.example.net,192.168.1.10' "$DEPLOY_DIR/private/dnsmasq.conf"
+if grep -Eq 'address=/|local=/|host-record=vpn\\.' "$DEPLOY_DIR/private/dnsmasq.conf"; then
+    fail 'VPN DNS overrides the public endpoint or other services sharing the domain.'
+fi
 vpn_add phone >/dev/null
+grep -Fq 'Endpoint = vpn.home.example.net:41873' "$DEPLOY_DIR/private/phone.conf"
 grep -Fq 'Address = 10.44.0.3/32' "$DEPLOY_DIR/private/phone.conf"
 [[ "$(stat -c %a "$DEPLOY_DIR/private/phone.conf")" == 600 ]]
 [[ "$(stat -c %a "$DEPLOY_DIR/private")" == 700 ]]

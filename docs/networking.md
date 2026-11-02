@@ -12,7 +12,8 @@ For LAN devices without VPN, set local DNS as described below.
 
    | Name | Service |
    | --- | --- |
-   | `home` | WireGuard and LAN/VPN-only DEN home page |
+   | `vpn` | Public WireGuard endpoint (never a private DNS rewrite) |
+   | `home` | LAN/VPN-only DEN home page |
    | `media` | Jellyfin |
    | `photos` | Immich |
    | `files` | Nextcloud |
@@ -115,16 +116,47 @@ In the router's local DNS settings, point each enabled app name to DEN's
 192.168.1.10 chat.example.net downloads.example.net
 ```
 
-Keep `home.example.net` pointing to the **public IP** for WireGuard.
-To open `https://home.example.net` on the LAN without changing that VPN endpoint,
-use router NAT loopback/hairpin support, or connect through WireGuard (whose DNS
-resolves it to the LAN IP). Do not override `home` to the LAN IP in router DNS:
-VPN clients still need its public address to establish the tunnel.
-The home page includes service links, LAN SSH instructions and the installed README.
+Keep `vpn.example.net` pointing to the **public IP** in every resolver.
+The installer and `vpn-add` now generate `vpn.DOMAIN` endpoints. Existing device
+profiles using `home.DOMAIN` must be edited before adding a private `home` rewrite:
+replace only the endpoint hostname, preserving the port, keys and AllowedIPs.
+Test a disconnect/reconnect on mobile data. Saved server profiles do not update
+already-imported device profiles; older KeePass attachments may also retain
+the old endpoint. No key rotation or new peer is needed for a hostname edit.
+
+Add `home.example.net` to the private DEN app records after that transition.
+The home page includes service links, LAN SSH instructions, the mascot and a
+GitHub link.
 It retains the LAN/VPN allowlist even when chat is public.
-Devices must use the router's DNS; browser Secure DNS can bypass it.
+Devices must use the private resolver; browser Secure DNS can bypass it.
 If the router has no local DNS overrides, use WireGuard or add these entries
 to each computer's hosts file.
+
+DEN's VPN DNS now overrides only enabled DEN service names, not the entire
+domain. Other names, including `vpn` and BASM services, resolve upstream unless
+an administrator supplies explicit coexistence records. Existing deployments
+need a reviewed DNS configuration update; do not rerun `write_vpn` or the
+installer to change DNS, since initial VPN setup generates new keys.
+
+### Home-lab LAN DNS with BASM AdGuard
+
+The manually migrated AdGuard at `192.168.50.20` now has exact private rewrites:
+DEN's enabled web names to `192.168.50.245`, BASM's `erp`, `mail`, `cloud` to
+`192.168.50.20`. DEN VPN DNS has the same service separation.
+`vpn.scandinavianhacking.dedyn.io` stays public. Public service records were not
+changed. CleanBrowsing `185.228.168.9` and `185.228.169.9` are AdGuard's upstreams,
+not secondary resolvers to advertise directly to LAN clients.
+
+On the ASUS RT-AX58U, configure **LAN > DHCP Server > DNS and WINS Server
+Setting > DNS Server** as `192.168.50.20`. Leave a second public DNS blank.
+If shown, disable **Advertise router's IP in addition to user-specified DNS**.
+DNS Director/Filter rules forcing CleanBrowsing directly must not bypass AdGuard;
+disable that redirect or set an appropriate custom resolver after reviewing
+device exceptions. WAN DNS can remain separate. Renew DHCP/reconnect Wi-Fi and
+clear resolver/browser caches. Test with VPN off: `nslookup home.DOMAIN` must
+return `.245`, while `nslookup vpn.DOMAIN` must return the public IP.
+IPv6-advertised DNS and browser Secure DNS can also bypass private rewrites.
+Do not publicly expose AdGuard's DNS/admin ports.
 
 Open apps by hostname, not IP. `https://SERVER-LAN-IP/` serves only the DEN
 home page, still restricted to LAN/VPN. The IP route does not request an ACME
@@ -135,10 +167,9 @@ Public DNS may send you to another server, even from home.
 If `home.DOMAIN` shows `TRAEFIK DEFAULT CERT` but direct LAN access with that
 hostname serves a trusted certificate, the browser is reaching the wrong
 reverse proxy, not a broken DEN certificate. Use DEN's VPN DNS or a per-device
-hosts entry for the home page (`SERVER-LAN-IP home.DOMAIN`). On a device using
-`home.DOMAIN` as its VPN endpoint, that override also changes endpoint resolution:
-remove it before testing VPN away from home, or use the VPN's supplied DNS
-after connecting. Do not change the public endpoint record to a private IP.
+hosts entry for the home page (`SERVER-LAN-IP home.DOMAIN`). First migrate legacy
+`home.DOMAIN` VPN endpoints to `vpn.DOMAIN` as described above.
+Do not change the public endpoint record to a private IP.
 Do not install a default self-signed proxy certificate as trusted or use browser
 exceptions as the normal access procedure.
 

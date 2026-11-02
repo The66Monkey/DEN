@@ -270,22 +270,34 @@ DNS = 10.44.0.1
 
 [Peer]
 PublicKey = $public_key
-Endpoint = home.$DOMAIN:$WIREGUARD_PORT
+Endpoint = vpn.$DOMAIN:$WIREGUARD_PORT
 AllowedIPs = 10.44.0.0/24, $LAN_CIDR
 PersistentKeepalive = 25
 EOF
-    cat > "$DEPLOY_DIR/private/dnsmasq.conf" <<EOF
+    write_vpn_dns > "$DEPLOY_DIR/private/dnsmasq.conf"
+    chmod 700 "$DEPLOY_DIR/private"
+    chmod 600 "$DEPLOY_DIR/private/"*.conf
+}
+
+write_vpn_dns() {
+    local name
+    cat <<EOF
 port=53
 listen-address=10.44.0.1
 bind-interfaces
 no-resolv
 server=1.1.1.1
 server=1.0.0.1
-address=/$DOMAIN/$LAN_IP
-local=/$DOMAIN/
 EOF
-    chmod 700 "$DEPLOY_DIR/private"
-    chmod 600 "$DEPLOY_DIR/private/"*.conf
+    for name in home media photos files git; do
+        printf 'host-record=%s.%s,%s\n' "$name" "$DOMAIN" "$LAN_IP"
+    done
+    if [[ "${FLUXER_ENABLED:-no}" == yes ]]; then
+        printf 'host-record=chat.%s,%s\n' "$DOMAIN" "$LAN_IP"
+    fi
+    if [[ "${QBITTORRENT_ENABLED:-no}" == yes ]]; then
+        printf 'host-record=downloads.%s,%s\n' "$DOMAIN" "$LAN_IP"
+    fi
 }
 
 install_host_config() {
@@ -352,7 +364,7 @@ DNS = 10.44.0.1
 
 [Peer]
 PublicKey = $server_public
-Endpoint = home.$DOMAIN:$WIREGUARD_PORT
+Endpoint = vpn.$DOMAIN:$WIREGUARD_PORT
 AllowedIPs = 10.44.0.0/24, $LAN_CIDR
 PersistentKeepalive = 25
 EOF

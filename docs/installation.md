@@ -87,7 +87,7 @@ DEN does not upgrade it, enroll Secure Boot keys or enable GPU passthrough.
 - [ ] Add your domain at [deSEC](https://desec.io). If registered elsewhere,
   follow deSEC's nameserver instructions without removing records you still use.
 - [ ] Create these **A records**, each pointing to your router's **public IPv4**:
-  `home`, `media`, `photos`, `files`, `git`.
+  `vpn`, `home`, `media`, `photos`, `files`, `git`.
   Add `downloads` for qBittorrent and `chat` for Fluxer if wanted.
   Do not add AAAA records for DEN names.
 - [ ] Create a deSEC API token with permission to update those records and

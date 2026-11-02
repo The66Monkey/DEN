@@ -27,22 +27,24 @@ if ! valid_ipv4 "$current_ip"; then
     exit 1
 fi
 
-last_ip=''
-if [[ -f "$STATE_FILE" ]]; then
-    last_ip="$(<"$STATE_FILE")"
-fi
-if [[ "$current_ip" == "$last_ip" ]]; then
-    printf 'DEN DDNS: public IPv4 is unchanged (%s).\n' "$current_ip"
-    exit 0
-fi
-
-hostnames="home.$DOMAIN,media.$DOMAIN,photos.$DOMAIN,files.$DOMAIN,git.$DOMAIN"
+hostnames="vpn.$DOMAIN,home.$DOMAIN,media.$DOMAIN,photos.$DOMAIN,files.$DOMAIN,git.$DOMAIN"
 if [[ "$FLUXER_ENABLED" == yes ]]; then
     hostnames+=",chat.$DOMAIN"
 fi
 if [[ "$QBITTORRENT_ENABLED" == yes ]]; then
     hostnames+=",downloads.$DOMAIN"
 fi
+last_ip=''
+last_hostnames=''
+if [[ -f "$STATE_FILE" ]]; then
+    last_ip="$(sed -n '1p' "$STATE_FILE")"
+    last_hostnames="$(sed -n '2p' "$STATE_FILE")"
+fi
+if [[ "$current_ip" == "$last_ip" && "$hostnames" == "$last_hostnames" ]]; then
+    printf 'DEN DDNS: public IPv4 is unchanged (%s).\n' "$current_ip"
+    exit 0
+fi
+
 printf 'DEN DDNS: updating %s to %s.\n' "$hostnames" "$current_ip"
 if ! printf 'header = "Authorization: Token %s"\n' "$DESEC_TOKEN" |
     curl -4 -fsS --max-time 30 -K - -o /dev/null \
@@ -51,6 +53,6 @@ if ! printf 'header = "Authorization: Token %s"\n' "$DESEC_TOKEN" |
     exit 1
 fi
 
-printf '%s\n' "$current_ip" > "$STATE_FILE.tmp"
+printf '%s\n%s\n' "$current_ip" "$hostnames" > "$STATE_FILE.tmp"
 mv -f "$STATE_FILE.tmp" "$STATE_FILE"
 printf 'DEN DDNS: deSEC records updated.\n'
