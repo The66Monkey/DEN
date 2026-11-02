@@ -2,6 +2,9 @@
 
 **Digital Environment for Networking: your home server.**
 
+DEN is an opinionated deployment framework that brings established open-source
+services together into a complete home-server setup.
+
 Photos, files, movies and private remote access on one Fedora Server PC.
 Use the apps from your phone or computer; no desktop is needed on the server.
 
