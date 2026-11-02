@@ -22,6 +22,7 @@ Tests need neither root nor a Docker daemon. `COMPOSE_BIN` and `RESTIC_BIN` opti
 - Optional Fluxer route privacy, Rexctl full-archive-before-Restic ordering, and the disabled-by-default upgrade path.
 - Pre-DNAT network guard generation, HTTP/DNS certificate exceptions, VPN host-port scope, boot ordering and explicit invalid-rule failure.
 - Optional qBittorrent config validation, profile selection across lifecycle commands, private HTTPS routing, no published peer/UI ports, disabled port mapping, and preserved existing preferences.
+- Completed downloads exposed read-only to Jellyfin only with qBittorrent enabled; explicit shared-HDD consent, legacy-safe defaults, and a real shared-filesystem backup/restore without repository recursion.
 - Update refusal after failed downloads/backups, preserved environment secrets, failed readiness reporting, staging cleanup, and Nextcloud major-version gates (with mocked Compose).
 - Monthly timer, ordered release tags, backup/error gates, explicit database-major migration hooks, interrupted-update refusal, stable next-Fedora selection, and required reboots (mocked Git/DNF/systemd).
 
@@ -227,7 +228,9 @@ server's port forwards.
 is blocked outside without VPN, and requires an application login on LAN/VPN. Set a
 permanent password; test an authorized torrent transfer and saved resume state
 after a restart. Confirm UPnP/NAT-PMP remains off and no peer/direct UI ports are
-published. Back up and restore settings, completed and partial downloads on a
+published. Add `/downloads/complete` as a Jellyfin library, check that UID 1000
+can read completed files but cannot modify them, and confirm metadata remains
+writable in Jellyfin's configuration. Check seeding still works. Back up and restore settings, completed and partial downloads on a
 replacement host. With the option absent or `no`, confirm no qBittorrent service
 starts and no downloads route exists.
 

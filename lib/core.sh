@@ -15,8 +15,9 @@ read_settings() {
     local file="$1" line key value
     local -A seen=()
     [[ -f "$file" ]] || fail "Config not found: $file"
-    unset DOMAIN EMAIL LAN_IP LAN_CIDR MEDIA_MOUNT BACKUP_MOUNT KEEPASS_ENABLED FLUXER_ENABLED QBITTORRENT_ENABLED UPDATE_REPOSITORY ACME_CHALLENGE DB_PASSWORD NEXTCLOUD_ADMIN_PASSWORD RESTIC_PASSWORD
+    unset DOMAIN EMAIL LAN_IP LAN_CIDR MEDIA_MOUNT BACKUP_MOUNT ALLOW_SHARED_MEDIA_BACKUP KEEPASS_ENABLED FLUXER_ENABLED QBITTORRENT_ENABLED UPDATE_REPOSITORY ACME_CHALLENGE DB_PASSWORD NEXTCLOUD_ADMIN_PASSWORD RESTIC_PASSWORD
     MEDIA_MOUNT=
+    ALLOW_SHARED_MEDIA_BACKUP=no
     ACME_CHALLENGE=http
     KEEPASS_ENABLED=no
     FLUXER_ENABLED=no
@@ -27,7 +28,7 @@ read_settings() {
         [[ "$line" == *=* ]] || fail 'Use unquoted KEY=value lines in config.'
         key="${line%%=*}"; value="${line#*=}"
         case "$key" in
-            DOMAIN|EMAIL|LAN_IP|LAN_CIDR|MEDIA_MOUNT|BACKUP_MOUNT|KEEPASS_ENABLED|FLUXER_ENABLED|QBITTORRENT_ENABLED|UPDATE_REPOSITORY|ACME_CHALLENGE|DB_PASSWORD|NEXTCLOUD_ADMIN_PASSWORD|RESTIC_PASSWORD) ;;
+            DOMAIN|EMAIL|LAN_IP|LAN_CIDR|MEDIA_MOUNT|BACKUP_MOUNT|ALLOW_SHARED_MEDIA_BACKUP|KEEPASS_ENABLED|FLUXER_ENABLED|QBITTORRENT_ENABLED|UPDATE_REPOSITORY|ACME_CHALLENGE|DB_PASSWORD|NEXTCLOUD_ADMIN_PASSWORD|RESTIC_PASSWORD) ;;
             *) fail "Unknown config key: $key" ;;
         esac
         [[ ! -v "seen[$key]" ]] || fail "Duplicate config key: $key"
@@ -87,6 +88,7 @@ validate_settings() {
     [[ "$KEEPASS_ENABLED" == yes || "$KEEPASS_ENABLED" == no ]] || fail 'KEEPASS_ENABLED must be yes or no.'
     [[ "$FLUXER_ENABLED" == yes || "$FLUXER_ENABLED" == no ]] || fail 'FLUXER_ENABLED must be yes or no.'
     [[ "$QBITTORRENT_ENABLED" == yes || "$QBITTORRENT_ENABLED" == no ]] || fail 'QBITTORRENT_ENABLED must be yes or no.'
+    [[ "${ALLOW_SHARED_MEDIA_BACKUP:-no}" == yes || "${ALLOW_SHARED_MEDIA_BACKUP:-no}" == no ]] || fail 'ALLOW_SHARED_MEDIA_BACKUP must be yes or no.'
     [[ "${ACME_CHALLENGE:-http}" == http || "${ACME_CHALLENGE:-http}" == dns-desec ]] || fail 'ACME_CHALLENGE must be http or dns-desec.'
     [[ "$UPDATE_REPOSITORY" =~ ^https://[a-zA-Z0-9.-]+/[a-zA-Z0-9._/-]+\.git$ || "$UPDATE_REPOSITORY" =~ ^git@[a-zA-Z0-9.-]+:[a-zA-Z0-9._/-]+\.git$ ]] || fail 'UPDATE_REPOSITORY must be an HTTPS or SSH Git repository URL without embedded credentials.'
     [[ ${#DOMAIN} -le 253 && "$DOMAIN" == *.* && "$DOMAIN" != *.local && "$DOMAIN" != *.localhost ]] || fail 'Use a public DNS domain.'
@@ -113,7 +115,7 @@ validate_settings() {
     [[ "$BACKUP_MOUNT" =~ ^/mnt/[a-zA-Z0-9_-]+$ || "$BACKUP_MOUNT" =~ ^/media/[a-zA-Z0-9_-]+$ ]] || fail 'BACKUP_MOUNT must be a simple absolute path under /mnt or /media.'
     if [[ -n "${MEDIA_MOUNT:-}" ]]; then
         [[ "$MEDIA_MOUNT" =~ ^/mnt/[a-zA-Z0-9_-]+$ ]] || fail 'MEDIA_MOUNT must be a simple absolute path under /mnt, or empty for single-disk storage.'
-        [[ "$MEDIA_MOUNT" != "$BACKUP_MOUNT" ]] || fail 'Media and backup disks must be separate.'
+        [[ "$MEDIA_MOUNT" != "$BACKUP_MOUNT" || "${ALLOW_SHARED_MEDIA_BACKUP:-no}" == yes ]] || fail 'Media and backup disks must be separate unless ALLOW_SHARED_MEDIA_BACKUP=yes.'
     fi
     for key in DB_PASSWORD NEXTCLOUD_ADMIN_PASSWORD RESTIC_PASSWORD; do
         [[ ! -v "$key" || "${!key}" =~ ^[a-f0-9]{48}$ ]] || fail "Invalid generated secret: $key"
@@ -132,7 +134,8 @@ write_environment() {
     DB_PASSWORD="$(openssl rand -hex 24)"
     NEXTCLOUD_ADMIN_PASSWORD="$(openssl rand -hex 24)"
     RESTIC_PASSWORD="$(openssl rand -hex 24)"
-    for key in DOMAIN EMAIL LAN_IP LAN_CIDR MEDIA_MOUNT BACKUP_MOUNT KEEPASS_ENABLED FLUXER_ENABLED QBITTORRENT_ENABLED UPDATE_REPOSITORY ACME_CHALLENGE; do
+    ALLOW_SHARED_MEDIA_BACKUP="${ALLOW_SHARED_MEDIA_BACKUP:-no}"
+    for key in DOMAIN EMAIL LAN_IP LAN_CIDR MEDIA_MOUNT BACKUP_MOUNT ALLOW_SHARED_MEDIA_BACKUP KEEPASS_ENABLED FLUXER_ENABLED QBITTORRENT_ENABLED UPDATE_REPOSITORY ACME_CHALLENGE; do
         printf '%s=%s\n' "$key" "${!key}"
     done > "$destination/.env"
     printf 'DB_PASSWORD=%s\nNEXTCLOUD_ADMIN_PASSWORD=%s\nRESTIC_PASSWORD=%s\n' \

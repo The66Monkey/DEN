@@ -31,8 +31,7 @@ attached. This handover USB can be safely ejected and stored somewhere private.
 Automatic maintenance normally runs monthly, on the first day from 04:00
 server time. Applications may be briefly unavailable while it updates or
 reboots. No routine dashboard or alert checks are expected from you.
-Keep irreplaceable photos and files in another independent location too:
-automatic backups can fail unnoticed, even while applications still work.
+Keep another copy of photos and files you cannot replace.
 
 PASSWORDS AND ACCESS
 Keep a protected second copy of your vault and store its password separately.
@@ -81,7 +80,7 @@ INSTALLER: COMPLETE BEFORE HANDOVER
     Replace /USB-MOUNT with the USB's mount point on the installed server.
 [ ] Give the master password separately; verify the owner can open the vault.
 [ ] Test browser access and, if needed, the owner's VPN on mobile data.
-[ ] Verify server health, a current backup, and a tested restore.
+[ ] Verify server health and that the first automatic backup succeeded.
 [ ] Save a separate private recovery kit on a suitable protected device.
-    This guide and vault alone are not a complete disaster-recovery kit.
+    This saves the settings and password needed to restore a snapshot.
 [ ] Remove the draft notice only after all checks above are complete.

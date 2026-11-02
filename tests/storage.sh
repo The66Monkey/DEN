@@ -42,6 +42,16 @@ check_media_disk
 FILESYSTEM=btrfs
 check_media_disk
 FILESYSTEM=ext4
+SAVED_BACKUP_MOUNT="$BACKUP_MOUNT"
+BACKUP_MOUNT="$MEDIA_MOUNT"
+if (check_media_disk) 2>/dev/null; then fail 'Accepted shared media/backup storage without consent.'; fi
+ALLOW_SHARED_MEDIA_BACKUP=yes
+check_media_disk
+WRONG_FILESYSTEM=true
+if (check_media_disk) 2>/dev/null; then fail 'Shared-storage consent allowed the OS filesystem.'; fi
+WRONG_FILESYSTEM=false
+ALLOW_SHARED_MEDIA_BACKUP=no
+BACKUP_MOUNT="$SAVED_BACKUP_MOUNT"
 mv "$MEDIA_MOUNT/den/media" "$MEDIA_MOUNT/den/other"
 mkdir "$MEDIA_MOUNT/den/media"
 rm "$DATA_DIR/media"

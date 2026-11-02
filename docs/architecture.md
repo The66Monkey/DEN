@@ -69,6 +69,14 @@ bind mounts, so snapshots still have a single `/srv/den` root. Empty or absent
 `MEDIA_MOUNT` preserves the legacy single-disk layout. Fluxer live object-store
 volumes remain upstream-managed on SSD; no local HDD-media override is applied.
 
+With qBittorrent enabled, `templates/compose.torrents.yml` additionally exposes
+only completed downloads to Jellyfin read-only at `/downloads/complete`.
+Jellyfin metadata remains writable on SSD; seeding files need not move.
+`ALLOW_SHARED_MEDIA_BACKUP=yes` explicitly permits media/downloads and the
+Restic repository on the same HDD filesystem, with a warning and no
+disk-failure protection for that media. The default continues to require
+separate filesystems; OS-filesystem backup destinations are always rejected.
+
 ## Repository Map
 
 `install.sh` prepares a fresh host; `recover.sh` restores an empty host; `update.sh` submits a reviewed checkout to the installed CLI. `bin/den` dispatches root-only commands with a shared lock. `lib/core.sh` parses config without evaluating shell code. `lib/deploy.sh` owns Compose, routes, storage, VPN, and host setup. `lib/backup.sh` owns cold snapshots and staged restore. `lib/keepass.sh` manages the optional encrypted credential export. `lib/fluxer.sh` bridges the optional Rexctl-managed stack into DEN's proxy, backup, recovery, and update paths. `lib/maintenance.sh` owns health checks and release updates. `templates` holds the fixed stack and systemd units. `tests` has non-root contract, failure-path, and real Restic checks.

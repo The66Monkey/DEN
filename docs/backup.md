@@ -2,7 +2,7 @@
 
 ## What DEN Saves
 
-Restic encrypts backups on the separate mounted disk at `BACKUP_MOUNT/den-restic`. Snapshots contain all of `/srv/den`, including media, photo uploads, both databases, Nextcloud files and config, Jellyfin config, Forgejo SQLite and repositories, Traefik certificate state, and, when enabled, full Fluxer archives. Before each snapshot, DEN requests a full Fluxer archive from `rexctl` and stores it in `/srv/den/fluxer/backups`; if that command fails, DEN does not take a partial snapshot. DEN also copies `/opt/den` into `/srv/den/system/deployment`, including the exact Compose file, version, scripts, passwords, VPN keys, the Rexctl binary, and, when enabled, the KeePass database and its master password. Only `/srv/den/cache` is excluded because it can be regenerated.
+Restic saves encrypted snapshots at `BACKUP_MOUNT/den-restic`. The HDD can be shared with media/downloads using the [shared-storage setting](qbittorrent.md#sharing-the-media-and-backup-hdd). Snapshots include `/srv/den` and a saved copy of `/opt/den`: application data, settings, passwords, VPN keys and certificates. Optional Fluxer archives and qBittorrent downloads are included too. Regenerable caches are excluded.
 
 DEN stops all stack containers before copying application data into the repository and restarts only the previously running services afterward, including when the backup fails. This is a cold file-level backup, not a live database dump. There is no snapshot if Docker cannot confirm the stack is stopped. VPN and VPN DNS stay up. Downtime depends on changed data size and disk speed; a large first backup can take hours. Recovery uses the saved database image versions rather than trying to import old files into newer databases.
 
@@ -19,14 +19,18 @@ sudo den snapshots
 journalctl -u den-backup.service --since yesterday
 ```
 
-No snapshots are deleted automatically in 0.1.0. Once a month, after verifying your recovery kit and a recent backup, run:
+Nightly snapshots are automatic; you do not need to make extra manual backups
+during everyday use. No snapshots are deleted automatically in 0.1.0.
+When space runs low, remove older snapshots with:
 
 ```bash
-sudo den verify-backup
 sudo den prune
 ```
 
-`prune` keeps 7 daily, 4 weekly, and 6 monthly snapshot buckets (deduplicated, not necessarily 17 different snapshots). It deletes older snapshots and reclaims space, and is irreversible. Keep a pre-update snapshot until you are satisfied the update works. `verify-backup` reads all repository data and may take a long time. The backup disk should have enough room for the live data plus version history.
+`prune` keeps 7 daily, 4 weekly, and 6 monthly snapshot buckets, sharing unchanged
+data between snapshots. It permanently removes older history.
+If you suspect a backup problem, `sudo den verify-backup` checks the repository;
+it can take a while.
 
 ## Save the Recovery Kit
 
@@ -34,9 +38,11 @@ sudo den prune
 sudo den recovery-kit /media/recovery-usb
 ```
 
-Copy that protected directory to a second private, off-site location. It contains `.env` with the encryption password, the deSEC DDNS token in `private/ddns.env`, VPN keys, and deployment scripts. Store it separately from the server and ideally separately from the backup disk. A kit is **configuration only**, not a copy of household data. Restic cannot reset a lost encryption password. Generate a new kit into a new directory after VPN or release changes, keeping the preceding kit until the new one is verified.
-
-An always-connected USB disk helps against disk failure but not theft, fire, or a compromised root account. Keep an additional off-site copy of the Restic repository, copied while no Restic operation is running. DEN's standard target remains the mounted local disk; it does not claim an automated off-site backup service.
+Keep this private USB copy somewhere accessible if the server fails. It contains
+the encryption password, DNS token, VPN keys and deployment scripts, not household
+data. Restic cannot reset a lost encryption password. Refresh it after changing
+VPN profiles or the installed release. Additional off-site copies are optional;
+for most households, prioritize photos and files you cannot replace.
 
 ## Practice a Restore
 

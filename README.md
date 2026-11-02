@@ -8,7 +8,7 @@ DEN deploys a fixed core stack on one Fedora Server PC: media, photos, files, pr
 
 1. **Install Fedora Server** on the smaller SSD, with SSH enabled. Use Ethernet
    if possible. You need an x86-64-v2 PC, at least 8 GB RAM (16 GB recommended),
-   and a separate backup disk. No desktop is needed.
+   and a mounted HDD for storage/backups. No desktop is needed.
 2. **Lock the server's IP in your router.** Note the LAN IPv4 shown by Fedora
    Server (or run `hostname -I`). In your router's DHCP settings, reserve that
    address for the server's network adapter, for example `192.168.1.10`.
@@ -44,9 +44,11 @@ DEN deploys a fixed core stack on one Fedora Server PC: media, photos, files, pr
    Devices must use that local DNS. Keep `home.YOUR-DOMAIN` pointing to the
    public WAN IP for WireGuard. See [router and DNS details](docs/networking.md)
    if your router lacks local DNS overrides.
-6. **Prepare storage.** Mount the larger data disk at `/mnt/den-storage` and a
-   separate physical backup disk at `/mnt/den-backup`, persistently across
-   reboots. DEN never formats disks. Follow the
+6. **Prepare storage.** Use an SSD for the OS and app settings, and a larger
+   HDD for media/downloads. Backups can use a separate disk or share the HDD
+   with `ALLOW_SHARED_MEDIA_BACKUP=yes`; see the
+   [storage choices](docs/qbittorrent.md#sharing-the-media-and-backup-hdd).
+   Mount disks persistently across reboots. DEN never formats disks. Follow the
    [disk preparation steps](docs/installation.md#prepare-the-larger-disk-without-a-gui);
    for a single-disk server, explicitly set `MEDIA_MOUNT=`.
 
@@ -61,7 +63,7 @@ Then [install DEN](#install-den) from the console or SSH on your home network.
 | Keep code and small projects | Forgejo | `https://git.your-domain` |
 | Chat with household and friends (optional) | Fluxer | `https://chat.your-domain` |
 | Download and seed torrents (optional) | qBittorrent | `https://downloads.your-domain` |
-| Recover from a broken disk | Restic | Separate encrypted backup disk |
+| Restore saved data | Restic | Encrypted snapshots on the configured HDD |
 | Check the basics | `den status` / `den check` | Terminal and systemd journal |
 
 Traefik configures HTTPS automatically. Docker Compose runs the core applications; optional Fluxer is managed by its upstream `rexctl` tool. Fedora Server runs headlessly: install and administer DEN over SSH, and use application browsers on another device. The default example keeps the OS, databases, settings and caches on the small SSD, with Jellyfin media and qBittorrent downloads on a mounted larger HDD. Core data and Fluxer recovery archives remain accessible under `/srv/den`; Fluxer's live Docker volumes remain in Docker's data root. Apps are restricted to your LAN and VPN, not the open internet. Public links remain household/VPN-only.
@@ -77,6 +79,12 @@ sudo bash install.sh /tmp/den.env
 ```
 
 There are five required settings, a secondary-storage mount setting and three optional feature switches, with no application-selection wizard. Mount the larger disk at `MEDIA_MOUNT` before installing, or explicitly set `MEDIA_MOUNT=` for a single-disk host. DEN never selects, formats or partitions disks. Read the [short installation guide](docs/installation.md), then [finish your accounts and start using DEN](docs/first-evening.md). [Optional qBittorrent setup](docs/qbittorrent.md) covers its private Web UI, storage, and normal outbound connection.
+
+With qBittorrent enabled, add `/downloads/complete` as a Jellyfin library to
+watch completed media without moving files or interrupting seeding. Jellyfin
+has read-only media access; metadata is stored in its writable configuration.
+For an explicitly accepted shared media/backup HDD, see the
+[shared-disk limitations](docs/qbittorrent.md#sharing-the-media-and-backup-hdd).
 
 ## Try DEN Locally First
 
@@ -95,6 +103,35 @@ sudo den vpn-add phone
 sudo den logs nextcloud
 sudo den fluxer-status
 ```
+
+### Import WireGuard on Another Computer
+
+Use a separate profile for each device. Device names must be lowercase;
+`phive` is valid, but `PHive` is rejected and creates no configuration.
+From your computer, SSH into the server (replace the login and IP):
+
+```bash
+ssh YOUR-FEDORA-USER@SERVER-LAN-IP
+sudo den vpn-add phive
+sudo install -o "$(id -un)" -m 600 /opt/den/private/phive.conf "$HOME/phive.conf"
+exit
+```
+
+If `phive` already exists, skip `vpn-add`. Keep the same profile name in
+every command. Back on your own computer, download the profile and remove
+the temporary server copy:
+
+```bash
+scp YOUR-FEDORA-USER@SERVER-LAN-IP:phive.conf .
+ssh YOUR-FEDORA-USER@SERVER-LAN-IP 'rm -- "$HOME/phive.conf"'
+```
+
+Import `phive.conf` into WireGuard, activate it, and test the application
+URLs. Delete the downloaded copy after importing; it contains your private
+VPN key. The protected original remains on the server. For phones, see
+[terminal QR-code onboarding](docs/first-evening.md#connect-your-phone-with-wireguard).
+LAN devices do not need VPN when local DNS points the application names to
+the server's LAN IP; WireGuard can also supply DEN's private DNS.
 
 Backups run nightly at about 03:00. Monthly automatic maintenance runs on the
 first day at 04:00 (plus up to 30 minutes of jitter): DEN releases, enabled
@@ -116,6 +153,6 @@ Restic backup/restore and mocked maintenance failure paths. Full Fedora Server
 deployment, certificates, VPN/voice access, database recovery and unattended OS
 upgrades still need the [live acceptance checks](docs/testing.md). Setup in
 under one hour remains a goal, not a measured guarantee. Keep an independent
-copy of irreplaceable data until your deployment's recovery has been tested.
+copy of photos or files you cannot replace.
 
 See [architecture and storage](docs/architecture.md), [security](docs/security.md), and [troubleshooting](docs/troubleshooting.md).

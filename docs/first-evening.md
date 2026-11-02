@@ -19,7 +19,7 @@ Finish the setup wizard before giving anyone else LAN/VPN access. Create separat
 
 Open Immich at `https://photos.your-domain`. Create the first administrator and household users, then connect the Immich mobile app and enable photo upload. Check that several test uploads appear and can be downloaded again. Facial recognition and initial library processing can be slow on an old PC.
 
-An upload or sync is **not** a backup. Keep originals elsewhere until you have tested DEN's encrypted backup and restore.
+Keep another copy of photos you cannot replace; phone sync also propagates changes.
 
 ## Sync Files
 
@@ -78,14 +78,14 @@ provides DEN's private DNS; device Private DNS or browser Secure DNS must not
 bypass it. In DNS-01 VPN-only mode, leave any other server's TCP 80/443 forwards
 unchanged.
 
-### Back Up After Setup
+### Check the Setup
 
 After testing access from your phone:
 
 ```bash
-sudo den backup
-sudo den snapshots
 sudo den check
 ```
 
-Save the external recovery kit and run a staged restore as described in [backup and recovery](backup.md). Only then start depending on DEN for important data.
+Nightly backups are automatic. Save a private USB recovery kit once setup is
+finished; [backup and recovery](backup.md) explains how and includes restore
+instructions for when you need them.

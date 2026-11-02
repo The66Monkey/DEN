@@ -5,7 +5,7 @@
 1. Install the current Fedora Server release on the **smaller primary SSD**, with SSH and standard system utilities. Select only that disk in Fedora's installer; leave the larger secondary HDD untouched. No desktop or server-side browser is needed: run the commands below at the text console or over SSH, and open application pages on another LAN/VPN device. Fedora Workstation is useful for development checks but is not the production acceptance target. DEN currently targets x86_64 only; it is not an ARM, LXC, or multi-server installer.
 2. Use a CPU with x86-64-v2 support, usually from 2012 or later, at least 8 GB RAM, and preferably 16 GB and four cores. Immich alone recommends 8 GB. Fluxer is sized for the machine but adds meaningful memory and storage load; 16 GB is recommended when enabled. GPU transcoding is not configured; direct-play compatible media is the recommended path on old PCs.
 3. Keep the OS, databases, app settings and caches on the SSD. Mount a local ext4, XFS or Btrfs filesystem on the **larger HDD** at `/mnt/den-storage` using its UUID in `/etc/fstab` (see below). The example sets `MEDIA_MOUNT=/mnt/den-storage`: DEN scripts persistent bind mounts from its `den/media` and `den/downloads` folders to `/srv/den/media` and `/srv/den/downloads`. Jellyfin's read-only `/media` and qBittorrent's default completed/incomplete download paths therefore use the HDD automatically. Other data, including photos and Nextcloud files, remains on SSD; allow at least 40 GB plus room for those files. Fluxer needs another 20 GB free when enabled. DEN does not format disks, choose disks by size, create RAID, or migrate existing files.
-4. Mount a **separate physical backup disk** at `/mnt/den-backup` using a UUID entry in `/etc/fstab`. Mount it now and verify it stays mounted after reboot. An example entry, after formatting the disk yourself, is `UUID=YOUR-DISK-UUID /mnt/den-backup ext4 defaults,nofail 0 2`. DEN never formats or automatically mounts the disk, and refuses an unmounted destination. Different partitions of the same physical disk are not a disaster backup; DEN can detect different filesystems, not physical failure independence.
+4. Choose backup storage: a separate disk, or the same HDD as media/downloads with `ALLOW_SHARED_MEDIA_BACKUP=yes`. For a shared HDD, set both `MEDIA_MOUNT` and `BACKUP_MOUNT` to `/mnt/den-backup`. Mount it persistently using its UUID in `/etc/fstab`, for example `UUID=YOUR-DISK-UUID /mnt/den-backup ext4 defaults,nofail 0 2`. DEN never formats the disk and refuses an unmounted destination.
 5. Connect over Ethernet where practical. Fedora's newer kernel and firmware can improve support for older Wi-Fi hardware, but some USB adapters still need third-party kernel modules. DEN does not build or maintain out-of-tree Wi-Fi drivers; confirm the adapter works after a Fedora kernel update before relying on it as the server's only network connection.
 6. Complete [router and DNS setup](networking.md). A public domain, WAN IPv4, reachable TCP 80/443 and UDP 41873, and LAN DNS overrides are required by default. If another server already uses public TCP 80/443, set `ACME_CHALLENGE=dns-desec` for DNS-01 certificates and forward only UDP 41873 for VPN-only remote access. No domain, CGNAT, or an ISP blocking the required inbound ports means this deployment model is not suitable.
 
@@ -15,6 +15,10 @@ It also writes `/etc/den/network.nft` and a Docker service dependency on
 `den-firewall.service`. The guard restricts outside access before Docker
 port forwarding; LAN clients need no VPN. Existing Cockpit remains accessible
 on TCP 9090 from LAN/VPN. See [network policy](networking.md#lanvpn-network-guard).
+
+Sharing the media and backup HDD requires the explicit
+`ALLOW_SHARED_MEDIA_BACKUP=yes` opt-in; see
+[storage choices](qbittorrent.md#sharing-the-media-and-backup-hdd).
 
 ## Prepare the Larger Disk Without a GUI
 
@@ -46,9 +50,8 @@ sudo mount /mnt/den-storage
 findmnt /mnt/den-storage
 ```
 
-Verify after reboot before installing DEN. The backup disk must be a third,
-independent physical disk, not another folder or partition of this HDD.
-DEN checks filesystem separation, not physical disk identity.
+Verify after reboot before installing DEN. For the shared-HDD layout, use
+`/mnt/den-backup` instead of `/mnt/den-storage` in these examples.
 
 The installer creates systemd bind-mount units and a Docker storage dependency.
 They survive reboots; Docker cannot start its auto-restarting containers before
@@ -121,7 +124,7 @@ Save a recovery kit on a different device before considering setup complete:
 sudo den recovery-kit /media/recovery-usb
 ```
 
-The destination must already exist on a mounted separate filesystem. Keep a second private off-site copy. The kit contains the Restic password; losing it and the server together makes encrypted backups unrecoverable.
+The destination must already exist on a mounted separate filesystem. The kit contains the Restic password; keep it private and somewhere you can access if the server fails.
 
 ## Optional KeePassXC Vault
 

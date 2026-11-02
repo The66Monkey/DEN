@@ -99,6 +99,23 @@ ensure_media_storage
 [[ "$(stat -c %d "$DATA_DIR/jellyfin")" != "$(stat -c %d "$DATA_DIR/media")" ]]
 cmp "$DATA_DIR/downloads/completed" "$MEDIA_MOUNT/old-downloads/completed"
 cmp "$DATA_DIR/jellyfin/settings" "$TEMP/old-data/jellyfin/settings"
+SAVED_BACKUP_MOUNT="$BACKUP_MOUNT"
+BACKUP_MOUNT="$MEDIA_MOUNT"
+if (initialize_backup) >/dev/null 2>&1; then fail 'Real shared-disk backup accepted without consent.'; fi
+ALLOW_SHARED_MEDIA_BACKUP=yes
+initialize_backup >/dev/null
+backup_stack >/dev/null
+snapshot="$(restic_cmd snapshots --host den --tag den-v1 --json | jq -r 'last.id')"
+restore_snapshot "$snapshot" "$TEMP/shared-drill" >/dev/null
+for path in media/movie downloads/completed downloads/partial jellyfin/settings; do
+    cmp "$DATA_DIR/$path" "$TEMP/shared-drill$DATA_DIR/$path"
+done
+[[ ! -e "$TEMP/shared-drill$DATA_DIR/den-restic" ]]
+restic_cmd ls --json "$snapshot" | jq -s -e --arg completed "$DATA_DIR/downloads/completed" '
+    any(.[]; .path? == $completed) and
+    all(.[]; ((.path? // "") | contains("/den-restic") | not))
+' >/dev/null
+BACKUP_MOUNT="$SAVED_BACKUP_MOUNT"
 umount "$DATA_DIR/downloads" "$DATA_DIR/media"
 umount /etc/systemd/system
 umount "$MEDIA_MOUNT" "$BACKUP_MOUNT"

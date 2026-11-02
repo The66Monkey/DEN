@@ -4,7 +4,10 @@ compose() {
     local -a profiles=()
     local -a files=(-f "$DEPLOY_DIR/compose.yml")
     case "${1:-}" in up|start|run) ensure_media_storage ;; esac
-    [[ "${QBITTORRENT_ENABLED:-no}" != yes ]] || profiles=(--profile torrents)
+    if [[ "${QBITTORRENT_ENABLED:-no}" == yes ]]; then
+        profiles=(--profile torrents)
+        files+=(-f "$DEPLOY_DIR/templates/compose.torrents.yml")
+    fi
     if [[ "${ACME_CHALLENGE:-http}" == dns-desec ]]; then
         files+=(-f "$DEPLOY_DIR/templates/compose.dns.yml")
     fi
@@ -23,7 +26,10 @@ check_media_disk() {
         *) fail 'Secondary storage needs a local ext4, XFS, or Btrfs filesystem with Linux ownership and SELinux support.' ;;
     esac
     [[ "$(stat -c %d "$MEDIA_MOUNT")" != "$(stat -c %d /srv)" ]] || fail 'Secondary storage must be a different filesystem from the OS data root.'
-    [[ "$(stat -c %d "$MEDIA_MOUNT")" != "$(stat -c %d "$BACKUP_MOUNT")" ]] || fail 'Secondary storage and backups must be on different filesystems.'
+    if [[ "$(stat -c %d "$MEDIA_MOUNT")" == "$(stat -c %d "$BACKUP_MOUNT")" ]]; then
+        [[ "${ALLOW_SHARED_MEDIA_BACKUP:-no}" == yes ]] || fail 'Secondary storage and backups must be on different filesystems unless ALLOW_SHARED_MEDIA_BACKUP=yes.'
+        log 'WARNING: media/downloads and backups share a filesystem; disk failure loses both. Keep an independent off-site copy.'
+    fi
 }
 
 ensure_media_storage() {

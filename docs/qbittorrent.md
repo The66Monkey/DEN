@@ -46,9 +46,20 @@ bind-mounted to the paths above. Preferences and resume state stay on SSD.
 Jellyfin libraries likewise live at `MEDIA_MOUNT/den/media`. These paths are
 scripted at install time; no Web UI storage changes are needed.
 
-Downloads are not automatically imported into Jellyfin. After verifying an
-authorized media file, move it into an appropriate `/srv/den/media` library and
-rescan Jellyfin. qBittorrent does not receive write access to existing libraries.
+When qBittorrent is enabled, DEN also mounts the completed-download directory
+read-only into Jellyfin at `/downloads/complete`. In Jellyfin's dashboard,
+add a Movies library using that path, then scan it. If you download different
+media types, use qBittorrent category save folders such as
+`/downloads/complete/movies` and `/downloads/complete/tv` and add separate
+Jellyfin libraries for those folders. Only completed files are exposed;
+incomplete downloads are not.
+
+Jellyfin can download metadata and artwork to its writable `/config` and
+`/cache` directories without modifying media files. Leave options to save
+NFO files or artwork alongside media disabled. Deletion or editing of the
+media itself is intentionally unavailable. Files stay in place for qBittorrent
+to seed; do not move or rename them outside qBittorrent while seeding.
+qBittorrent does not receive write access to existing `/media` libraries.
 
 The optional Compose profile is selected by DEN's command wrapper, so `den
 start`, `stop`, `status`, `logs qbittorrent`, `check`, `backup`, and `update`
@@ -62,6 +73,32 @@ restarts only if it was previously running. Downloads can significantly grow
 backup size and downtime: allow enough space on both the live and backup disks.
 Recovery preserves saved preferences and passwords rather than initializing
 them again.
+
+### Sharing the Media and Backup HDD
+
+A simple home setup can use an SSD for apps/settings and one HDD for media,
+downloads and snapshots:
+
+```text
+MEDIA_MOUNT=/mnt/den-backup
+BACKUP_MOUNT=/mnt/den-backup
+ALLOW_SHARED_MEDIA_BACKUP=yes
+```
+
+The shared-storage option defaults to `no` for compatibility with separate-disk
+setups. Backups still cannot use the OS filesystem.
+
+Live media/downloads use `MOUNT/den/media` and `MOUNT/den/downloads`;
+Restic stays separate at `MOUNT/den-restic`. The backup reads only `/srv/den`,
+including its media/download bind mounts, not the repository itself. A shared
+HDD failure loses both live media and its snapshots; a separate disk provides
+protection against that. Allow room for downloads and snapshot history.
+
+Changing the environment on an existing server does **not** migrate files.
+Stop services, copy and verify existing media/downloads preserving ownership
+and permissions, then install persistent bind mounts and Docker dependencies
+before restarting. Never mount over nonempty directories to hide existing data
+or rerun the installer on an existing deployment.
 
 ## Local Rootless Podman Test
 

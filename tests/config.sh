@@ -25,6 +25,7 @@ read_settings "$ROOT/config/example.env"
 [[ "$QBITTORRENT_ENABLED" == no ]]
 [[ "$MEDIA_MOUNT" == /mnt/den-storage ]]
 [[ "$ACME_CHALLENGE" == http ]]
+[[ "$ALLOW_SHARED_MEDIA_BACKUP" == no ]]
 DESEC_TOKEN=abcdefghijklmnopqrstuvwxyz12
 write_environment "$TEMP/deployment"
 [[ "$(stat -c %a "$TEMP/deployment/.env")" == 600 ]]
@@ -43,9 +44,17 @@ for invalid in 'LAN_IP=192.168.1.999' 'LAN_IP=192.168.2.10' 'LAN_IP=192.168.1.0'
         fail "Accepted invalid setting: $invalid"
     fi
 done
+if (ALLOW_SHARED_MEDIA_BACKUP=maybe; validate_settings) 2>/dev/null; then fail 'Accepted an invalid shared-storage flag.'; fi
+(MEDIA_MOUNT="$BACKUP_MOUNT"; ALLOW_SHARED_MEDIA_BACKUP=yes; validate_settings)
+ALLOW_SHARED_MEDIA_BACKUP=yes
+DESEC_TOKEN=abcdefghijklmnopqrstuvwxyz12
+write_environment "$TEMP/shared-deployment"
+read_settings "$TEMP/shared-deployment/.env"
+[[ "$ALLOW_SHARED_MEDIA_BACKUP" == yes ]]
 printf 'DOMAIN=home.example.net\nEMAIL=you@example.net\nLAN_IP=192.168.1.10\nLAN_CIDR=192.168.1.0/24\nBACKUP_MOUNT=/mnt/den-backup\nKEEPASS_ENABLED=yes\nFLUXER_ENABLED=yes\nQBITTORRENT_ENABLED=yes\n' > "$TEMP/keepass.env"
 read_settings "$TEMP/keepass.env"
 [[ -z "$MEDIA_MOUNT" ]]
+[[ "$ALLOW_SHARED_MEDIA_BACKUP" == no ]]
 DESEC_TOKEN=abcdefghijklmnopqrstuvwxyz12
 write_environment "$TEMP/keepass-deployment"
 grep -Fxq 'KEEPASS_ENABLED=yes' "$TEMP/keepass-deployment/.env"

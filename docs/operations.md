@@ -82,10 +82,10 @@ Use `sudo systemctl unmask den-update.timer` and
 `sudo systemctl enable --now den-update.timer` to restore the default.
 
 Manual application remains available: `sudo bash update.sh` from a trusted
-release checkout. Periodically test recovery and save an external recovery kit;
-automatic updates cannot replace an off-site backup. `sudo den verify-backup`
-and explicit `sudo den prune` remain available; snapshots are not automatically
-deleted.
+release checkout. Keep a private USB recovery kit with your server settings.
+Use `sudo den verify-backup` if you suspect a backup problem, and
+`sudo den prune` when you need to reclaim space; snapshots are not automatically
+deleted. See [backup and recovery](backup.md).
 
 ### Major Database Migrations (Release Maintainers)
 

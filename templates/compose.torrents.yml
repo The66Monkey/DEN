@@ -1,0 +1,10 @@
+services:
+  jellyfin:
+    volumes:
+      - type: bind
+        source: /srv/den/downloads/complete
+        target: /downloads/complete
+        read_only: true
+        bind:
+          create_host_path: false
+          selinux: z

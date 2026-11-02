@@ -10,13 +10,15 @@ read_settings "$ROOT/config/example.env"
 DESEC_TOKEN=abcdefghijklmnopqrstuvwxyz12
 write_environment "$DEPLOY_DIR"
 cp "$ROOT/templates/compose.yml" "$DEPLOY_DIR/compose.yml"
+mkdir -p "$DEPLOY_DIR/templates"
+cp "$ROOT/templates/compose.torrents.yml" "$DEPLOY_DIR/templates/"
 
 for enabled in no yes; do
     QBITTORRENT_ENABLED="$enabled"
     write_routes
     if [[ -n "${COMPOSE_BIN:-}" ]]; then
         profiles=()
-        [[ "$enabled" != yes ]] || profiles=(--profile torrents)
+        [[ "$enabled" != yes ]] || profiles=(--profile torrents -f "$DEPLOY_DIR/templates/compose.torrents.yml")
         "$COMPOSE_BIN" --env-file "$DEPLOY_DIR/.env" -f "$DEPLOY_DIR/compose.yml" \
             "${profiles[@]}" config --format json > "$TEMP/rendered.json"
     else
@@ -24,6 +26,7 @@ for enabled in no yes; do
     fi
     if [[ "$enabled" == no ]]; then
         jq -e '.services | length == 11 and (has("qbittorrent") | not)' "$TEMP/rendered.json" >/dev/null
+        jq -e 'all(.services.jellyfin.volumes[]; .target != "/downloads/complete")' "$TEMP/rendered.json" >/dev/null
         jq -e '.http.routers | has("downloads") | not' "$DEPLOY_DIR/routes.json" >/dev/null
     else
         jq -e '
@@ -35,6 +38,10 @@ for enabled in no yes; do
             (.services.qbittorrent.healthcheck.test | index("Host: downloads.home.example.net") != null) and
             ([.services.qbittorrent.volumes[].source] == ["/srv/den/qbittorrent", "/srv/den/downloads"]) and
             (all(.services.qbittorrent.volumes[]; .type == "bind" and .bind.selinux == "z"))
+            and (any(.services.jellyfin.volumes[];
+                .source == "/srv/den/downloads/complete" and .target == "/downloads/complete"
+                and .read_only == true and .bind.selinux == "z" and .bind.create_host_path == false))
+            and (all(.services.jellyfin.volumes[] | select(.target == "/media"); .read_only == true))
         ' "$TEMP/rendered.json" >/dev/null
         jq -e '
             (.http.routers | length == 5) and
@@ -76,11 +83,13 @@ EOF
 chmod 700 "$TEMP/bin/docker"
 QBITTORRENT_ENABLED=no PATH="$TEMP/bin:$PATH" compose ps
 if grep -Fxq -- --profile "$TEMP/compose-args"; then fail 'Disabled feature activated a profile.'; fi
+if grep -Fxq "$DEPLOY_DIR/templates/compose.torrents.yml" "$TEMP/compose-args"; then fail 'Disabled feature exposed downloads to Jellyfin.'; fi
 MEDIA_MOUNT=
 for action in 'up' 'pull' 'ps' 'stop' 'start' 'config' 'logs'; do
     QBITTORRENT_ENABLED=yes PATH="$TEMP/bin:$PATH" compose "$action"
     grep -Fxq -- --profile "$TEMP/compose-args"
     grep -Fxq torrents "$TEMP/compose-args"
+    grep -Fxq "$DEPLOY_DIR/templates/compose.torrents.yml" "$TEMP/compose-args"
     grep -Fxq "$action" "$TEMP/compose-args"
 done
 printf 'qBittorrent optional config, routes, profiles, lifecycle and recovery-safe settings passed.\n'
