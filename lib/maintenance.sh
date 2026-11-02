@@ -104,6 +104,9 @@ update_release() (
     install -m 644 "$DEPLOY_DIR/templates/systemd/"* /etc/systemd/system/ || return 1
     systemctl daemon-reload || return 1
     systemctl restart den-dns || return 1
+    if [[ -f "$DEPLOY_DIR/private/ddns.env" ]]; then
+        systemctl enable --now den-ddns.timer || return 1
+    fi
     enable_update_timer || return 1
     rm "$DEPLOY_DIR/private/update-in-progress" || return 1
     log 'Release update completed. Monthly automatic maintenance also updates Fedora and enabled Fluxer.'

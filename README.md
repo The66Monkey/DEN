@@ -17,7 +17,7 @@ DEN deploys a fixed core stack on one Fedora Server PC: media, photos, files, pr
    your email. Add a domain you own, such as `example.net`; deSEC hosts DNS,
    it does not register that domain for you. At your domain registrar, replace
    the domain's nameservers with the ones deSEC supplies. In deSEC, create
-   **A records** for the domain itself (empty subname) and subnames `media`,
+   **A records** for subnames `home`, `media`,
    `photos`, `files`, and `git`. Give every record your router's **public WAN
    IPv4**, not Fedora's LAN IP. Set `DOMAIN=example.net` in DEN's config.
    Add `chat` or `downloads` only if enabling Fluxer or qBittorrent.
@@ -33,11 +33,12 @@ DEN deploys a fixed core stack on one Fedora Server PC: media, photos, files, pr
 
    **Do not forward SSH (22) or any other application ports.** CGNAT will not
    work: you need a reachable public IPv4 from your ISP. If the WAN IP changes,
-   arrange a deSEC-compatible DDNS updater; DEN does not update public DNS.
+   DEN's built-in deSEC updater refreshes its records every four hours.
+   The installer asks for a deSEC API token; the domain apex is never changed.
 5. **Make the application names work at home.** In your router's local DNS,
    point `media.YOUR-DOMAIN`, `photos.YOUR-DOMAIN`, `files.YOUR-DOMAIN`, and
    `git.YOUR-DOMAIN` to the reserved **LAN IP**; include optional names if enabled.
-   Devices must use that local DNS. Keep the domain itself pointing to the
+   Devices must use that local DNS. Keep `home.YOUR-DOMAIN` pointing to the
    public WAN IP for WireGuard. See [router and DNS details](docs/networking.md)
    if your router lacks local DNS overrides.
 6. **Prepare storage.** Mount the larger data disk at `/mnt/den-storage` and a

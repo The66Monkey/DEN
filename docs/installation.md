@@ -67,7 +67,7 @@ vi /tmp/den.env
 sudo bash install.sh /tmp/den.env
 ```
 
-Keep `KEY=value` values unquoted. Required settings are your domain, certificate contact email, reserved server IPv4, actual LAN subnet, and mounted backup path. Set `KEEPASS_ENABLED=yes` to generate an optional KeePass-compatible credential vault, or `FLUXER_ENABLED=yes` to install optional Fluxer chat; both default to `no`. The VPN uses `10.44.0.0/24`; containers use `172.30.44.0/24`. DEN rejects a LAN overlapping either.
+Keep `KEY=value` values unquoted. Required settings are your domain, certificate contact email, reserved server IPv4, actual LAN subnet, and mounted backup path. The installer will also prompt for a deSEC API token so it can keep DEN's DNS records current; create the records listed in [networking](networking.md) first. Set `KEEPASS_ENABLED=yes` to generate an optional KeePass-compatible credential vault, or `FLUXER_ENABLED=yes` to install optional Fluxer chat; both default to `no`. The VPN uses `10.44.0.0/24`; containers use `172.30.44.0/24`. DEN rejects a LAN overlapping either.
 
 Set `QBITTORRENT_ENABLED=yes` to add optional [qBittorrent downloads](qbittorrent.md);
 it defaults to `no`. Configure `downloads.DOMAIN` in public and LAN DNS first.

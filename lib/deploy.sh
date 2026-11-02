@@ -231,7 +231,7 @@ DNS = 10.44.0.1
 
 [Peer]
 PublicKey = $public_key
-Endpoint = $DOMAIN:$WIREGUARD_PORT
+Endpoint = home.$DOMAIN:$WIREGUARD_PORT
 AllowedIPs = 10.44.0.0/24, $LAN_CIDR
 PersistentKeepalive = 25
 EOF
@@ -259,6 +259,7 @@ install_host_config() {
     systemctl daemon-reload
     systemctl enable --now wg-quick@wg0 den-dns
     systemctl enable den.service
+    systemctl enable --now den-ddns.timer
 }
 
 start_stack() {
@@ -309,7 +310,7 @@ DNS = 10.44.0.1
 
 [Peer]
 PublicKey = $server_public
-Endpoint = $DOMAIN:$WIREGUARD_PORT
+Endpoint = home.$DOMAIN:$WIREGUARD_PORT
 AllowedIPs = 10.44.0.0/24, $LAN_CIDR
 PersistentKeepalive = 25
 EOF

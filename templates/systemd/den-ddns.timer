@@ -1,0 +1,10 @@
+[Unit]
+Description=Refresh DEN deSEC DNS records every four hours
+
+[Timer]
+OnBootSec=5m
+OnUnitActiveSec=4h
+Unit=den-ddns.service
+
+[Install]
+WantedBy=timers.target

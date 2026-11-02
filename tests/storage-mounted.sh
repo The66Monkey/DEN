@@ -29,6 +29,7 @@ mount --bind "$TEMP/units" /etc/systemd/system
 mount -t tmpfs tmpfs "$TEMP/disk"
 mount -t tmpfs tmpfs "$TEMP/backup"
 read_settings "$ROOT/config/example.env"
+DESEC_TOKEN=abcdefghijklmnopqrstuvwxyz12
 MEDIA_MOUNT="$TEMP/disk"
 BACKUP_MOUNT="$TEMP/backup"
 write_environment "$DEPLOY_DIR"

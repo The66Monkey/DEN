@@ -1,7 +1,15 @@
 *.env
 !config/example.env
+.env.*
 *.log
 *.key
 *.conf
+*.kdbx
+*.token
 !templates/*.conf
 .test-tools/
+.coverage
+coverage/
+test-results/
+__pycache__/
+*.py[cod]

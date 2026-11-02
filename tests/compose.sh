@@ -6,6 +6,7 @@ source "$ROOT/lib/deploy.sh"
 DEPLOY_DIR="$(mktemp -d)"
 trap 'rm -rf "$DEPLOY_DIR"' EXIT
 read_settings "$ROOT/config/example.env"
+DESEC_TOKEN=abcdefghijklmnopqrstuvwxyz12
 write_environment "$DEPLOY_DIR"
 write_routes
 cp "$ROOT/templates/compose.yml" "$DEPLOY_DIR/compose.yml"

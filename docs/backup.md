@@ -34,7 +34,7 @@ sudo den prune
 sudo den recovery-kit /media/recovery-usb
 ```
 
-Copy that protected directory to a second private, off-site location. It contains `.env` with the encryption password and VPN keys, plus deployment scripts. Store it separately from the server and ideally separately from the backup disk. A kit is **configuration only**, not a copy of household data. Restic cannot reset a lost encryption password. Generate a new kit into a new directory after VPN or release changes, keeping the preceding kit until the new one is verified.
+Copy that protected directory to a second private, off-site location. It contains `.env` with the encryption password, the deSEC DDNS token in `private/ddns.env`, VPN keys, and deployment scripts. Store it separately from the server and ideally separately from the backup disk. A kit is **configuration only**, not a copy of household data. Restic cannot reset a lost encryption password. Generate a new kit into a new directory after VPN or release changes, keeping the preceding kit until the new one is verified.
 
 An always-connected USB disk helps against disk failure but not theft, fire, or a compromised root account. Keep an additional off-site copy of the Restic repository, copied while no Restic operation is running. DEN's standard target remains the mounted local disk; it does not claim an automated off-site backup service.
 

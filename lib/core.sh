@@ -36,6 +36,25 @@ read_settings() {
     validate_settings
 }
 
+request_ddns_token() {
+    local token attempt
+    [[ -t 0 ]] || fail 'A deSEC API token is required; run the installer in an interactive terminal.'
+    for attempt in 1 2 3; do
+        read -r -s -p 'deSEC API token (DNS update access for this domain): ' token
+        printf '\n' >&2
+        if validate_desec_token "$token"; then
+            DESEC_TOKEN="$token"
+            return 0
+        fi
+        printf 'DEN: Enter a valid deSEC token (16-128 letters, digits, or ._~+/=- characters).\n' >&2
+    done
+    fail 'A valid deSEC API token is required for dynamic DNS updates.'
+}
+
+validate_desec_token() {
+    [[ "${1:-}" =~ ^[A-Za-z0-9._~+/=-]{16,128}$ ]]
+}
+
 ipv4_number() {
     local address="$1" octet result=0
     local -a octets
@@ -91,7 +110,8 @@ validate_settings() {
 
 write_environment() {
     local destination="$1" key
-    mkdir -p "$destination"
+    validate_desec_token "${DESEC_TOKEN:-}" || fail 'A valid deSEC API token is required.'
+    mkdir -p "$destination" "$destination/private"
     chmod 700 "$destination"
     if [[ -f "$destination/.env" ]]; then
         fail 'An environment already exists; use den start, not a second install.'
@@ -106,4 +126,7 @@ write_environment() {
     printf 'DB_PASSWORD=%s\nNEXTCLOUD_ADMIN_PASSWORD=%s\nRESTIC_PASSWORD=%s\n' \
         "$DB_PASSWORD" "$NEXTCLOUD_ADMIN_PASSWORD" "$RESTIC_PASSWORD" >> "$destination/.env"
     chmod 600 "$destination/.env"
+    printf 'DOMAIN=%s\nFLUXER_ENABLED=%s\nQBITTORRENT_ENABLED=%s\nDESEC_TOKEN=%s\n' \
+        "$DOMAIN" "$FLUXER_ENABLED" "$QBITTORRENT_ENABLED" "$DESEC_TOKEN" > "$destination/private/ddns.env"
+    chmod 600 "$destination/private/ddns.env"
 }

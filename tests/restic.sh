@@ -12,6 +12,7 @@ BACKUP_MOUNT="$TEMP/backup-disk"
 mkdir -p "$DEPLOY_DIR" "$DATA_DIR/media" "$DATA_DIR/cache" "$BACKUP_MOUNT"
 read_settings "$ROOT/config/example.env"
 MEDIA_MOUNT=
+DESEC_TOKEN=abcdefghijklmnopqrstuvwxyz12
 BACKUP_MOUNT="$TEMP/backup-disk"
 QBITTORRENT_ENABLED=yes
 write_environment "$DEPLOY_DIR"

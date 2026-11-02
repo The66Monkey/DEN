@@ -7,6 +7,7 @@ TEMP="$(mktemp -d)"
 trap 'rm -rf "$TEMP"' EXIT
 DEPLOY_DIR="$TEMP/deployment"
 read_settings "$ROOT/config/example.env"
+DESEC_TOKEN=abcdefghijklmnopqrstuvwxyz12
 write_environment "$DEPLOY_DIR"
 cp "$ROOT/templates/compose.yml" "$DEPLOY_DIR/compose.yml"
 

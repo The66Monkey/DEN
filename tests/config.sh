@@ -9,9 +9,12 @@ read_settings "$ROOT/config/example.env"
 [[ "$FLUXER_ENABLED" == no ]]
 [[ "$QBITTORRENT_ENABLED" == no ]]
 [[ "$MEDIA_MOUNT" == /mnt/den-storage ]]
+DESEC_TOKEN=abcdefghijklmnopqrstuvwxyz12
 write_environment "$TEMP/deployment"
 [[ "$(stat -c %a "$TEMP/deployment/.env")" == 600 ]]
 [[ "$(stat -c %a "$TEMP/deployment")" == 700 ]]
+[[ "$(stat -c %a "$TEMP/deployment/private/ddns.env")" == 600 ]]
+grep -Fxq 'DESEC_TOKEN=abcdefghijklmnopqrstuvwxyz12' "$TEMP/deployment/private/ddns.env"
 read_settings "$TEMP/deployment/.env"
 [[ ${#DB_PASSWORD} == 48 && ${#RESTIC_PASSWORD} == 48 ]]
 [[ "$KEEPASS_ENABLED" == no ]]
@@ -27,6 +30,7 @@ done
 printf 'DOMAIN=home.example.net\nEMAIL=you@example.net\nLAN_IP=192.168.1.10\nLAN_CIDR=192.168.1.0/24\nBACKUP_MOUNT=/mnt/den-backup\nKEEPASS_ENABLED=yes\nFLUXER_ENABLED=yes\nQBITTORRENT_ENABLED=yes\n' > "$TEMP/keepass.env"
 read_settings "$TEMP/keepass.env"
 [[ -z "$MEDIA_MOUNT" ]]
+DESEC_TOKEN=abcdefghijklmnopqrstuvwxyz12
 write_environment "$TEMP/keepass-deployment"
 grep -Fxq 'KEEPASS_ENABLED=yes' "$TEMP/keepass-deployment/.env"
 grep -Fxq 'FLUXER_ENABLED=yes' "$TEMP/keepass-deployment/.env"

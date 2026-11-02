@@ -35,5 +35,6 @@ systemctl start den.service
 fluxer_restore
 systemctl enable --now den-backup.timer den-check.timer
 enable_update_timer
+systemctl start den-ddns.service || log 'Initial deSEC update failed; the timer will retry in four hours. Check: sudo journalctl -u den-ddns'
 show_summary
 log 'Recovery completed with the versions and keys saved in the snapshot.'
