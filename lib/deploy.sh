@@ -275,6 +275,7 @@ show_summary() {
     printf '\nMedia: https://media.%s\nPhotos: https://photos.%s\nFiles: https://files.%s\nGit: https://git.%s\n' "$DOMAIN" "$DOMAIN" "$DOMAIN" "$DOMAIN"
     printf '\nNextcloud user: admin. Password: sudo grep NEXTCLOUD_ADMIN_PASSWORD /opt/den/.env\n'
     printf 'VPN profile: /opt/den/private/home.conf (private; use on ONE device).\n'
+    printf "Show its private QR code over SSH: sudo sh -c 'qrencode -t ansiutf8 < /opt/den/private/home.conf'\n"
     printf 'Finish Jellyfin and Immich account setup in your browser. Create Git admin with: sudo den git-admin\n'
     printf 'Save the recovery kit away from this server: sudo den recovery-kit /path/on/another/device\n'
     if [[ -n "${MEDIA_MOUNT:-}" ]]; then

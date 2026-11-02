@@ -1,0 +1,14 @@
+[Unit]
+Description=DEN LAN and VPN ingress guard before Docker port forwarding
+Wants=firewalld.service
+After=firewalld.service
+Before=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/sbin/nft --file /etc/den/network.nft
+ExecReload=/usr/sbin/nft --file /etc/den/network.nft
+
+[Install]
+WantedBy=multi-user.target

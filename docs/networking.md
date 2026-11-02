@@ -55,11 +55,52 @@ Do not forward application or administration ports, including Fluxer voice (TCP 
 
 Confirm your router has a public WAN IPv4. CGNAT (`100.64.0.0/10`) or a private WAN address usually prevents inbound connections; ask your ISP for public IPv4. With double NAT, forward the ports on both routers. Solve local name resolution before installing.
 
+## LAN/VPN network guard
+
+DEN installs `den-firewall.service` and `/etc/den/network.nft`. This separate
+nftables table filters ingress **before Docker destination NAT**, so
+Docker-published ports cannot bypass the LAN/VPN restriction.
+
+- Devices in `LAN_CIDR` can use the server without a VPN; application logins
+  still apply. Local DNS overrides are needed for the HTTPS names.
+- Outside that subnet, UDP 41873 is the remote entry point. Authenticated
+  WireGuard devices can use the web apps, SSH, Cockpit on TCP 9090, VPN DNS
+  and enabled Fluxer voice ports, and reach the configured LAN.
+- DNS-01 permits no unsolicited public web/admin/voice access. HTTP-01 keeps
+  only public TCP 80 as an additional exception for certificate challenges.
+- Return traffic for outbound connections, DHCP and necessary IPv6 network
+  control messages remain allowed. IPv6 does not provide an alternative path
+  into application or administration listeners.
+- Docker's internal bridges remain trusted for application communication.
+  This is an edge-access policy, not isolation between containers.
+
+The guard is enabled at boot and required before Docker starts. Firewalld
+stays enabled and uses a dedicated `den-vpn` zone instead of putting `wg0`
+in the general `trusted` zone; the guard bounds that zone's accepted traffic.
+Cockpit's socket is not enabled automatically, but an existing Cockpit
+installation remains usable from LAN/VPN.
+Open `https://SERVER-LAN-IP:9090` and sign in with your Fedora account.
+Cockpit uses its own certificate, not Traefik's application certificates;
+verify its identity before trusting a self-signed certificate.
+
+`sudo den check` verifies that the guard service and table are present.
+Inspect with `sudo nft list table inet den_guard`; validate and reload with
+`sudo nft --check --file /etc/den/network.nft` and
+`sudo systemctl reload den-firewall`. Reloads replace only DEN's table,
+not Docker or firewalld rules. Stopping the service does not erase its rules.
+Installation, recovery and release updates regenerate the policy from the
+saved environment.
+
+Do not source-NAT forwarded internet traffic to a LAN address: the server
+cannot distinguish it from a genuine LAN device. Keep only the documented
+router forwards, disable automatic router port mapping, and do not expose
+DEN through a proxy that hides source addresses.
+
 ## Verify access
 
 Test from mobile data or another external network, not your home Wi-Fi:
 
-- With VPN **off**, every enabled HTTPS application must return **403 Forbidden** if forwarding TCP 443 to DEN. In DNS-01 VPN-only mode, public traffic goes to the other server instead and must not reach DEN.
+- With VPN **off**, outside traffic must not reach DEN applications or administration. The network guard normally drops it (connection timeout); Traefik also returns **403 Forbidden** to untrusted sources that reach its allowlist. In DNS-01 coexistence mode, public traffic can reach your other server instead.
 - With VPN **on**, each URL must show the application or login page with a valid certificate.
 - Fluxer voice ports must not be reachable from mobile data without VPN.
 
@@ -73,6 +114,24 @@ Import `/opt/den/private/home.conf` securely onto one device. For each additiona
 sudo den vpn-add phone
 ```
 
-Import `/opt/den/private/phone.conf` privately. Never reuse or publish profiles. Revoke a lost device with `sudo den vpn-remove phone`.
+To import without copying the profile by hand, SSH into the server from a
+computer on your home network:
+
+```bash
+ssh YOUR-FEDORA-USER@SERVER-LAN-IP
+sudo sh -c 'qrencode -t ansiutf8 < /opt/den/private/phone.conf'
+```
+
+`qrencode` is installed as standard. In the phone's WireGuard app, add a
+tunnel by scanning the QR code in your computer's terminal. If you have not
+created `phone` yet, run `sudo den vpn-add phone` first; do not recreate an
+existing profile. The initial `home.conf` can also be scanned, but must be
+used on only one device.
+
+The QR code contains a private key: never share it or post screenshots.
+Alternatively, import the configuration file through a private transfer.
+Never reuse or publish profiles. Revoke a lost device with
+`sudo den vpn-remove phone`. Disable phone Wi-Fi and test the tunnel on mobile
+data, with UDP 41873 forwarded to the server.
 
 The VPN is split-tunnel: only the DEN VPN subnet and your home subnet route through the server. Client encrypted/private DNS can bypass VPN DNS; use the profile's resolver for DEN names. A remote network using the same subnet as home can cause routing conflicts.

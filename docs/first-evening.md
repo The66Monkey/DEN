@@ -47,7 +47,40 @@ When Fluxer is enabled, use the browser setup token printed by the installer at 
 
 ## Finish Safely
 
-Import a VPN profile onto your phone and test from mobile data. Then:
+### Connect Your Phone with WireGuard
+
+DEN installs `qrencode` as standard so you can scan a VPN profile instead of
+copying it by hand. Install the WireGuard app on your phone. From a computer
+on your home network, SSH into the server using your Fedora login:
+
+```bash
+ssh YOUR-FEDORA-USER@SERVER-LAN-IP
+```
+
+In that SSH session, create a separate profile for your phone and display it:
+
+```bash
+sudo den vpn-add phone
+sudo sh -c 'qrencode -t ansiutf8 < /opt/den/private/phone.conf'
+```
+
+If `phone` already exists, skip `vpn-add` and just show its QR code. In the
+phone app, choose **Add tunnel / Scan from QR code** and scan your computer's
+terminal. Use a different profile name for each additional device.
+
+The QR code contains the VPN private key. Do not share it, post screenshots,
+or scan the same profile onto multiple devices. Revoke a lost device with
+`sudo den vpn-remove phone`.
+
+Forward UDP 41873 to the server's LAN IP. Turn off phone Wi-Fi, enable the
+WireGuard tunnel and open the application URLs on mobile data. The profile
+provides DEN's private DNS; device Private DNS or browser Secure DNS must not
+bypass it. In DNS-01 VPN-only mode, leave any other server's TCP 80/443 forwards
+unchanged.
+
+### Back Up After Setup
+
+After testing access from your phone:
 
 ```bash
 sudo den backup

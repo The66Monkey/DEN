@@ -20,7 +20,15 @@ DEN is one current Fedora Server host. Bash owns provisioning and lifecycle comm
 | Optional chat | Upstream Fluxer `rexctl` stack behind Traefik, private LAN/VPN route |
 | Optional downloads | qBittorrent 5.3.0 in the `torrents` Compose profile, private LAN/VPN route |
 
-All core container images are pinned to manifest digests resolved on 2026-10-31. Immich server and machine learning have the same release. The eleven core containers share one fixed bridge subnet; this is a simplicity tradeoff, not strong isolation between applications. Databases and application listeners have no published host ports. Only Traefik publishes core TCP ports, bound to `LAN_IP`. Optional Fluxer runs in its own Rexctl-managed Docker project and is routed from Traefik through the core bridge gateway; its full archives are saved inside `/srv/den` before every Restic snapshot. Host WireGuard and VPN DNS are outside Compose. Fedora firewalld remains enabled; `wg0` is assigned to its trusted zone for the explicitly allowed VPN-to-LAN path. SELinux remains enabled, with shared labels on DEN's core container bind mounts.
+All core container images are pinned to manifest digests resolved on 2026-10-31. Immich server and machine learning have the same release. The eleven core containers share one fixed bridge subnet; this is a simplicity tradeoff, not strong isolation between applications. Databases and application listeners have no published host ports. Only Traefik publishes core TCP ports, bound to `LAN_IP`. Optional Fluxer runs in its own Rexctl-managed Docker project and is routed from Traefik through the core bridge gateway; its full archives are saved inside `/srv/den` before every Restic snapshot. Host WireGuard and VPN DNS are outside Compose. Fedora firewalld remains enabled; `wg0` uses the dedicated `den-vpn` zone, bounded by DEN's pre-DNAT nftables guard. SELinux remains enabled, with shared labels on DEN's core container bind mounts.
+
+`den-firewall.service` loads only the `inet den_guard` table from
+`/etc/den/network.nft`, before Docker starts. Its prerouting filter runs at
+priority -110, before destination NAT at -100. LAN, authenticated VPN,
+outbound return traffic and essential network control remain usable;
+unsolicited non-LAN application/admin/voice traffic is dropped, including
+IPv6. HTTP-01 alone adds an external TCP 80 exception. Internal Docker bridges
+remain trusted; this does not add inter-container isolation.
 
 Dynamic container addresses come from `172.30.44.128/25`, leaving Traefik's
 fixed `172.30.44.2` outside the allocator pool. Installed release files take

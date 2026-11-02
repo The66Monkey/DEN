@@ -11,6 +11,11 @@
 
 DEN installs Docker CE and Compose from Docker's Fedora repository and Fedora packages for WireGuard, DNS, and backups. It keeps firewalld and SELinux enabled, opens the required host ports, and configures shared SELinux labels on container data. It writes under `/opt/den`, `/srv/den`, `/etc/wireguard`, `/etc/systemd/system`, `/etc/sysctl.d`, and creates `/usr/local/bin/den`. Use a fresh machine, not one already hosting applications.
 
+It also writes `/etc/den/network.nft` and a Docker service dependency on
+`den-firewall.service`. The guard restricts outside access before Docker
+port forwarding; LAN clients need no VPN. Existing Cockpit remains accessible
+on TCP 9090 from LAN/VPN. See [network policy](networking.md#lanvpn-network-guard).
+
 ## Prepare the Larger Disk Without a GUI
 
 Inspect disks and existing filesystems from the console/SSH:
@@ -108,7 +113,7 @@ sudo den check
 systemctl list-timers 'den-*'
 ```
 
-From another LAN device, visit the four URLs printed by installation. The browser must show a valid HTTPS certificate, not a certificate warning. Follow [first-evening setup](first-evening.md), create the initial accounts, and make a new backup. Test access from mobile data: without VPN each application must return **403** when forwarding public HTTPS to DEN, or be unreachable on DEN in DNS-01 VPN-only mode. With VPN it must be usable.
+From another LAN device, visit the four URLs printed by installation. The browser must show a valid HTTPS certificate, not a certificate warning. Follow [first-evening setup](first-evening.md), create the initial accounts, and make a new backup. Test access from mobile data: without VPN, DEN applications and administration must be unreachable (normally dropped by the network guard). With VPN they must be usable. In DNS-01 coexistence mode, public HTTPS can reach your other server instead.
 
 Save a recovery kit on a different device before considering setup complete:
 

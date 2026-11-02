@@ -42,6 +42,23 @@ Away from home, use the WireGuard VPN profile provided by the installer.
 Each device needs its own profile. Never share a VPN profile or forward SSH
 port 22 on your router just to access the server.
 
+ADD YOUR PHONE TO THE VPN
+Install the WireGuard app on your phone. From a computer on your home network,
+connect using the Fedora administrator account:
+  ssh YOUR-FEDORA-USER@SERVER-ADDRESS
+Create a profile for this phone (skip this if "phone" already exists):
+  sudo den vpn-add phone
+Show its QR code in the terminal:
+  sudo sh -c 'qrencode -t ansiutf8 < /opt/den/private/phone.conf'
+DEN installs the QR tool as standard. In the phone app, add a tunnel using
+"Scan from QR code", then scan your computer's terminal.
+Use a different profile name for each device. The QR code contains a private
+key: never share it or post screenshots. Do not reuse it on another device.
+The router must forward UDP 41873 to the server. Turn off phone Wi-Fi, enable
+the tunnel, and test the service addresses on mobile data. Do not move an
+existing server's TCP 80/443 forwards when DEN uses DNS-01 VPN-only access.
+If you do not administer the server, ask the installer to show the code.
+
 IF SOMETHING STOPS WORKING
 Check that the server has power, network, and its normal disks connected.
 Try again from the home network. Do not bypass browser certificate warnings.

@@ -34,6 +34,8 @@ health_check() {
     actual="$(compose ps --all --format json | jq -s 'flatten | map(select(.State == "running" and .Health == "healthy")) | length')"
     [[ "$actual" == "$expected" ]] || fail "Only $actual/$expected containers are healthy. Run sudo den status."
     systemctl is-active --quiet wg-quick@wg0 den-dns || fail 'WireGuard or VPN DNS is down.'
+    systemctl is-active --quiet den-firewall || fail 'DEN network guard is down.'
+    nft list table inet den_guard >/dev/null || fail 'DEN network guard rules are missing.'
     fluxer_health_check
     ensure_backup_mount
     snapshots="$(restic_cmd snapshots --host den --tag den-v1 --json)"
@@ -95,10 +97,12 @@ update_release() (
         DEPLOY_DIR="$DEPLOY_DIR" DATA_DIR="$DATA_DIR" bash "$migration" || return 1
     done
     source "$DEPLOY_DIR/lib/deploy.sh"
+    source "$DEPLOY_DIR/lib/hosts/fedora.sh"
     if [[ "${QBITTORRENT_ENABLED:-no}" == yes ]]; then
         prepare_storage || return 1
     fi
     write_routes || return 1
+    configure_fedora_host || return 1
     if ! start_stack; then
         log 'Update did not become healthy. Do not downgrade images; restore the pre-update snapshot using docs/backup.md.'
         return 1

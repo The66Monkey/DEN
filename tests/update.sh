@@ -9,13 +9,14 @@ DEPLOY_DIR="$TEMP/live"
 DATA_DIR="$TEMP/data"
 SOURCE_DIR="$TEMP/release"
 CALLS="$TEMP/calls"
-mkdir -p "$DEPLOY_DIR/private" "$SOURCE_DIR/templates" "$SOURCE_DIR/lib"
+mkdir -p "$DEPLOY_DIR/private" "$SOURCE_DIR/templates" "$SOURCE_DIR/lib/hosts"
 printf 'secret\n' > "$DEPLOY_DIR/.env"
 printf '{}\n' > "$DEPLOY_DIR/routes.json"
 printf 'nextcloud:33.0.10-apache\n' > "$DEPLOY_DIR/compose.yml"
 printf 'nextcloud:33.0.11-apache\n' > "$SOURCE_DIR/templates/compose.yml"
 printf '0.1.1\n' > "$SOURCE_DIR/VERSION"
 printf 'write_routes() { printf "routes\\n" >> "$CALLS"; }\n' > "$SOURCE_DIR/lib/deploy.sh"
+printf 'configure_fedora_host() { printf "firewall\\n" >> "$CALLS"; }\n' > "$SOURCE_DIR/lib/hosts/fedora.sh"
 FAIL_PULL=false
 FAIL_BACKUP=false
 FAIL_START=false
@@ -60,6 +61,9 @@ grep -Fq '33.0.11' "$DEPLOY_DIR/compose.yml"
 cmp "$DEPLOY_DIR/.env" <(printf 'secret\n')
 grep -Fxq backup "$CALLS"
 grep -Fxq start "$CALLS"
+grep -Fxq firewall "$CALLS"
+[[ "$(grep -n '^backup$' "$CALLS" | cut -d: -f1)" -lt "$(grep -n '^firewall$' "$CALLS" | cut -d: -f1)" ]]
+[[ "$(grep -n '^firewall$' "$CALLS" | cut -d: -f1)" -lt "$(grep -n '^start$' "$CALLS" | cut -d: -f1)" ]]
 [[ -z "$(find "$TEMP" -maxdepth 1 -name 'candidate.*' -print -quit)" ]]
 QBITTORRENT_ENABLED=yes
 : > "$CALLS"

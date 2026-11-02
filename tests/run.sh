@@ -9,6 +9,7 @@ shellcheck --severity=warning -x -P "$ROOT" install.sh update.sh recover.sh bin/
 bash tests/config.sh
 bash tests/storage.sh
 bash tests/ddns.sh
+bash tests/firewall.sh
 bash tests/compose.sh
 bash tests/qbittorrent.sh
 bash tests/backup.sh
@@ -17,6 +18,11 @@ if command -v unshare >/dev/null && unshare --user --map-root-user --mount true 
     unshare --user --map-root-user --mount bash tests/storage-mounted.sh
 else
     printf 'Isolated real bind-mount checks skipped: user/mount namespaces unavailable.\n'
+fi
+if command -v nft >/dev/null && unshare --user --map-root-user --mount --net true 2>/dev/null; then
+    unshare --user --map-root-user --mount --net bash tests/firewall-network.sh
+else
+    printf 'Real network guard checks skipped: nftables or user/network namespaces unavailable.\n'
 fi
 bash tests/vpn.sh
 bash tests/keepass.sh

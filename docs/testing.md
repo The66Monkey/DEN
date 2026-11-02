@@ -20,6 +20,7 @@ Tests need neither root nor a Docker daemon. `COMPOSE_BIN` and `RESTIC_BIN` opti
 - Per-device VPN addresses and keys, protected profiles, duplicate/name rejection, and persistent peer revocation (with mocked WireGuard).
 - Optional KeePass vault creation, mode-600 files, generated credentials, WireGuard attachments, and non-destructive resynchronization.
 - Optional Fluxer route privacy, Rexctl full-archive-before-Restic ordering, and the disabled-by-default upgrade path.
+- Pre-DNAT network guard generation, HTTP/DNS certificate exceptions, VPN host-port scope, boot ordering and explicit invalid-rule failure.
 - Optional qBittorrent config validation, profile selection across lifecycle commands, private HTTPS routing, no published peer/UI ports, disabled port mapping, and preserved existing preferences.
 - Update refusal after failed downloads/backups, preserved environment secrets, failed readiness reporting, staging cleanup, and Nextcloud major-version gates (with mocked Compose).
 - Monthly timer, ordered release tags, backup/error gates, explicit database-major migration hooks, interrupted-update refusal, stable next-Fedora selection, and required reboots (mocked Git/DNF/systemd).
@@ -33,6 +34,14 @@ the host. Otherwise that test prints an explicit skip. Actual Fedora boot
 ordering and SELinux labels still require live acceptance: reboot a disposable
 SSD/HDD host, verify both bind mounts precede Docker startup, then boot without
 the HDD and confirm Docker/DEN do not write media or downloads onto SSD.
+
+With nftables, iproute2, Python 3 and unprivileged user/network/mount
+namespaces available, the suite also tests real LAN/WAN/VPN TCP and UDP
+traffic, IPv6 denial and Docker-style destination NAT inside isolated
+namespaces. Missing nftables or unavailable namespaces produce an explicit
+skip, not a passing network test. On Fedora, run it directly as
+`sudo unshare --mount --net bash tests/firewall-network.sh`; never run its
+network setup in the host namespace.
 
 ## Required Live Acceptance
 
@@ -193,27 +202,29 @@ If enabled, stop it separately with
 
 Before marking a DEN release production-ready, use a fresh Fedora Server VM or dedicated PC and a separate backup disk. Set up a real domain and router as documented. Use non-sensitive fixtures. Fedora Workstation is suitable for development checks, but does not replace Server acceptance.
 
-For the external 403 checks below, DNS-01 VPN-only coexistence is an exception:
-public TCP 80/443 must not reach DEN at all. The other server can return a
-different response. Test DNS-01 certificate issuance and trusted HTTPS on
-LAN/VPN without moving the other server's port forwards.
+Outside access must be blocked by the network guard, normally by a connection
+timeout rather than an HTTP response. Traefik's 403 allowlist remains defense
+in depth. In DNS-01 VPN-only coexistence, public TCP 80/443 must not reach DEN
+at all; the other server can return a different response. Test DNS-01
+certificate issuance and trusted HTTPS on LAN/VPN without moving the other
+server's port forwards.
 
 1. Time from running the installer to healthy applications. Record download speed, hardware, and first-user setup time; the under-one-hour goal is not validated by the unit tests.
 2. Confirm each pinned image starts on the minimum CPU class, Nextcloud creates its account/database, Immich reaches its matched database and ML worker, and Forgejo admin creation works.
 3. Open all four apps from a LAN client with valid public certificates. Check upload/download, movie playback, a photo thumbnail/search, Nextcloud desktop sync, and HTTPS Git clone/push.
-4. Check TCP 80/443 bindings and UDP 41873. Scan from outside: application HTTPS must be 403 without VPN, and no database, SSH Git, DNS, or dashboard port may be reachable. Test spoofed `X-Forwarded-For` headers too.
+4. Check TCP 80/443 bindings and UDP 41873. Scan from outside: application HTTPS must be blocked without VPN, and no database, SSH, DNS, Cockpit, or voice port may be reachable. Verify only HTTP-01 admits public TCP 80. Test spoofed `X-Forwarded-For` headers where a connection is admitted. Check LAN apps and Cockpit, host/container outbound access, then repeat after reloading firewalld.
 5. Import a profile on mobile data. Verify handshake, DNS, app access, separate device profiles, and revocation. Confirm ordinary internet browsing does not go through DEN.
 6. Add known files, users, photos, and Git commits, take a backup, and perform a staged restore. Then run **recover.sh on an empty replacement host** and verify actual databases, accounts, downloads, Git histories, certificates, and VPN keys.
 7. Exercise a reviewed patch update and a sequential Nextcloud major upgrade. Test failed pulls, disconnected backup disk, and failed readiness without losing the pre-update snapshot. Recover the pre-update application state after a migration.
-8. Reboot; verify Docker, DEN, WireGuard, VPN DNS, and both timers recover. Test a missed nightly job, failed backup alert, unhealthy container, and stale backup.
+8. Reboot; verify the network guard loads before Docker, DEN, WireGuard, VPN DNS, and both timers recover. Repeat outside denial and LAN/VPN access tests. Test a missed nightly job, failed backup alert, unhealthy container, and stale backup.
 9. Verify the backup disk's absence never writes a repository under the underlying mountpoint. Inspect secret permissions and ensure logs do not disclose generated passwords.
 
 10. On representative older hardware, test the target Wi-Fi adapter during installation and after a Fedora kernel update and reboot. Record its USB or PCI ID and driver. Confirm DEN services recover after network loss; an out-of-tree driver must have its own maintenance and Secure Boot signing plan.
 
-11. With `FLUXER_ENABLED=yes`, confirm the setup token creates the first admin, new registration remains invite-only, `chat` returns 403 from outside without VPN, and voice works between LAN/VPN clients. Verify TCP 7881 and UDP 7882 are not forwarded at the router. Run `sudo den backup`, confirm a new full archive appears under `/srv/den/fluxer/backups`, then exercise `recover.sh` on a replacement host and verify users, messages, uploads, and attachments.
+11. With `FLUXER_ENABLED=yes`, confirm the setup token creates the first admin, new registration remains invite-only, `chat` is blocked from outside without VPN, and voice works between LAN/VPN clients. Verify TCP 7881 and UDP 7882 are not forwarded at the router. Run `sudo den backup`, confirm a new full archive appears under `/srv/den/fluxer/backups`, then exercise `recover.sh` on a replacement host and verify users, messages, uploads, and attachments.
 
-12. With `QBITTORRENT_ENABLED=yes`, confirm `downloads` has valid HTTPS, returns
-403 outside without VPN, and requires an application login on LAN/VPN. Set a
+12. With `QBITTORRENT_ENABLED=yes`, confirm `downloads` has valid HTTPS,
+is blocked outside without VPN, and requires an application login on LAN/VPN. Set a
 permanent password; test an authorized torrent transfer and saved resume state
 after a restart. Confirm UPnP/NAT-PMP remains off and no peer/direct UI ports are
 published. Back up and restore settings, completed and partial downloads on a

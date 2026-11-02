@@ -12,6 +12,6 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Install test dependencies
-        run: sudo apt-get update && sudo apt-get install -y jq openssl shellcheck restic python3-pykeepass
+        run: sudo apt-get update && sudo apt-get install -y jq openssl shellcheck restic python3-pykeepass nftables iproute2
       - name: Verify scripts, stack and encrypted recovery
         run: bash tests/run.sh
