@@ -132,6 +132,16 @@ certificate, so browsers normally show a certificate warning there. For trusted
 HTTPS use `https://home.DOMAIN/` with the local/VPN DNS arrangement above.
 Public DNS may send you to another server, even from home.
 
+If `home.DOMAIN` shows `TRAEFIK DEFAULT CERT` but direct LAN access with that
+hostname serves a trusted certificate, the browser is reaching the wrong
+reverse proxy, not a broken DEN certificate. Use DEN's VPN DNS or a per-device
+hosts entry for the home page (`SERVER-LAN-IP home.DOMAIN`). On a device using
+`home.DOMAIN` as its VPN endpoint, that override also changes endpoint resolution:
+remove it before testing VPN away from home, or use the VPN's supplied DNS
+after connecting. Do not change the public endpoint record to a private IP.
+Do not install a default self-signed proxy certificate as trusted or use browser
+exceptions as the normal access procedure.
+
 ## Verify Access
 
 - LAN with local DNS, or VPN on: app URLs open with valid HTTPS.

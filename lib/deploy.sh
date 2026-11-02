@@ -100,9 +100,10 @@ EOF
 
 write_homepage() {
     install -d -m 755 "$DEPLOY_DIR/home" || return 1
+    install -m 644 "$DEPLOY_DIR/docs/images/mascot.png" "$DEPLOY_DIR/home/mascot.png" || return 1
     jq -nr --arg domain "$DOMAIN" --arg ip "$LAN_IP" \
         --arg fluxer "${FLUXER_ENABLED:-no}" --arg torrents "${QBITTORRENT_ENABLED:-no}" \
-        --rawfile template "$DEPLOY_DIR/templates/home.html" --rawfile readme "$DEPLOY_DIR/README.md" '
+        --rawfile template "$DEPLOY_DIR/templates/home.html" '
         ([
             {name: "media", label: "Media - Jellyfin"},
             {name: "photos", label: "Photos - Immich"},
@@ -115,8 +116,7 @@ write_homepage() {
         reduce [
             ["{{DOMAIN}}", ($domain | @html)],
             ["{{LAN_IP}}", ($ip | @html)],
-            ["{{SERVICES}}", $services],
-            ["{{README}}", ($readme | @html)]
+            ["{{SERVICES}}", $services]
         ][] as $replacement ($template; split($replacement[0]) | join($replacement[1]))
     ' > "$DEPLOY_DIR/home/index.html" || return 1
     chmod 644 "$DEPLOY_DIR/home/index.html"

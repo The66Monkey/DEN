@@ -11,8 +11,10 @@ Fluxer uses its own upstream `rexctl` stack. WireGuard and VPN DNS run on the ho
 Core images are pinned by digest in `templates/compose.yml`.
 An internal nginx container serves the LAN/VPN-only `home.DOMAIN` landing page.
 Installation, release updates and recovery generate `/opt/den/home/index.html`
-from the HTML template, configured domain/LAN IP, enabled services and escaped
-README text. Only this generated directory is mounted read-only into nginx;
+from the HTML template, configured domain/LAN IP and enabled services. The page
+links to GitHub instead of embedding installation instructions, and includes a
+local copy of the mascot from `docs/images/mascot.png`.
+Only this generated directory is mounted read-only into nginx;
 deployment secrets are not served. No extra host port is published.
 
 | Network item | Value |

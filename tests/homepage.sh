@@ -7,6 +7,8 @@ DEPLOY_DIR="$(mktemp -d)"
 trap 'rm -rf "$DEPLOY_DIR"' EXIT
 read_settings "$ROOT/config/example.env"
 mkdir -p "$DEPLOY_DIR/templates"
+mkdir -p "$DEPLOY_DIR/docs/images"
+cp "$ROOT/docs/images/mascot.png" "$DEPLOY_DIR/docs/images/"
 cp "$ROOT/templates/home.html" "$DEPLOY_DIR/templates/"
 cp "$ROOT/README.md" "$DEPLOY_DIR/"
 for fluxer in no yes; do
@@ -45,10 +47,12 @@ if fluxer == "yes":
     services.append("chat")
 if torrents == "yes":
     services.append("downloads")
-assert parsed.links == [f"https://{name}.{domain}/" for name in services]
+assert parsed.links == [f"https://{name}.{domain}/" for name in services] + ["https://github.com/The66Monkey/DEN"]
 text = "".join(parsed.text)
 assert f"ssh YOUR-FEDORA-USER@{ip}" in text
-assert (root / "README.md").read_text() in text
+assert (root / "README.md").read_text() not in text
+assert 'src="/mascot.png"' in page
+assert (root / "home/mascot.png").read_bytes() == (root / "docs/images/mascot.png").read_bytes()
 assert parsed.scripts == 0
 assert "{{" not in page
 assert (root / "home").stat().st_mode & 0o777 == 0o755
@@ -58,8 +62,9 @@ PY
 done
 printf '<script>alert("README")</script> & private text\n' > "$DEPLOY_DIR/README.md"
 write_homepage
-grep -Fq '&lt;script&gt;alert(&quot;README&quot;)&lt;/script&gt; &amp; private text' "$DEPLOY_DIR/home/index.html"
-if grep -Fq '<script>' "$DEPLOY_DIR/home/index.html"; then fail 'README HTML was not escaped.'; fi
+if grep -Fq '<script>' "$DEPLOY_DIR/home/index.html"; then fail 'README HTML leaked into homepage.'; fi
 rm "$DEPLOY_DIR/README.md"
-if write_homepage 2>/dev/null; then fail 'Missing README returned success.'; fi
-printf 'Homepage README, SSH instructions, optional links, escaping and generation errors passed.\n'
+write_homepage
+rm "$DEPLOY_DIR/docs/images/mascot.png"
+if write_homepage 2>/dev/null; then fail 'Missing mascot returned success.'; fi
+printf 'Homepage mascot, GitHub link, SSH instructions, optional links and generation errors passed.\n'
