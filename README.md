@@ -1,11 +1,8 @@
-# DEN
+# DEN (Digital Environment for Networking)
 
-**Digital Environment for Networking: your home server.**
-
-DEN is an opinionated deployment framework that brings established open-source
-services together into a complete home-server setup.
-
-Photos, files, movies and private remote access on one Fedora Server PC.
+An opinionated deployment framework that brings established open-source services
+together into a complete home-server setup: photos, files, movies and private
+remote access on one Fedora Server PC.
 Use the apps from your phone or computer; no desktop is needed on the server.
 
 <p align="center">
@@ -44,3 +41,12 @@ the server to opening your apps. Print it or tick off the steps as you go.
 Fedora Server. See [validation status](docs/testing.md#validation-status) for
 what was checked and what remains. Keep another copy of files you cannot replace.
 For contributors: [architecture](docs/architecture.md) and [testing](docs/testing.md).
+
+## License
+
+- Software: MIT License — [LICENSE](LICENSE)
+- Documentation: CC BY 4.0 — [LICENSE-docs](LICENSE-docs)
+- Attribution guidance: [ATTRIBUTION.md](ATTRIBUTION.md)
+
+Free to use, adapt and self-host. A mention of the DEN Framework by
+[ScandinavianHacking](https://scandinavianhacking.se/) is appreciated.
