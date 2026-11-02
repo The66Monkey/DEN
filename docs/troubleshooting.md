@@ -12,7 +12,7 @@ systemctl --failed
 | --- | --- |
 | App URL fails on LAN or shows a TLS error | Enable WireGuard, or point the app's local DNS name to DEN's LAN IP. Use the hostname, not the bare IP. |
 | Certificate is not ready | Wait a few minutes, then run `sudo den logs traefik`. Check [DNS and certificate setup](networking.md). |
-| WireGuard will not connect | Forward **UDP**, not TCP, port 41873. Test on mobile data. Check the `home` DNS record and `sudo wg show`. |
+| WireGuard will not connect | Forward **UDP**, not TCP, port 41873. Test on mobile data. Check the `vpn` DNS record (or the endpoint in a legacy profile) and `sudo wg show`. |
 | VPN connects but names fail | Disable browser/device Secure DNS that bypasses VPN DNS. Check `systemctl status den-dns`. |
 | Profile was not created | Use a lowercase device name and the same name in every command. See [profile download](installation.md#import-wireguard-on-another-computer). |
 | Outside access fails without VPN | Expected for private apps. Enabled Fluxer needs public TCP 443 routed to DEN; if BASM owns that forward, plan the cutover first. |
@@ -30,6 +30,18 @@ Do not delete `/opt/den/.env`, data folders or backups to retry setup.
 Do not disable SELinux or the firewall. Failed installation does not yet support
 automatic resume: `sudo den start` starts prepared apps but cannot complete
 missing host configuration. Save the error and ask for help.
+
+## Browser still says "Not secure"
+
+First verify the full `https://` hostname, the certificate's hostname, issuer and
+expiry, and that DNS reaches the intended server. A private window that reports
+a secure connection while an old normal tab does not suggests browser-local
+state, such as a prior certificate exception. Close old tabs and restart the
+browser; if necessary, reset that site's permissions/data (this may sign you out).
+If a fresh window also reports a problem, inspect its security explanation for
+certificate errors or mixed content instead of assuming a cache issue.
+Do not disable certificate validation, trust a proxy's default self-signed
+certificate or repeatedly request new ACME certificates to fix browser state.
 
 For deeper diagnosis, [architecture](architecture.md) lists paths and firewall
 commands. Redact passwords, tokens and VPN keys before sharing logs.

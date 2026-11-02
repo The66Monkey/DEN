@@ -138,23 +138,23 @@ an administrator supplies explicit coexistence records. Existing deployments
 need a reviewed DNS configuration update; do not rerun `write_vpn` or the
 installer to change DNS, since initial VPN setup generates new keys.
 
-### Home-lab LAN DNS with BASM AdGuard
+### LAN DNS with BASM and a private resolver
 
-The manually migrated AdGuard at `192.168.50.20` now has exact private rewrites:
-DEN's enabled web names to `192.168.50.245`, BASM's `erp`, `mail`, `cloud` to
-`192.168.50.20`. DEN VPN DNS has the same service separation.
-`vpn.scandinavianhacking.dedyn.io` stays public. Public service records were not
-changed. CleanBrowsing `185.228.168.9` and `185.228.169.9` are AdGuard's upstreams,
-not secondary resolvers to advertise directly to LAN clients.
+When using AdGuard or another private resolver, configure exact rewrites:
+DEN's enabled web names to DEN's LAN address, BASM's `erp`, `mail`, `cloud` to
+BASM's LAN address. Keep the same service separation in VPN DNS.
+`vpn.example.net` must stay public. Preserve public service records.
+If using a filtering provider, configure it as the private resolver's upstream,
+not a secondary resolver advertised directly to LAN clients.
 
 On the ASUS RT-AX58U, configure **LAN > DHCP Server > DNS and WINS Server
-Setting > DNS Server** as `192.168.50.20`. Leave a second public DNS blank.
+Setting > DNS Server** to the private resolver's LAN address. Leave a second public DNS blank.
 If shown, disable **Advertise router's IP in addition to user-specified DNS**.
 DNS Director/Filter rules forcing CleanBrowsing directly must not bypass AdGuard;
 disable that redirect or set an appropriate custom resolver after reviewing
 device exceptions. WAN DNS can remain separate. Renew DHCP/reconnect Wi-Fi and
 clear resolver/browser caches. Test with VPN off: `nslookup home.DOMAIN` must
-return `.245`, while `nslookup vpn.DOMAIN` must return the public IP.
+return DEN's LAN address, while `nslookup vpn.DOMAIN` must return the public IP.
 IPv6-advertised DNS and browser Secure DNS can also bypass private rewrites.
 Do not publicly expose AdGuard's DNS/admin ports.
 
