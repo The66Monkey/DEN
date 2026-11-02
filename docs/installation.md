@@ -7,8 +7,8 @@ Print it if useful; do not write passwords or tokens on it.
 | Your details | Fill in |
 | --- | --- |
 | Fedora login | ________________________ |
-| Server LAN IP, e.g. `192.168.50.58` | ________________________ |
-| Home subnet, e.g. `192.168.50.0/24` | ________________________ |
+| Server LAN IP, e.g. `192.168.1.10` | ________________________ |
+| Home subnet, e.g. `192.168.1.0/24` | ________________________ |
 | Public IPv4 (router's WAN address) | ________________________ |
 | Domain, e.g. `example.net` | ________________________ |
 | Certificate contact email | ________________________ |
@@ -19,6 +19,9 @@ Print it if useful; do not write passwords or tokens on it.
   an SSD and a larger HDD. Use Ethernet if possible.
 - [ ] Install Fedora Server on the **SSD only**. Enable SSH and create your login.
 - [ ] Reserve the server's LAN IP in your router so it does not change.
+  For example, the router might be `192.168.1.1` and the server `192.168.1.10`,
+  on subnet `192.168.1.0/24`. Use your own network's values, not the router's
+  address for the server.
 - [ ] On your computer, connect with your Fedora login and the server IP:
 
   ```bash
@@ -102,8 +105,8 @@ Keep `home.DOMAIN` pointing to the public IP.
   ```text
   DOMAIN=example.net
   EMAIL=you@example.net
-  LAN_IP=192.168.50.58
-  LAN_CIDR=192.168.50.0/24
+  LAN_IP=192.168.1.10
+  LAN_CIDR=192.168.1.0/24
   ACME_CHALLENGE=dns-desec
   MEDIA_MOUNT=/mnt/den-backup
   BACKUP_MOUNT=/mnt/den-backup
