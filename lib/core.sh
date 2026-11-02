@@ -67,6 +67,29 @@ validate_desec_token() {
     [[ "${1:-}" =~ ^[A-Za-z0-9._~+/=-]{16,128}$ ]]
 }
 
+validate_hostname() {
+    [[ "${1:-}" =~ ^[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?$ ]]
+}
+
+request_server_hostname() {
+    local requested
+    SERVER_HOSTNAME=FedoraDEN
+    if [[ ! -t 0 ]]; then
+        SERVER_HOSTNAME="$(hostname -s)" || fail 'Could not read the current server hostname.'
+        return 0
+    fi
+    while true; do
+        read -r -p "Server hostname (one label) [$SERVER_HOSTNAME]: " requested ||
+            fail 'Could not read the server hostname.'
+        requested="${requested:-$SERVER_HOSTNAME}"
+        if validate_hostname "$requested"; then
+            SERVER_HOSTNAME="$requested"
+            return 0
+        fi
+        printf 'DEN: Use 1-63 letters, digits, or hyphens; do not start or end with a hyphen.\n' >&2
+    done
+}
+
 ipv4_number() {
     local address="$1" octet result=0
     local -a octets

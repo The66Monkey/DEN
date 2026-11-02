@@ -17,6 +17,7 @@ fi
 [[ $# == 1 ]] || fail 'Supply a config file; see config/example.env.'
 read_settings "$1"
 check_host
+request_server_hostname
 request_ddns_token
 install_packages
 GIT_TERMINAL_PROMPT=0 git ls-remote --exit-code "$UPDATE_REPOSITORY" refs/heads/main >/dev/null || fail 'Automatic updates need root Git access to UPDATE_REPOSITORY; configure a read-only deploy key before installing.'
@@ -34,6 +35,7 @@ compose config --quiet
 compose pull
 initialize_backup
 install_host_config
+hostnamectl set-hostname "$SERVER_HOSTNAME" || fail "Could not set the server hostname to $SERVER_HOSTNAME."
 systemctl start den.service
 fluxer_install
 backup_stack

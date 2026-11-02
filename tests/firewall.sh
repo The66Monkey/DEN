@@ -5,6 +5,11 @@ source "$ROOT/lib/core.sh"
 source "$ROOT/lib/hosts/fedora.sh"
 TEMP="$(mktemp -d)"
 trap 'rm -rf "$TEMP"' EXIT
+DEPLOY_DIR="$ROOT"
+DEN_PROFILE_DIR="$TEMP/profile.d"
+install_login_banner
+cmp "$ROOT/templates/profile.d/den.sh" "$DEN_PROFILE_DIR/den.sh"
+[[ "$(stat -c '%a' "$DEN_PROFILE_DIR/den.sh")" == 644 ]]
 read_settings "$ROOT/config/example.env"
 write_network_guard > "$TEMP/http.nft"
 grep -Fq 'hook prerouting priority -110' "$TEMP/http.nft"

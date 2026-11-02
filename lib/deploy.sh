@@ -262,6 +262,7 @@ EOF
 install_host_config() {
     install -d -m 700 /etc/wireguard
     install -m 600 "$DEPLOY_DIR/private/wg0.conf" /etc/wireguard/wg0.conf
+    install_login_banner || fail 'Could not install the DEN login banner.'
     printf 'net.ipv4.ip_forward=1\n' > /etc/sysctl.d/90-den.conf
     sysctl -p /etc/sysctl.d/90-den.conf
     configure_fedora_host

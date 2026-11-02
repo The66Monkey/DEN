@@ -127,6 +127,8 @@ Keep `home.DOMAIN` pointing to the public IP.
 - [ ] Make sure root can read the configured `UPDATE_REPOSITORY` without prompts.
   A private repository needs a read-only deploy key for root; your normal
   user's Git access is not enough.
+- [ ] During setup, choose a server hostname when prompted (the suggested name is
+  `FedoraDEN`; press Enter to accept it).
 - [ ] Install, entering your Fedora password and deSEC token when asked:
 
   ```bash
@@ -134,6 +136,8 @@ Keep `home.DOMAIN` pointing to the public IP.
   ```
 
   Leave SSH open. Downloads and certificates can take several minutes.
+  SSH logins show a short DEN banner with the hostname, LAN IPv4 address, and
+  service state. Run `sudo den status` for the detailed stack summary.
   If installation fails, do not delete settings to retry; use
   [troubleshooting](troubleshooting.md).
 

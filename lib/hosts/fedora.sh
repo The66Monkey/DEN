@@ -82,6 +82,12 @@ EOF
     systemctl reload-or-restart den-firewall.service || exit 1
 )
 
+install_login_banner() {
+    local profile_dir="${DEN_PROFILE_DIR:-/etc/profile.d}"
+    install -d -m 755 "$profile_dir" || return 1
+    install -m 644 "$DEPLOY_DIR/templates/profile.d/den.sh" "$profile_dir/den.sh"
+}
+
 configure_fedora_host() {
     local port
     for port in 80/tcp 443/tcp "$WIREGUARD_PORT/udp"; do

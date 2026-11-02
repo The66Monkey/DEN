@@ -20,6 +20,16 @@ if (request_ddns_token </dev/null) 2>/dev/null; then fail 'Accepted an invalid t
 unset DESEC_TOKEN_FILE DESEC_TOKEN
 if (request_ddns_token </dev/null) 2>/dev/null; then fail 'Accepted noninteractive install without a token file.'; fi
 read_settings "$ROOT/config/example.env"
+validate_hostname FedoraDEN
+validate_hostname home-server
+if validate_hostname '-den'; then fail 'Accepted a hostname starting with a hyphen.'; fi
+if validate_hostname 'den-'; then fail 'Accepted a hostname ending with a hyphen.'; fi
+if validate_hostname 'den server'; then fail 'Accepted a hostname containing spaces.'; fi
+if validate_hostname 'abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijkl'; then
+    fail 'Accepted a hostname longer than 63 characters.'
+fi
+request_server_hostname </dev/null
+[[ "$SERVER_HOSTNAME" == "$(hostname -s)" ]]
 [[ "$KEEPASS_ENABLED" == no ]]
 [[ "$FLUXER_ENABLED" == no ]]
 [[ "$QBITTORRENT_ENABLED" == no ]]
