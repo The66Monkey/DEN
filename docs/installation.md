@@ -181,6 +181,9 @@ Skip `vpn-add` if that profile already exists.
 ## 6. Open Your Apps
 
 Use your domain in place of `DOMAIN`. Open **names, not the server IP**.
+Start at `https://home.DOMAIN` for links to enabled services, SSH instructions
+and the DEN README. This page is LAN/VPN-only; use WireGuard or router NAT
+loopback as described in [local DNS setup](networking.md#router-and-local-dns).
 Complete only the services you enabled:
 
 | Done | Service | Open | First action |

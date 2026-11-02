@@ -25,12 +25,12 @@ for enabled in no yes; do
         compose config --format json > "$TEMP/rendered.json"
     fi
     if [[ "$enabled" == no ]]; then
-        jq -e '.services | length == 11 and (has("qbittorrent") | not)' "$TEMP/rendered.json" >/dev/null
+        jq -e '.services | length == 12 and (has("qbittorrent") | not)' "$TEMP/rendered.json" >/dev/null
         jq -e 'all(.services.jellyfin.volumes[]; .target != "/downloads/complete")' "$TEMP/rendered.json" >/dev/null
         jq -e '.http.routers | has("downloads") | not' "$DEPLOY_DIR/routes.json" >/dev/null
     else
         jq -e '
-            (.services | length == 12) and
+            (.services | length == 13) and
             (.services.qbittorrent.ports == null) and
             (.services.qbittorrent.profiles == ["torrents"]) and
             (.services.qbittorrent.environment.WEBUI_PORT == "18427") and
@@ -44,7 +44,7 @@ for enabled in no yes; do
             and (all(.services.jellyfin.volumes[] | select(.target == "/media"); .read_only == true))
         ' "$TEMP/rendered.json" >/dev/null
         jq -e '
-            (.http.routers | length == 5) and
+            (.http.routers | length == 6) and
             (.http.routers.downloads.rule == "Host(`downloads.home.example.net`)") and
             (.http.routers.downloads.tls.certResolver == "home") and
             (.http.routers.downloads.middlewares == ["private", "headers"]) and
@@ -55,7 +55,7 @@ done
 FLUXER_ENABLED=yes
 write_routes
 jq -e '
-    (.http.routers | length == 6) and
+    (.http.routers | length == 7) and
     (.http.routers.chat.middlewares == ["headers"]) and
     (all(.http.routers | to_entries[] | select(.key != "chat"); .value.middlewares[0] == "private"))
 ' "$DEPLOY_DIR/routes.json" >/dev/null

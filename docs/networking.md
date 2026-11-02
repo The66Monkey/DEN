@@ -12,7 +12,7 @@ For LAN devices without VPN, set local DNS as described below.
 
    | Name | Service |
    | --- | --- |
-   | `home` | WireGuard |
+   | `home` | WireGuard and LAN/VPN-only DEN home page |
    | `media` | Jellyfin |
    | `photos` | Immich |
    | `files` | Nextcloud |
@@ -93,6 +93,12 @@ In the router's local DNS settings, point each enabled app name to DEN's
 ```
 
 Keep `home.example.net` pointing to the **public IP** for WireGuard.
+To open `https://home.example.net` on the LAN without changing that VPN endpoint,
+use router NAT loopback/hairpin support, or connect through WireGuard (whose DNS
+resolves it to the LAN IP). Do not override `home` to the LAN IP in router DNS:
+VPN clients still need its public address to establish the tunnel.
+The home page includes service links, LAN SSH instructions and the installed README.
+It retains the LAN/VPN allowlist even when chat is public.
 Devices must use the router's DNS; browser Secure DNS can bypass it.
 If the router has no local DNS overrides, use WireGuard or add these entries
 to each computer's hosts file.

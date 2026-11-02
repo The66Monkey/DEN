@@ -17,6 +17,8 @@ Use the apps from your phone or computer; no desktop is needed on the server.
 - **Forgejo** — keep your Git projects at home.
 - **WireGuard** — connect privately from your phone or computer.
 - **Automatic backups and updates** — routine maintenance is built in.
+- **Home page** — open `https://home.YOUR-DOMAIN` on LAN/VPN for service links,
+  SSH instructions and this README.
 
 **Optional:** qBittorrent for downloads, Fluxer for chat and calls, and a
 KeePassXC-compatible password vault.

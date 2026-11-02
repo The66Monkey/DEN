@@ -47,6 +47,8 @@ standalone validators. Fixtures use temporary directories.
 Coverage includes config/secrets, Compose routes, optional features, storage
 mounts, encrypted backup/restore, VPN profiles, firewall rules, update gates
 and monthly maintenance failure paths.
+Homepage checks cover the installed README, HTML escaping, LAN SSH instructions,
+enabled-service links and private routing.
 
 Real mount tests require user/mount namespaces. Real network tests also need
 nftables, iproute2 and network namespaces; unavailable tests print a skip.
@@ -79,6 +81,8 @@ Override detected IP/storage with `DEN_LOCAL_IP` and `DEN_LOCAL_STORAGE`.
 Use a spare host or VM and non-sensitive data:
 
 - Install; verify all enabled apps, valid HTTPS and first-user setup.
+- Open `https://home.DOMAIN` on LAN/VPN; verify the README, SSH IP and service
+  links. Confirm it remains private when public chat is enabled.
 - Test playback, photo upload, file sync and HTTPS Git clone/push.
 - Test mobile VPN handshake/DNS and blocked private apps without VPN.
   With Fluxer enabled, test public chat login, invites, WebSockets and calls

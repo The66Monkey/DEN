@@ -13,7 +13,7 @@ DOMAIN=home.example.net
 LAN_CIDR=192.168.1.0/24
 FLUXER_ENABLED=no
 write_routes
-jq -e '(.http.routers | keys | sort) == ["files", "git", "media", "photos"]' "$DEPLOY_DIR/routes.json" >/dev/null
+jq -e '(.http.routers | keys | sort) == ["files", "git", "home", "media", "photos"]' "$DEPLOY_DIR/routes.json" >/dev/null
 FLUXER_ENABLED=yes
 write_routes
 jq -e '

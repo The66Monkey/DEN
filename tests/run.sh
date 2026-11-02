@@ -11,6 +11,7 @@ bash tests/storage.sh
 bash tests/ddns.sh
 bash tests/firewall.sh
 bash tests/compose.sh
+bash tests/homepage.sh
 bash tests/qbittorrent.sh
 bash tests/backup.sh
 bash tests/restic.sh

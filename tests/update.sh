@@ -16,6 +16,7 @@ printf 'nextcloud:33.0.10-apache\n' > "$DEPLOY_DIR/compose.yml"
 printf 'nextcloud:33.0.11-apache\n' > "$SOURCE_DIR/templates/compose.yml"
 printf '0.1.1\n' > "$SOURCE_DIR/VERSION"
 printf 'write_routes() { printf "routes\\n" >> "$CALLS"; }\n' > "$SOURCE_DIR/lib/deploy.sh"
+printf 'write_homepage() { printf "homepage\\n" >> "$CALLS"; [[ "${FAIL_HOME:-no}" != yes ]]; }\n' >> "$SOURCE_DIR/lib/deploy.sh"
 printf 'configure_fedora_host() { printf "firewall\\n" >> "$CALLS"; }\n' > "$SOURCE_DIR/lib/hosts/fedora.sh"
 printf 'fluxer_configure_public_voice() { printf "voice\\n" >> "$CALLS"; [[ "${FAIL_VOICE:-no}" != yes ]]; }\n' > "$SOURCE_DIR/lib/fluxer.sh"
 FAIL_PULL=false
@@ -64,6 +65,8 @@ grep -Fxq backup "$CALLS"
 grep -Fxq start "$CALLS"
 grep -Fxq firewall "$CALLS"
 grep -Fxq voice "$CALLS"
+grep -Fxq homepage "$CALLS"
+[[ "$(grep -n '^homepage$' "$CALLS" | cut -d: -f1)" -lt "$(grep -n '^start$' "$CALLS" | cut -d: -f1)" ]]
 [[ "$(grep -n '^backup$' "$CALLS" | cut -d: -f1)" -lt "$(grep -n '^firewall$' "$CALLS" | cut -d: -f1)" ]]
 [[ "$(grep -n '^firewall$' "$CALLS" | cut -d: -f1)" -lt "$(grep -n '^start$' "$CALLS" | cut -d: -f1)" ]]
 [[ "$(grep -n '^voice$' "$CALLS" | cut -d: -f1)" -lt "$(grep -n '^start$' "$CALLS" | cut -d: -f1)" ]]
@@ -75,6 +78,11 @@ grep -Fxq storage "$CALLS"
 [[ "$(grep -n '^backup$' "$CALLS" | cut -d: -f1)" -lt "$(grep -n '^storage$' "$CALLS" | cut -d: -f1)" ]]
 [[ "$(grep -n '^storage$' "$CALLS" | cut -d: -f1)" -lt "$(grep -n '^start$' "$CALLS" | cut -d: -f1)" ]]
 QBITTORRENT_ENABLED=no
+: > "$CALLS"
+if FAIL_HOME=yes update_release "$SOURCE_DIR" >/dev/null; then fail 'Failed homepage generation returned success.'; fi
+if grep -Fxq start "$CALLS"; then fail 'Apps started after failed homepage generation.'; fi
+[[ -f "$DEPLOY_DIR/private/update-in-progress" ]]
+rm "$DEPLOY_DIR/private/update-in-progress"
 : > "$CALLS"
 if FAIL_VOICE=yes update_release "$SOURCE_DIR" >/dev/null; then fail 'Failed voice configuration returned success.'; fi
 if grep -Fxq start "$CALLS"; then fail 'Apps started after failed voice configuration.'; fi

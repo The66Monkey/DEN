@@ -27,6 +27,7 @@ unset DESEC_TOKEN
 configure_media_storage
 prepare_storage
 cp "$DEPLOY_DIR/templates/compose.yml" "$DEPLOY_DIR/compose.yml"
+write_homepage
 write_routes
 write_vpn
 sync_keepass

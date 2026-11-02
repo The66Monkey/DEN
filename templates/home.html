@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DEN - Welcome home</title>
+  <style>
+    :root { color-scheme: light dark; font-family: system-ui, sans-serif; line-height: 1.6; }
+    body { max-width: 62rem; margin: auto; padding: 2rem 1rem; }
+    h1, h2 { line-height: 1.2; }
+    nav ul { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 1rem; padding: 0; list-style: none; }
+    nav a { display: block; padding: 1rem; border: 1px solid #888; border-radius: .5rem; }
+    code, pre { font-family: ui-monospace, monospace; }
+    pre { padding: 1rem; border: 1px solid #888; border-radius: .5rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+    footer { margin-top: 2rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Welcome home to DEN</h1>
+    <p>Your Digital Environment for Networking at <strong>home.{{DOMAIN}}</strong>.</p>
+    <p>If you are here, open a service below or SSH into the server to manage DEN.
+      This page and private services are available on your home network or through WireGuard.</p>
+  </header>
+  <main>
+    <nav aria-label="DEN services">
+      <h2>Open your services</h2>
+      <ul>
+{{SERVICES}}
+      </ul>
+    </nav>
+    <section aria-labelledby="ssh-heading">
+      <h2 id="ssh-heading">Manage your server</h2>
+      <p>From a terminal on your home network or VPN, run:</p>
+      <pre><code>ssh YOUR-FEDORA-USER@{{LAN_IP}}</code></pre>
+      <p>Replace <code>YOUR-FEDORA-USER</code> with your Fedora login.
+        Then run <code>sudo den status</code> to check services or <code>sudo den help</code> for commands.
+        Do not forward SSH to the internet.</p>
+    </section>
+    <section aria-labelledby="readme-heading">
+      <h2 id="readme-heading">DEN README</h2>
+      <p>The README from your installed DEN release (shown as plain text).</p>
+      <pre>{{README}}</pre>
+    </section>
+  </main>
+  <footer>No passwords, tokens or VPN profiles are shown here. Retrieve credentials privately over SSH.</footer>
+</body>
+</html>

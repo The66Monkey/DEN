@@ -26,6 +26,7 @@ cp "$DATA_DIR/system/deployment/compose.yml" "$DEPLOY_DIR/compose.yml"
 cp -a "$DATA_DIR/system/deployment/private" "$DEPLOY_DIR/"
 read_settings "$DEPLOY_DIR/.env"
 prepare_storage
+write_homepage
 write_routes
 ln -sfn /opt/den/bin/den /usr/local/bin/den
 compose config --quiet

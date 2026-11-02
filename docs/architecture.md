@@ -9,6 +9,11 @@ One Fedora Server host runs Docker Compose for Jellyfin, Immich, Nextcloud,
 Forgejo and optional qBittorrent. Traefik handles HTTPS without a Docker socket.
 Fluxer uses its own upstream `rexctl` stack. WireGuard and VPN DNS run on the host.
 Core images are pinned by digest in `templates/compose.yml`.
+An internal nginx container serves the LAN/VPN-only `home.DOMAIN` landing page.
+Installation, release updates and recovery generate `/opt/den/home/index.html`
+from the HTML template, configured domain/LAN IP, enabled services and escaped
+README text. Only this generated directory is mounted read-only into nginx;
+deployment secrets are not served. No extra host port is published.
 
 | Network item | Value |
 | --- | --- |

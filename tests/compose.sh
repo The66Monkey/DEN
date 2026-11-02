@@ -17,7 +17,9 @@ else
 fi
 jq -e '
     .name == "den" and
-    (.services | length == 11) and
+    (.services | length == 12) and
+    (.services.homepage.ports == null) and
+    (any(.services.homepage.volumes[]; .target == "/usr/share/nginx/html" and .read_only == true and .bind.selinux == "z")) and
     ([.services | to_entries[] | select(.value.ports != null) | .key] == ["traefik"]) and
     ([.services.traefik.ports[].published] == ["80", "443"]) and
     (all(.services.traefik.ports[]; .host_ip == "192.168.1.10")) and
@@ -37,10 +39,13 @@ jq -e '
     (all(.services[] | .volumes[]? | select(.source | startswith("/srv/den/")); .bind.selinux == "z"))
 ' "$DEPLOY_DIR/rendered.json" >/dev/null
 jq -e '
-    (.http.routers | length == 4) and
+    (.http.routers | length == 5) and
     (all(.http.routers[]; .tls.certResolver == "home" and .middlewares[0] == "private")) and
     (.http.middlewares.private.ipAllowList.sourceRange == ["192.168.1.0/24", "10.44.0.0/24"]) and
-    (.http.routers.photos.rule == "Host(`photos.home.example.net`)")
+    (.http.routers.photos.rule == "Host(`photos.home.example.net`)") and
+    (.http.routers.home.rule == "Host(`home.home.example.net`)") and
+    (.http.routers.home.middlewares == ["private", "headers"]) and
+    (.http.services.home.loadBalancer.servers[0].url == "http://homepage:80")
 ' "$DEPLOY_DIR/routes.json" >/dev/null
 mkdir -p "$DEPLOY_DIR/templates"
 cp "$ROOT/templates/compose.dns.yml" "$DEPLOY_DIR/templates/"

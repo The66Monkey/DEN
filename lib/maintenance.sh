@@ -102,6 +102,7 @@ update_release() (
     if [[ "${QBITTORRENT_ENABLED:-no}" == yes ]]; then
         prepare_storage || return 1
     fi
+    write_homepage || return 1
     write_routes || return 1
     configure_fedora_host || return 1
     fluxer_configure_public_voice || return 1

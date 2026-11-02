@@ -98,6 +98,30 @@ EOF
     ensure_media_storage
 }
 
+write_homepage() {
+    install -d -m 755 "$DEPLOY_DIR/home" || return 1
+    jq -nr --arg domain "$DOMAIN" --arg ip "$LAN_IP" \
+        --arg fluxer "${FLUXER_ENABLED:-no}" --arg torrents "${QBITTORRENT_ENABLED:-no}" \
+        --rawfile template "$DEPLOY_DIR/templates/home.html" --rawfile readme "$DEPLOY_DIR/README.md" '
+        ([
+            {name: "media", label: "Media - Jellyfin"},
+            {name: "photos", label: "Photos - Immich"},
+            {name: "files", label: "Files - Nextcloud"},
+            {name: "git", label: "Git - Forgejo"}
+        ] + (if $fluxer == "yes" then [{name: "chat", label: "Chat - Fluxer (public, invite-only)"}] else [] end)
+          + (if $torrents == "yes" then [{name: "downloads", label: "Downloads - qBittorrent"}] else [] end)
+        | map("<li><a href=\"https://" + (.name + "." + $domain | @html) + "/\">" + (.label | @html) + "</a></li>")
+        | join("\n")) as $services |
+        reduce [
+            ["{{DOMAIN}}", ($domain | @html)],
+            ["{{LAN_IP}}", ($ip | @html)],
+            ["{{SERVICES}}", $services],
+            ["{{README}}", ($readme | @html)]
+        ][] as $replacement ($template; split($replacement[0]) | join($replacement[1]))
+    ' > "$DEPLOY_DIR/home/index.html" || return 1
+    chmod 644 "$DEPLOY_DIR/home/index.html"
+}
+
 write_routes() {
     jq -n --arg domain "$DOMAIN" --arg lan "$LAN_CIDR" --arg fluxer "${FLUXER_ENABLED:-no}" --arg torrents "${QBITTORRENT_ENABLED:-no}" --arg qbit "http://qbittorrent:$QBITTORRENT_WEBUI_PORT" --arg chat "http://172.30.44.1:$FLUXER_PROXY_PORT" '
         {http: {
@@ -108,12 +132,13 @@ write_routes() {
                     regex: "https://(.*)/.well-known/(?:card|cal)dav",
                     replacement: "https://${1}/remote.php/dav/", permanent: true}}
             },
-            routers: (reduce (["media", "photos", "files", "git"] + (if $fluxer == "yes" then ["chat"] else [] end) + (if $torrents == "yes" then ["downloads"] else [] end))[] as $name ({};
+            routers: (reduce (["home", "media", "photos", "files", "git"] + (if $fluxer == "yes" then ["chat"] else [] end) + (if $torrents == "yes" then ["downloads"] else [] end))[] as $name ({};
                 .[$name] = {rule: ("Host(`" + (if $name == "chat" then "chat." else $name + "." end) + $domain + "`)") ,
                     entryPoints: ["websecure"], service: $name,
                     middlewares: ((if $name == "chat" then ["headers"] else ["private", "headers"] end) + (if $name == "files" then ["dav"] else [] end)),
                     tls: {certResolver: "home"}})),
             services: ({
+                home: {loadBalancer: {servers: [{url: "http://homepage:80"}]}},
                 media: {loadBalancer: {servers: [{url: "http://jellyfin:8096"}]}},
                 photos: {loadBalancer: {servers: [{url: "http://immich-server:2283"}]}},
                 files: {loadBalancer: {servers: [{url: "http://nextcloud:80"}]}},
@@ -279,7 +304,7 @@ start_stack() {
 }
 
 show_summary() {
-    printf '\nMedia: https://media.%s\nPhotos: https://photos.%s\nFiles: https://files.%s\nGit: https://git.%s\n' "$DOMAIN" "$DOMAIN" "$DOMAIN" "$DOMAIN"
+    printf '\nHome: https://home.%s\nMedia: https://media.%s\nPhotos: https://photos.%s\nFiles: https://files.%s\nGit: https://git.%s\n' "$DOMAIN" "$DOMAIN" "$DOMAIN" "$DOMAIN" "$DOMAIN"
     printf '\nNextcloud user: admin. Password: sudo grep NEXTCLOUD_ADMIN_PASSWORD /opt/den/.env\n'
     printf 'VPN profile: /opt/den/private/home.conf (private; use on ONE device).\n'
     printf "Show its private QR code over SSH: sudo sh -c 'qrencode -t ansiutf8 < /opt/den/private/home.conf'\n"
