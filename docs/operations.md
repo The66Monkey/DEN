@@ -32,8 +32,11 @@ for rollback; do not restart its application containers alongside BASM.
 BASM workers/scheduling and Postal delivery are enabled. Its health check and
 Nextcloud file roundtrip pass; a real outgoing mail test reached the owner's
 inbox with SPF/DKIM/DMARC passing. The owner confirmed external access through
-the migrated legacy VPN and a real RustDesk connection. The external kiosk
-heartbeat and independent BASM recovery validation still remain.
+the migrated legacy VPN and a real RustDesk connection. A manual external kiosk
+heartbeat was received and saved; its recurring schedule and independent BASM
+recovery validation still remain. This restaurant-owned kiosk is untrusted:
+keep DEN/BASM secrets and home VPN profiles off it. Its unauthenticated heartbeat
+is only an IP-discovery hint, never a trusted device identity.
 DEN's old `.58` LAN binding and private DNS entry were updated to `.245`.
 The new homepage service has also been deployed, with private hostname and
 LAN-IP routes. IP access uses a default certificate (browser warning); the
