@@ -28,6 +28,26 @@ Print it if useful; do not write passwords or tokens on it.
   ssh YOUR-FEDORA-USER@SERVER-LAN-IP
   ```
 
+### Media codecs and NVIDIA
+
+The installer and recovery enable the third-party **RPM Fusion Free** repository
+and install its full `ffmpeg` package by default. If Fedora's `ffmpeg-free` is
+present, DEN uses RPM Fusion's documented
+`dnf swap ffmpeg-free ffmpeg --allowerasing` transaction. Review package
+replacement/licensing requirements before installation. No nonfree GPU driver
+repository or driver branch is installed automatically.
+
+Jellyfin runs in a container with its own full `jellyfin-ffmpeg`; replacing host
+FFmpeg does **not** replace that binary or fix container GPU access. Do not mount
+the host FFmpeg executable into Jellyfin. See
+[media diagnostics](operations.md#media-codecs-and-nvidia) before enabling
+hardware acceleration.
+
+DEN detects NVIDIA display/3D devices and checks `nvidia-smi` during installation,
+recovery and `sudo den check`. A warning does not prevent software playback.
+Keep a working GPU-compatible driver branch (including 580xx where appropriate).
+DEN does not upgrade it, enroll Secure Boot keys or enable GPU passthrough.
+
 ## 2. Mount the HDD
 
 - [ ] Identify the HDD's **existing filesystem and UUID**:

@@ -40,6 +40,7 @@ enable_update_timer() {
 
 health_check() {
     local expected actual snapshots newest now used
+    check_nvidia_driver || return 1
     ensure_media_storage
     expected="$(compose config --services | wc -l)"
     actual="$(compose ps --all --format json | jq -s 'flatten | map(select(.State == "running" and .Health == "healthy")) | length')"

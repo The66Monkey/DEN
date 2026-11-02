@@ -1,5 +1,36 @@
 #!/usr/bin/env bash
 
+install_media_codecs() {
+    local fedora_version
+    fedora_version="$(rpm -E %fedora)" || return 1
+    [[ "$fedora_version" =~ ^[0-9]+$ ]] || fail 'Cannot determine Fedora version for RPM Fusion.'
+    dnf install -y "https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-${fedora_version}.noarch.rpm" || return 1
+    if rpm -q ffmpeg-free >/dev/null 2>&1; then
+        dnf swap -y ffmpeg-free ffmpeg --allowerasing || return 1
+    else
+        dnf install -y ffmpeg --allowerasing || return 1
+    fi
+    rpm -q ffmpeg >/dev/null || return 1
+    ffmpeg -version >/dev/null || return 1
+}
+
+check_nvidia_driver() {
+    local devices
+    if ! command -v lspci >/dev/null 2>&1; then
+        log 'WARNING: NVIDIA detection unavailable; install pciutils and check GPU/driver compatibility before enabling hardware transcoding.'
+        return 0
+    fi
+    devices="$(lspci -Dn)" || return 1
+    if grep -Eq ' (0300|0302|0380): 10de:' <<< "$devices"; then
+        if ! command -v nvidia-smi >/dev/null 2>&1 || ! nvidia-smi >/dev/null 2>&1; then
+            log 'WARNING: NVIDIA GPU detected but nvidia-smi failed or is missing. Check the matching driver branch, kernel module and Secure Boot before enabling NVIDIA transcoding.'
+        else
+            log 'NVIDIA driver responds. Jellyfin still requires NVIDIA container-toolkit/device access and hardware-acceleration configuration; host driver detection alone does not enable GPU transcoding.'
+        fi
+        log 'WARNING: NVIDIA codec support depends on the GPU generation. Do not select unsupported codecs or replace a working legacy driver branch automatically.'
+    fi
+}
+
 install_packages() {
     install -d -m 755 /etc/yum.repos.d
     dnf install -y curl ca-certificates
@@ -8,7 +39,9 @@ install_packages() {
     dnf install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin \
         docker-compose-plugin container-selinux firewalld restic wireguard-tools qrencode \
         dnsmasq iptables-nft nftables jq openssl curl ca-certificates \
-        policycoreutils-python-utils git dnf5-plugins
+        policycoreutils-python-utils git dnf5-plugins pciutils
+    install_media_codecs || return 1
+    check_nvidia_driver || return 1
     if [[ "$KEEPASS_ENABLED" == yes ]]; then
         dnf install -y python3-pykeepass
     fi

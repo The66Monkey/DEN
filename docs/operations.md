@@ -31,8 +31,9 @@ physical port `enp3s0`) and BASM on `192.168.50.20` (2 vCPUs, 6 GiB RAM,
 for rollback; do not restart its application containers alongside BASM.
 BASM workers/scheduling and Postal delivery are enabled. Its health check and
 Nextcloud file roundtrip pass; a real outgoing mail test reached the owner's
-inbox with SPF/DKIM/DMARC passing. External VPN/RustDesk/kiosk tests and
-independent BASM recovery validation still remain.
+inbox with SPF/DKIM/DMARC passing. The owner confirmed external access through
+the migrated legacy VPN and a real RustDesk connection. The external kiosk
+heartbeat and independent BASM recovery validation still remain.
 DEN's old `.58` LAN binding and private DNS entry were updated to `.245`.
 The new homepage service has also been deployed, with private hostname and
 LAN-IP routes. IP access uses a default certificate (browser warning); the
@@ -61,6 +62,44 @@ repository. Arrange an independent encrypted copy of BASM backups and test
 guest recovery; neither an unchecked live VM-disk copy nor a VM snapshot on
 the same disk is an independent backup. Schedule Fedora host updates/reboots
 around guest backups and availability requirements.
+
+## Media codecs and NVIDIA
+
+New installs/recovery use RPM Fusion Free's full host FFmpeg by default, not
+Fedora's codec-limited `ffmpeg-free`. Existing deployments do not rerun package
+installation on a DEN source update. To apply the same change explicitly:
+
+```bash
+sudo dnf install https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm
+# If ffmpeg-free is installed:
+sudo dnf swap ffmpeg-free ffmpeg --allowerasing
+# Otherwise:
+sudo dnf install ffmpeg --allowerasing
+rpm -q ffmpeg
+ffmpeg -version
+```
+
+Jellyfin's bundled FFmpeg is independent of these host packages. Check the
+actual container binary instead of assuming host codec availability:
+
+```bash
+sudo docker compose --env-file /opt/den/.env -f /opt/den/compose.yml exec -T jellyfin /usr/lib/jellyfin-ffmpeg/ffmpeg -version
+sudo docker compose --env-file /opt/den/.env -f /opt/den/compose.yml exec -T jellyfin /usr/lib/jellyfin-ffmpeg/ffmpeg -hide_banner -decoders
+nvidia-smi
+```
+
+Installation and `den check` warn if an NVIDIA display GPU has no working
+`nvidia-smi`, and remind owners that driver availability is not container GPU
+access. Check kernel-module/Secure Boot status and the supported legacy driver
+branch before changing drivers. A GTX 970 cannot decode every modern codec in
+hardware: keep unsupported formats on software decoding.
+
+DEN's default Compose does not request NVIDIA GPU devices. NVIDIA acceleration
+also requires NVIDIA Container Toolkit, explicit Jellyfin GPU access, SELinux-
+compatible permissions and Jellyfin Dashboard hardware-acceleration settings.
+Do not disable SELinux, use privileged containers or replace the bundled FFmpeg
+to bypass setup errors. Confirm an actual transcode and its Jellyfin FFmpeg log,
+not only `nvidia-smi` output. Software transcoding remains the default.
 
 ## Automatic Monthly Maintenance
 
