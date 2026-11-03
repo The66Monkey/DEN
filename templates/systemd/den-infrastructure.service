@@ -1,0 +1,18 @@
+[Unit]
+Description=DEN independent LAN DNS and shared HTTPS edge
+Requires=docker.service
+After=docker.service network-online.target den-firewall.service
+Wants=network-online.target
+ConditionPathExists=/opt/den/private/external-edge
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/den/private/infrastructure
+ExecStart=/usr/bin/docker compose --project-name den-infrastructure --env-file .env -f compose.yml up -d --wait --wait-timeout 180 edge dns
+ExecStop=/usr/bin/docker compose --project-name den-infrastructure --env-file .env -f compose.yml stop --timeout 60
+TimeoutStartSec=240
+TimeoutStopSec=150
+
+[Install]
+WantedBy=multi-user.target

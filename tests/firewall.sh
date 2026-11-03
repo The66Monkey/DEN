@@ -27,6 +27,14 @@ grep -Fq '22, 53, 80, 443, 9090, 7881' "$TEMP/dns.nft"
 grep -Fq 'udp dport { 53, 7882 }' "$TEMP/dns.nft"
 grep -Fq "ip daddr $LAN_IP tcp dport { 443, 7881 } return" "$TEMP/dns.nft"
 grep -Fq "ip daddr $LAN_IP udp dport 7882 return" "$TEMP/dns.nft"
+DEPLOY_DIR="$TEMP/external"
+mkdir -p "$DEPLOY_DIR/private"
+touch "$DEPLOY_DIR/private/external-edge"
+FLUXER_ENABLED=no
+write_network_guard > "$TEMP/external.nft"
+grep -Fq "ip daddr $LAN_IP tcp dport 80 return" "$TEMP/external.nft"
+grep -Fq "ip daddr $LAN_IP tcp dport 443 return" "$TEMP/external.nft"
+if grep -Fq '7881' "$TEMP/external.nft"; then fail 'Shared edge exposed disabled Fluxer voice.'; fi
 grep -Fxq 'Before=docker.service' "$ROOT/templates/systemd/den-firewall.service"
 if grep -q '^ExecStop=' "$ROOT/templates/systemd/den-firewall.service"; then fail 'Stopping the guard removes protection.'; fi
 nft() { return 1; }

@@ -28,9 +28,13 @@ Still to verify:
 - Owner confirmation of normal playback, photo upload, file sync and voice use.
 
 These are follow-up checks, not claims of completed validation.
-The public Fluxer routing change has not been applied to that live host.
-Public chat, cross-network voice/video and a BASM migration/cutover still need
-live acceptance; earlier VPN-only checks do not validate them.
+The optional shared-edge topology has since passed live acceptance: public
+chat works on mobile data with VPN off, private home/AI access is denied there,
+and existing business websites work through the independent edge. Migrated DNS
+was checked over UDP/TCP, including legacy VPN forwarding and the VM's persistent
+resolver. Real encrypted DEN and BASM backups completed without restarting DEN's
+infrastructure containers. No post-migration host reboot, future ACME renewal,
+cross-network voice/video or full replacement-host recovery is claimed.
 
 ## Automated Checks
 
@@ -49,6 +53,9 @@ mounts, encrypted backup/restore, VPN profiles, firewall rules, update gates
 and monthly maintenance failure paths.
 Homepage checks cover the installed README, HTML escaping, LAN SSH instructions,
 enabled-service links and private routing.
+Infrastructure checks cover separate Compose ownership, embedded-edge exclusion,
+private DNS/admin bindings, exact custom-route merging, conflicts/failure
+preservation and bind-mounted route inode stability.
 
 Real mount tests require user/mount namespaces. Real network tests also need
 nftables, iproute2 and network namespaces; unavailable tests print a skip.

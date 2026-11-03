@@ -1,0 +1,77 @@
+name: den-infrastructure
+
+services:
+  edge:
+    image: traefik:v3.7.17@sha256:30ff62491aacdb862ceb8c9edcf2627da638d7deafdd4b6dab32fe34f8aa3e90
+    restart: unless-stopped
+    command:
+      - --providers.file.filename=/etc/traefik/routes.yml
+      - --providers.file.watch=true
+      - --entrypoints.web.address=:80
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.websecure.transport.respondingtimeouts.readtimeout=600s
+      - --certificatesresolvers.home.acme.email=${EMAIL:?required}
+      - --certificatesresolvers.home.acme.storage=/certificates/acme.json
+      - --certificatesresolvers.home.acme.dnschallenge.provider=desec
+      - --certificatesresolvers.home.acme.dnschallenge.resolvers=1.1.1.1:53,1.0.0.1:53
+      - --certificatesresolvers.home.acme.dnschallenge.propagation.delaybeforechecks=60s
+      - --certificatesresolvers.home.acme.dnschallenge.propagation.requireallrns=true
+      - --certificatesresolvers.business.acme.email=${EMAIL:?required}
+      - --certificatesresolvers.business.acme.storage=/certificates/business-acme.json
+      - --certificatesresolvers.business.acme.tlschallenge=true
+      - --ping=true
+      - --log.level=WARN
+    environment:
+      DESEC_TOKEN_FILE: /run/secrets/desec-token
+      DESEC_PROPAGATION_TIMEOUT: '600'
+      DESEC_POLLING_INTERVAL: '10'
+    ports:
+      - '${LAN_IP:?required}:80:80'
+      - '${LAN_IP:?required}:443:443'
+    volumes:
+      - ${DEN_DEPLOY_DIR:-/opt/den}/routes.json:/etc/traefik/routes.yml:ro,z
+      - ${DEN_DATA_DIR:-/srv/den}/traefik:/certificates:z
+      - ../desec-token:/run/secrets/desec-token:ro,z
+    networks:
+      home:
+        ipv4_address: 172.30.44.2
+    healthcheck:
+      test: [CMD, traefik, healthcheck, --ping]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+    logging: &logging
+      driver: local
+      options:
+        max-size: 10m
+        max-file: '3'
+
+  dns:
+    image: adguard/adguardhome@sha256:7fbf01d73ecb7a32d2d9e6cef8bf88e64bd787889ca80a1e8bce30cd4c084442
+    restart: unless-stopped
+    ports:
+      - '${LAN_IP:?required}:53:53/tcp'
+      - '${LAN_IP:?required}:53:53/udp'
+      - '127.0.0.1:3080:3000/tcp'
+    volumes:
+      - ${DEN_DATA_DIR:-/srv/den}/infrastructure/adguard/conf:/opt/adguardhome/conf:z
+      - ${DEN_DATA_DIR:-/srv/den}/infrastructure/adguard/work:/opt/adguardhome/work:z
+    networks: [dns]
+    healthcheck:
+      test: [CMD-SHELL, 'nslookup example.com 127.0.0.1 >/dev/null']
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    logging: *logging
+
+networks:
+  home:
+    external: true
+    name: den_home
+  dns:
+    ipam:
+      config:
+        - subnet: 172.30.45.0/24

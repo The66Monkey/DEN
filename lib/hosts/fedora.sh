@@ -73,8 +73,11 @@ table inet den_guard {
         ip6 hoplimit 255 icmpv6 type { nd-router-advert, nd-neighbor-solicit, nd-neighbor-advert } return
         fib daddr type local udp dport $WIREGUARD_PORT return
 EOF
-    if [[ "${ACME_CHALLENGE:-http}" == http ]]; then
+    if [[ "${ACME_CHALLENGE:-http}" == http || ( -n "${DEPLOY_DIR:-}" && -f "$DEPLOY_DIR/private/external-edge" ) ]]; then
         printf '        ip daddr %s tcp dport 80 return\n' "$LAN_IP"
+    fi
+    if [[ -n "${DEPLOY_DIR:-}" && -f "$DEPLOY_DIR/private/external-edge" && "${FLUXER_ENABLED:-no}" != yes ]]; then
+        printf '        ip daddr %s tcp dport 443 return\n' "$LAN_IP"
     fi
     if [[ "${FLUXER_ENABLED:-no}" == yes ]]; then
         printf '        ip daddr %s tcp dport { 443, 7881 } return\n' "$LAN_IP"
@@ -129,6 +132,9 @@ configure_fedora_host() {
     for port in 80/tcp 443/tcp "$WIREGUARD_PORT/udp"; do
         firewall-cmd --permanent --add-port="$port" || return 1
     done
+    if [[ -f "$DEPLOY_DIR/private/external-edge" ]]; then
+        firewall-cmd --permanent --add-rich-rule="rule family=ipv4 source address=$LAN_CIDR service name=dns accept" || return 1
+    fi
     if [[ "${FLUXER_ENABLED:-no}" == yes ]]; then
         firewall-cmd --permanent --add-port=7881/tcp || return 1
         firewall-cmd --permanent --add-port=7882/udp || return 1

@@ -20,6 +20,9 @@ compose() {
     if [[ "${AI_ENABLED:-no}" == yes ]]; then
         files+=(-f "$DEPLOY_DIR/templates/compose.ai.yml")
     fi
+    if [[ -f "$DEPLOY_DIR/private/external-edge" ]]; then
+        files+=(-f "$DEPLOY_DIR/templates/compose.external-edge.yml")
+    fi
     env -i PATH="$PATH" HOME="${HOME:-/root}" docker compose \
         --project-name den --project-directory "$DEPLOY_DIR" \
         --env-file "$DEPLOY_DIR/.env" "${files[@]}" "${profiles[@]}" "$@"
@@ -133,7 +136,9 @@ write_homepage() {
 }
 
 write_routes() {
-    local torrent_host=qbittorrent
+    local torrent_host=qbittorrent candidate merged
+    candidate="$(mktemp)" || return 1
+    merged="$(mktemp)" || { rm -f "$candidate"; return 1; }
     if [[ "${QBITTORRENT_VPN_ENABLED:-no}" == yes ]]; then torrent_host=torrent-vpn; fi
     jq -n --arg domain "$DOMAIN" --arg ip "$LAN_IP" --arg lan "$LAN_CIDR" --arg fluxer "${FLUXER_ENABLED:-no}" --arg torrents "${QBITTORRENT_ENABLED:-no}" --arg ai "${AI_ENABLED:-no}" --arg ai_url "http://172.30.44.1:28413" --arg qbit "http://$torrent_host:$QBITTORRENT_WEBUI_PORT" --arg chat "http://172.30.44.1:$FLUXER_PROXY_PORT" '
         {http: {
@@ -162,7 +167,26 @@ write_routes() {
             } + (if $fluxer == "yes" then {chat: {loadBalancer: {servers: [{url: $chat}]}}} else {} end)
               + (if $torrents == "yes" then {downloads: {loadBalancer: {servers: [{url: $qbit}]}}} else {} end))
               + (if $ai == "yes" then {ai: {loadBalancer: {servers: [{url: $ai_url}]}}} else {} end)
-        }}' > "$DEPLOY_DIR/routes.json"
+        }}' > "$candidate" || { rm -f "$candidate" "$merged"; return 1; }
+    if [[ -f "$DEPLOY_DIR/private/routes-custom.json" ]]; then
+        if ! jq -s -e -f "$DEPLOY_DIR/templates/merge-routes.jq" \
+            "$candidate" "$DEPLOY_DIR/private/routes-custom.json" > "$merged"; then
+            rm -f "$candidate" "$merged"
+            return 1
+        fi
+    else
+        cp "$candidate" "$merged" || { rm -f "$candidate" "$merged"; return 1; }
+    fi
+    cat "$merged" > "$DEPLOY_DIR/routes.json" || { rm -f "$candidate" "$merged"; return 1; }
+    rm -f "$candidate" "$merged"
+}
+
+infrastructure_compose() {
+    env -i PATH="$PATH" HOME="${HOME:-/root}" docker compose \
+        --project-name den-infrastructure \
+        --project-directory "$DEPLOY_DIR/private/infrastructure" \
+        --env-file "$DEPLOY_DIR/private/infrastructure/.env" \
+        -f "$DEPLOY_DIR/private/infrastructure/compose.yml" "$@"
 }
 
 prepare_storage() {

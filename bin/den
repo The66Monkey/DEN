@@ -83,7 +83,10 @@ esac
 case "$ACTION" in
     start) start_stack ;;
     stop) compose stop --timeout 120; ai_stop ;;
-    status) compose ps --all; show_summary ;;
+    status)
+        compose ps --all
+        if [[ -f "$DEPLOY_DIR/private/external-edge" ]]; then infrastructure_compose ps --all; fi
+        show_summary ;;
     check) health_check ;;
     logs)
         if [[ $# == 1 ]]; then

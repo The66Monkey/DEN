@@ -7,6 +7,10 @@ the backup and restart afterwards; VPN stays up. No daily action is needed.
 Snapshots include app data/settings, media, downloads, passwords and VPN profiles,
 but not regenerable caches.
 
+With the optional [independent infrastructure](infrastructure.md), DNS and the
+shared edge remain running. Their private configuration and certificates are
+included; AdGuard query logs, statistics and filter cache are not.
+
 ```bash
 sudo den snapshots          # list saved snapshots
 sudo den backup             # optional backup now

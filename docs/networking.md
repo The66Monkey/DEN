@@ -70,10 +70,15 @@ Your ISP must provide a reachable public IPv4; ask them if you are behind CGNAT.
 
 Use `ACME_CHALLENGE=dns-desec`. Leave the other server's TCP 80/443 forwards
 unchanged and forward only UDP 41873 to DEN **when Fluxer is disabled**.
-Public Fluxer needs TCP 443 routed directly to DEN; DNS certificates alone do
+Public Fluxer needs TCP 443 routed to DEN's edge; DNS certificates alone do
 not route browser traffic. With one public IP, both servers cannot own that
 forward. Plan a cutover before enabling public chat; shared external-proxy
 routing is not configured by DEN. Certificates can take several minutes.
+
+For an explicitly managed shared front door instead of separate forwards, see
+[independent DNS and shared HTTPS edge](infrastructure.md). This optional
+topology moves ingress and LAN DNS outside the business VM without making
+private DEN apps public.
 
 ### Public Chat and Calls
 

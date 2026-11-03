@@ -13,6 +13,7 @@ bash tests/ddns.sh
 bash tests/firewall.sh
 bash tests/media.sh
 bash tests/compose.sh
+bash tests/infrastructure.sh
 bash tests/homepage.sh
 bash tests/qbittorrent.sh
 bash tests/torrent-vpn.sh

@@ -52,6 +52,12 @@ health_check() {
     fi
     actual="$(compose ps --all --format json | jq -s 'flatten | map(select(.State == "running" and .Health == "healthy")) | length')"
     [[ "$actual" == "$expected" ]] || fail "Only $actual/$expected containers are healthy. Run sudo den status."
+    if [[ -f "$DEPLOY_DIR/private/external-edge" ]]; then
+        infrastructure_compose exec -T edge traefik healthcheck --ping || return 1
+        infrastructure_compose exec -T dns nslookup example.com 127.0.0.1 >/dev/null || return 1
+        actual="$(infrastructure_compose ps --status running --services | sort)"
+        [[ "$actual" == $'dns\nedge' ]] || fail 'Shared edge or LAN DNS is down.'
+    fi
     systemctl is-active --quiet wg-quick@wg0 den-dns || fail 'WireGuard or VPN DNS is down.'
     systemctl is-active --quiet den-firewall || fail 'DEN network guard is down.'
     nft list table inet den_guard >/dev/null || fail 'DEN network guard rules are missing.'
@@ -88,6 +94,10 @@ update_release() (
     trap 'rm -rf "$stage"' EXIT
     copy_release "$source_dir" "$stage" || return 1
     cp "$DEPLOY_DIR/.env" "$stage/.env" || return 1
+    if [[ -f "$DEPLOY_DIR/private/external-edge" ]]; then
+        install -d -m 700 "$stage/private" || return 1
+        cp "$DEPLOY_DIR/private/external-edge" "$stage/private/" || return 1
+    fi
     if [[ "${AI_ENABLED:-no}" == yes ]]; then
         ai_prepare || return 1
         install -d -m 700 "$stage/private" || return 1

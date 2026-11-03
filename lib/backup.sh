@@ -76,7 +76,8 @@ backup_stack() (
     active="$(compose ps --status running -q)" || exit 1
     [[ -z "$active" ]] || fail 'Containers are still running; no snapshot was taken.'
     if [[ "$ai_running" == true ]]; then ai_stop || exit 1; fi
-    restic_cmd backup --host den --tag den-v1 --exclude "$DATA_DIR/cache" "$DATA_DIR"
+    restic_cmd backup --host den --tag den-v1 --exclude "$DATA_DIR/cache" \
+        --exclude "$DATA_DIR/infrastructure/adguard/work" "$DATA_DIR"
 )
 
 snapshot_details() {
