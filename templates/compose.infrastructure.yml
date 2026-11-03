@@ -37,6 +37,7 @@ services:
     networks:
       home:
         ipv4_address: 172.30.44.2
+      dns: {}
     healthcheck:
       test: [CMD, traefik, healthcheck, --ping]
       interval: 30s

@@ -73,12 +73,62 @@ The existing `den_home` network must exist before starting infrastructure.
    public TCP 80/443, DNS is allowed only from the LAN, and existing private app
    allowlists stay in effect. No router changes to SSH/admin ports are needed.
 
-AdGuard administration stays loopback-only:
+## AdGuard administration: `dns.example.com`
+
+With independent infrastructure enabled, DEN generates a private HTTPS route at
+`https://dns.<configured domain>` (for example `https://dns.example.com`).
+The edge reaches AdGuard on its DNS container network; the route uses the
+existing LAN/VPN allowlist and AdGuard's own administrator login.
+
+Apply the current infrastructure template to the saved infrastructure Compose
+file, then regenerate routes with the current release's `write_routes`.
+Keep administrator-owned custom routes intact. Add an exact AdGuard DNS rewrite:
+
+```text
+dns.example.com -> DEN-LAN-IP
+```
+
+Use your configured domain and DEN address. This is a private resolver record,
+not a public DDNS record. DNS-01 issues the HTTPS certificate using the existing
+deSEC token; ensure its permissions cover `_acme-challenge.dns`. Certificate
+transparency publishes the hostname, as with the other HTTPS apps.
+DEN's generated VPN DNS includes this name when infrastructure is enabled.
+For an existing VPN configuration, add only that `host-record` and restart
+`den-dns`; preserve peer keys and existing coexistence records.
+
+The loopback port remains available as a recovery path:
 
 ```sh
 ssh -N -L 3080:127.0.0.1:3080 USER@DEN-LAN-IP
 # Open http://127.0.0.1:3080 and use the existing AdGuard account.
 ```
+
+### Device-specific filtering
+
+In AdGuard, use **Query Log** to check the device's requests and blocked results.
+When migrating from router DNS, transfer reviewed blocking rules into AdGuard;
+changing DHCP DNS does not transfer the router's old rules.
+Neither DEN nor BASM ships a blanket TV, vendor or app blocking list.
+
+For a specific TV, reserve its DHCP address and add narrowly scoped custom rules,
+for example:
+
+```text
+||lgsmartad.com^$client=192.168.1.201
+||lgad.cjpowercast.com^$client=192.168.1.201
+```
+
+Replace the address with the TV's reserved IP. These are optional examples,
+not installation defaults. Verify the query log and normal TV apps afterward.
+Whole-vendor domains can also serve accounts, updates and applications.
+DNS filtering cannot distinguish advertising from content on the same hostname.
+If requests are absent from AdGuard, check secondary DHCP DNS, IPv6 DNS and
+device-specific DNS settings before changing filtering rules.
+
+For protection beyond DNS, use the
+[optional balanced IoT profile](networking.md#optional-balanced-iot-protection).
+Its baseline favors device isolation and normal streaming compatibility;
+aggressive filters and gateway enforcement remain separate administrator choices.
 
 ## Verify before changing the router
 

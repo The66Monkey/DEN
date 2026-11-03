@@ -43,6 +43,29 @@ cp "$DEPLOY_DIR/env/.env" "$DEPLOY_DIR/.env"
 compose config --services | grep -Fxq traefik
 touch "$DEPLOY_DIR/private/external-edge"
 if compose config --services | grep -Fxq traefik; then fail 'Embedded edge remains enabled.'; fi
+rm "$DEPLOY_DIR/private/routes-custom.json"
+write_routes
+jq -e '.http.routers.dns == null and .http.services.dns == null' "$DEPLOY_DIR/routes.json" >/dev/null
+mkdir -p "$DEPLOY_DIR/private/infrastructure"
+cp "$ROOT/templates/compose.infrastructure.yml" "$DEPLOY_DIR/private/infrastructure/compose.yml"
+write_routes
+jq -e '
+    .http.routers.dns.rule == "Host(`dns.home.example.net`)" and
+    .http.routers.dns.entryPoints == ["websecure"] and
+    .http.routers.dns.middlewares == ["private", "headers"] and
+    .http.routers.dns.tls.certResolver == "home" and
+    .http.services.dns.loadBalancer.servers == [{"url":"http://dns:3000"}]
+' "$DEPLOY_DIR/routes.json" >/dev/null
+write_vpn_dns | grep -Fxq 'host-record=dns.home.example.net,192.168.1.10'
+printf '{"http":{"routers":{"dns":{}}}}\n' > "$DEPLOY_DIR/private/routes-custom.json"
+cp "$DEPLOY_DIR/routes.json" "$DEPLOY_DIR/good.json"
+if write_routes >"$DEPLOY_DIR/error" 2>&1; then fail 'Custom route replaced managed DNS administration.'; fi
+cmp "$DEPLOY_DIR/good.json" "$DEPLOY_DIR/routes.json"
+rm "$DEPLOY_DIR/private/external-edge"
+rm "$DEPLOY_DIR/private/routes-custom.json"
+write_routes
+jq -e '.http.routers.dns == null' "$DEPLOY_DIR/routes.json" >/dev/null
+if write_vpn_dns | grep -q 'host-record=dns\.'; then fail 'DNS administration advertised without the independent edge.'; fi
 cp "$ROOT/templates/compose.infrastructure.yml" "$DEPLOY_DIR/infrastructure.yml"
 env -i PATH="$PATH" HOME="${HOME:-/root}" docker compose --env-file "$DEPLOY_DIR/.env" \
     -f "$DEPLOY_DIR/infrastructure.yml" config --format json > "$DEPLOY_DIR/infra.json"
@@ -50,6 +73,8 @@ jq -e '
     (.services | keys) == ["dns", "edge"] and
     .networks.home.external == true and
     .services.edge.networks.home.ipv4_address == "172.30.44.2" and
+    (.services.edge.networks | has("dns")) and
+    (.services.dns.networks | keys) == ["dns"] and
     ([.services.edge.ports[].published] == ["80", "443"]) and
     (all(.services.dns.ports[] | select(.target == 53); .host_ip == "192.168.1.10")) and
     (all(.services.dns.ports[] | select(.target == 3000); .host_ip == "127.0.0.1")) and

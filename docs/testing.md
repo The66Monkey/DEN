@@ -60,6 +60,13 @@ enabled-service links and private routing.
 Infrastructure checks cover separate Compose ownership, embedded-edge exclusion,
 private DNS/admin bindings, exact custom-route merging, conflicts/failure
 preservation and bind-mounted route inode stability.
+Independent AdGuard checks cover the private `dns.<domain>` HTTPS route,
+edge-to-DNS network access and its VPN record, while installations without
+independent infrastructure retain their existing routes and DNS records.
+TV-subnet checks cover rejected overlaps, saved/legacy settings, Jellyfin-only
+HTTPS allowlists, firewall-zone replacement, disabling and failure gates.
+Isolated network tests exercise TV DNS/HTTPS access and denial of host
+administration, voice ports and direct container/VPN addresses.
 
 Real mount tests require user/mount namespaces. Real network tests also need
 nftables, iproute2 and network namespaces; unavailable tests print a skip.

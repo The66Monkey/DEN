@@ -26,3 +26,9 @@ For administrators: Docker/root access controls the entire server. Containers
 share a network, not strong isolation. Only use a trusted update repository;
 its code runs as root. Source-hiding proxies or router source NAT can undermine
 LAN restrictions. See [architecture](architecture.md) for implementation details.
+
+For TVs and other less-trusted devices, see the
+[optional balanced IoT profile](networking.md#optional-balanced-iot-protection).
+It keeps normal internet use and Jellyfin access while isolating trusted devices.
+Set up the router rules, then configure `TV_CIDR` and run `sudo den tv-setup` for
+DEN's DNS/Jellyfin-only exception. The setting is disabled by default.

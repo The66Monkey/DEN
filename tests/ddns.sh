@@ -31,6 +31,7 @@ grep -Fq 'hostname=vpn.scandinavianhacking.dedyn.io,home.scandinavianhacking.ded
 grep -Fq ',downloads.scandinavianhacking.dedyn.io&myipv4=' "$DDNS_REQUEST_LOG"
 ! grep -Fq 'hostname=scandinavianhacking.dedyn.io' "$DDNS_REQUEST_LOG"
 ! grep -Fq "ai.$DOMAIN" "$DDNS_REQUEST_LOG"
+! grep -Fq "dns.$DOMAIN" "$DDNS_REQUEST_LOG"
 grep -Fxq 'header = "Authorization: Token abcdefghijklmnopqrstuvwxyz12"' "$DDNS_CURL_CONFIG"
 [[ "$(head -1 "$STATE_FILE")" == "$DDNS_TEST_IP" ]]
 

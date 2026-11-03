@@ -54,6 +54,7 @@ install_packages() {
 }
 
 write_network_guard() {
+    require_tv_infrastructure
     cat <<EOF
 add table inet den_guard
 flush table inet den_guard
@@ -65,6 +66,11 @@ table inet den_guard {
         iifname "br-*" return
         ct state invalid counter drop
         iifname "wg0" goto vpn
+EOF
+    if [[ -n "${TV_CIDR:-}" ]]; then
+        printf '        ip saddr %s goto tv\n' "$TV_CIDR"
+    fi
+    cat <<EOF
         ct state established,related return
         ip saddr $LAN_CIDR return
         udp sport 67 udp dport 68 return
@@ -97,8 +103,52 @@ EOF
         ip daddr $LAN_CIDR return
         counter drop
     }
+EOF
+    if [[ -n "${TV_CIDR:-}" ]]; then
+        cat <<EOF
+    chain tv {
+        ip daddr $LAN_IP tcp dport { 53, 443 } return
+        ip daddr $LAN_IP udp dport 53 return
+        counter drop
+    }
+EOF
+    fi
+    cat <<EOF
 }
 EOF
+}
+
+configure_tv_zone() {
+    local zones sources source
+    zones="$(firewall-cmd --permanent --get-zones)" || return 1
+    if ! grep -Fwq den-tv <<< "$zones"; then
+        [[ -n "${TV_CIDR:-}" ]] || return 0
+        firewall-cmd --permanent --new-zone=den-tv || return 1
+    fi
+    firewall-cmd --permanent --zone=den-tv --set-target=DROP || return 1
+    firewall-cmd --permanent --zone=den-tv --add-service=dns || return 1
+    firewall-cmd --permanent --zone=den-tv --add-service=https || return 1
+    sources="$(firewall-cmd --permanent --zone=den-tv --list-sources)" || return 1
+    for source in $sources; do
+        [[ "$source" == "${TV_CIDR:-}" ]] ||
+            firewall-cmd --permanent --zone=den-tv --remove-source="$source" || return 1
+    done
+    if [[ -n "${TV_CIDR:-}" ]]; then
+        firewall-cmd --permanent --zone=den-tv --add-source="$TV_CIDR" || return 1
+    fi
+}
+
+tv_setup() {
+    require_tv_infrastructure
+    configure_network_guard || fail 'Could not apply TV network guard.'
+    configure_tv_zone || fail 'Could not apply TV firewall zone.'
+    firewall-cmd --reload || fail 'Could not reload TV firewall policy.'
+    write_routes || fail 'Could not apply Jellyfin TV route.'
+    if [[ -n "${TV_CIDR:-}" ]]; then
+        log "TV network $TV_CIDR can reach DNS and Jellyfin HTTPS. Complete router isolation and AdGuard client setup in docs/networking.md."
+    else
+        log 'TV subnet access disabled; trusted LAN/VPN access is unchanged.'
+    fi
 }
 
 configure_network_guard() (
@@ -146,6 +196,7 @@ configure_fedora_host() {
     firewall-cmd --permanent --zone=den-vpn --set-target=ACCEPT || return 1
     firewall-cmd --permanent --zone=den-vpn --change-interface=wg0 || return 1
     configure_network_guard || return 1
+    configure_tv_zone || return 1
     firewall-cmd --reload || return 1
 
     if semanage fcontext -l -C | grep -Fq '/opt/den/private/dnsmasq\.conf'; then

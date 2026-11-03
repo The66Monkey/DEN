@@ -146,6 +146,10 @@ Keep `home.DOMAIN` pointing to the public IP.
   Fluxer is public when enabled, including when upgrading an existing install.
   AI stays LAN/VPN-only; read [AI setup](ai.md) for model sizing, private DNS,
   initial admin credentials and optional workstation inference.
+- [ ] Leave `TV_CIDR` empty for the normal home-LAN setup. For a separate TV
+  Wi-Fi network with Jellyfin, follow the
+  [TV network setup](networking.md#optional-balanced-iot-protection) after
+  installing DEN's independent AdGuard infrastructure.
 - [ ] Make sure root can read the configured `UPDATE_REPOSITORY` without prompts.
   A private repository needs a read-only deploy key for root; your normal
   user's Git access is not enough.

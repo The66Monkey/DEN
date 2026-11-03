@@ -25,7 +25,7 @@ def serve(sock, udp):
             client.close()
 
 for family, address in [(socket.AF_INET, "0.0.0.0"), (socket.AF_INET6, "::")]:
-    for port in [22, 80, 443, 9090, 7881, 18443, 18427]:
+    for port in [22, 53, 80, 443, 9090, 7881, 18443, 18427]:
         sock = socket.socket(family, socket.SOCK_STREAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         if family == socket.AF_INET6:
@@ -83,6 +83,8 @@ try:
         ip("-n", namespace, "route", "add", "default", "via", host_address.split("/")[0])
     ip("route", "add", "198.51.100.20/32", "dev", "lan0")
     ip("-n", "den-client", "address", "add", "198.51.100.20/32", "dev", "client0")
+    ip("route", "add", "192.168.60.201/32", "dev", "lan0")
+    ip("-n", "den-client", "address", "add", "192.168.60.201/32", "dev", "client0")
     ip("address", "add", "fd00:50::58/64", "dev", "lan0", "nodad")
     ip("-n", "den-client", "address", "add", "fd00:50::20/64", "dev", "client0", "nodad")
     run("sysctl", "-qw", "net.ipv4.ip_forward=1")
@@ -130,6 +132,19 @@ try:
     for port in [80, 443, 7881]:
         check("den-client", "198.51.100.20", "192.168.50.58", port, expected="deny")
     check("den-client", "198.51.100.20", "192.168.50.58", 7882, "udp", "deny")
+    run("nft", "-f", sys.argv[4])
+    for port in [22, 53, 80, 443, 9090, 7881, 18427]:
+        check("den-client", "192.168.60.201", "192.168.50.58", port,
+              expected="allow" if port in [53, 443] else "deny")
+    for port in [53, 41873, 7882]:
+        check("den-client", "192.168.60.201", "192.168.50.58", port, "udp",
+              expected="allow" if port == 53 else "deny")
+    check("den-client", "192.168.60.201", "172.30.44.2", 18443, expected="deny")
+    check("den-client", "192.168.60.201", "10.44.0.1", 53, "udp", "deny")
+    check("den-client", "fd00:50::20", "fd00:50::58", 443, expected="deny")
+    # Disabling the option revokes TV access even when the edge remains public.
+    run("nft", "-f", sys.argv[1])
+    check("den-client", "192.168.60.201", "192.168.50.58", 53, "udp", "deny")
     print("Real LAN/VPN/WAN filtering, IPv6 denial, UDP entry and pre-DNAT protection passed.")
 finally:
     for process in processes:

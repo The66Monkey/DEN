@@ -22,6 +22,12 @@ write_network_guard > "$TEMP/http.nft"
 FLUXER_ENABLED=no
 ACME_CHALLENGE=dns-desec
 write_network_guard > "$TEMP/private.nft"
+DEPLOY_DIR="$TEMP/deployment"
+mkdir -p "$DEPLOY_DIR/private/infrastructure"
+touch "$DEPLOY_DIR/private/external-edge" "$DEPLOY_DIR/private/infrastructure/compose.yml"
+TV_CIDR=192.168.60.0/24
+FLUXER_ENABLED=yes
+write_network_guard > "$TEMP/tv.nft"
 mkdir -p /run/netns
 mount -t tmpfs tmpfs /run/netns
-python3 "$ROOT/tests/firewall-network.py" "$TEMP/dns.nft" "$TEMP/http.nft" "$TEMP/private.nft"
+python3 "$ROOT/tests/firewall-network.py" "$TEMP/dns.nft" "$TEMP/http.nft" "$TEMP/private.nft" "$TEMP/tv.nft"

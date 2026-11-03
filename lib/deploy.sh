@@ -136,11 +136,13 @@ write_homepage() {
 }
 
 write_routes() {
-    local torrent_host=qbittorrent candidate merged
+    local torrent_host=qbittorrent candidate merged dns_admin=no
+    require_tv_infrastructure
     candidate="$(mktemp)" || return 1
     merged="$(mktemp)" || { rm -f "$candidate"; return 1; }
     if [[ "${QBITTORRENT_VPN_ENABLED:-no}" == yes ]]; then torrent_host=torrent-vpn; fi
-    jq -n --arg domain "$DOMAIN" --arg ip "$LAN_IP" --arg lan "$LAN_CIDR" --arg fluxer "${FLUXER_ENABLED:-no}" --arg torrents "${QBITTORRENT_ENABLED:-no}" --arg ai "${AI_ENABLED:-no}" --arg ai_url "http://172.30.44.1:28413" --arg qbit "http://$torrent_host:$QBITTORRENT_WEBUI_PORT" --arg chat "http://172.30.44.1:$FLUXER_PROXY_PORT" '
+    if [[ -f "$DEPLOY_DIR/private/external-edge" && -f "$DEPLOY_DIR/private/infrastructure/compose.yml" ]]; then dns_admin=yes; fi
+    jq -n --arg domain "$DOMAIN" --arg ip "$LAN_IP" --arg lan "$LAN_CIDR" --arg tv "${TV_CIDR:-}" --arg fluxer "${FLUXER_ENABLED:-no}" --arg torrents "${QBITTORRENT_ENABLED:-no}" --arg ai "${AI_ENABLED:-no}" --arg dns_admin "$dns_admin" --arg ai_url "http://172.30.44.1:28413" --arg qbit "http://$torrent_host:$QBITTORRENT_WEBUI_PORT" --arg chat "http://172.30.44.1:$FLUXER_PROXY_PORT" '
         {http: {
             middlewares: {
                 private: {ipAllowList: {sourceRange: [$lan, "10.44.0.0/24"]}},
@@ -148,11 +150,13 @@ write_routes() {
                 dav: {redirectRegex: {
                     regex: "https://(.*)/.well-known/(?:card|cal)dav",
                     replacement: "https://${1}/remote.php/dav/", permanent: true}}
-            },
-            routers: (reduce (["home", "media", "photos", "files", "git"] + (if $fluxer == "yes" then ["chat"] else [] end) + (if $torrents == "yes" then ["downloads"] else [] end) + (if $ai == "yes" then ["ai"] else [] end))[] as $name ({};
+            } + (if $tv != "" then {
+                "media-private": {ipAllowList: {sourceRange: [$lan, "10.44.0.0/24", $tv]}}
+            } else {} end),
+            routers: (reduce (["home", "media", "photos", "files", "git"] + (if $fluxer == "yes" then ["chat"] else [] end) + (if $torrents == "yes" then ["downloads"] else [] end) + (if $ai == "yes" then ["ai"] else [] end) + (if $dns_admin == "yes" then ["dns"] else [] end))[] as $name ({};
                 .[$name] = {rule: ("Host(`" + (if $name == "chat" then "chat." else $name + "." end) + $domain + "`)") ,
                     entryPoints: ["websecure"], service: $name,
-                    middlewares: ((if $name == "chat" then ["headers"] else ["private", "headers"] end) + (if $name == "files" then ["dav"] else [] end)),
+                    middlewares: ((if $name == "chat" then ["headers"] elif $name == "media" and $tv != "" then ["media-private", "headers"] else ["private", "headers"] end) + (if $name == "files" then ["dav"] else [] end)),
                     tls: {certResolver: "home"}}) + {
                 "home-lan-ip": {
                     rule: ("Host(`" + $ip + "`)"), entryPoints: ["websecure"],
@@ -167,6 +171,7 @@ write_routes() {
             } + (if $fluxer == "yes" then {chat: {loadBalancer: {servers: [{url: $chat}]}}} else {} end)
               + (if $torrents == "yes" then {downloads: {loadBalancer: {servers: [{url: $qbit}]}}} else {} end))
               + (if $ai == "yes" then {ai: {loadBalancer: {servers: [{url: $ai_url}]}}} else {} end)
+              + (if $dns_admin == "yes" then {dns: {loadBalancer: {servers: [{url: "http://dns:3000"}]}}} else {} end)
         }}' > "$candidate" || { rm -f "$candidate" "$merged"; return 1; }
     if [[ -f "$DEPLOY_DIR/private/routes-custom.json" ]]; then
         if ! jq -s -e -f "$DEPLOY_DIR/templates/merge-routes.jq" \
@@ -338,6 +343,9 @@ EOF
     if [[ "${AI_ENABLED:-no}" == yes ]]; then
         printf 'host-record=ai.%s,%s\n' "$DOMAIN" "$LAN_IP"
     fi
+    if [[ -f "$DEPLOY_DIR/private/external-edge" && -f "$DEPLOY_DIR/private/infrastructure/compose.yml" ]]; then
+        printf 'host-record=dns.%s,%s\n' "$DOMAIN" "$LAN_IP"
+    fi
 }
 
 install_host_config() {
@@ -371,6 +379,12 @@ start_stack() {
 show_summary() {
     setup_section 'DEN setup complete - next steps'
     printf '\nHome: https://home.%s\nMedia: https://media.%s\nPhotos: https://photos.%s\nFiles: https://files.%s\nGit: https://git.%s\n' "$DOMAIN" "$DOMAIN" "$DOMAIN" "$DOMAIN" "$DOMAIN"
+    if [[ -f "$DEPLOY_DIR/private/external-edge" && -f "$DEPLOY_DIR/private/infrastructure/compose.yml" ]]; then
+        printf 'DNS administration: https://dns.%s (trusted LAN/VPN).\n' "$DOMAIN"
+    fi
+    if [[ -n "${TV_CIDR:-}" ]]; then
+        printf 'TV network: %s (DNS and Jellyfin HTTPS; router isolation required).\n' "$TV_CIDR"
+    fi
     printf '\nNextcloud user: admin. Password: sudo grep NEXTCLOUD_ADMIN_PASSWORD /opt/den/.env\n'
     printf 'VPN profile: /opt/den/private/home.conf (private; use on ONE device).\n'
     printf "Show its private QR code over SSH: sudo sh -c 'qrencode -t ansiutf8 < /opt/den/private/home.conf'\n"

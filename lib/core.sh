@@ -17,6 +17,7 @@ read_settings() {
     [[ -f "$file" ]] || fail "Config not found: $file"
     unset DOMAIN EMAIL LAN_IP LAN_CIDR MEDIA_MOUNT BACKUP_MOUNT ALLOW_SHARED_MEDIA_BACKUP KEEPASS_ENABLED FLUXER_ENABLED QBITTORRENT_ENABLED QBITTORRENT_VPN_ENABLED UPDATE_REPOSITORY ACME_CHALLENGE DB_PASSWORD NEXTCLOUD_ADMIN_PASSWORD RESTIC_PASSWORD
     MEDIA_MOUNT=
+    TV_CIDR=
     ALLOW_SHARED_MEDIA_BACKUP=no
     ACME_CHALLENGE=http
     KEEPASS_ENABLED=no
@@ -34,7 +35,7 @@ read_settings() {
         [[ "$line" == *=* ]] || fail 'Use unquoted KEY=value lines in config.'
         key="${line%%=*}"; value="${line#*=}"
         case "$key" in
-            DOMAIN|EMAIL|LAN_IP|LAN_CIDR|MEDIA_MOUNT|BACKUP_MOUNT|ALLOW_SHARED_MEDIA_BACKUP|KEEPASS_ENABLED|FLUXER_ENABLED|QBITTORRENT_ENABLED|QBITTORRENT_VPN_ENABLED|AI_ENABLED|AI_MODEL|AI_REMOTE_OLLAMA_URL|NVIDIA_POWER_LIMIT_W|NVIDIA_GPU_ID|UPDATE_REPOSITORY|ACME_CHALLENGE|DB_PASSWORD|NEXTCLOUD_ADMIN_PASSWORD|RESTIC_PASSWORD) ;;
+            DOMAIN|EMAIL|LAN_IP|LAN_CIDR|TV_CIDR|MEDIA_MOUNT|BACKUP_MOUNT|ALLOW_SHARED_MEDIA_BACKUP|KEEPASS_ENABLED|FLUXER_ENABLED|QBITTORRENT_ENABLED|QBITTORRENT_VPN_ENABLED|AI_ENABLED|AI_MODEL|AI_REMOTE_OLLAMA_URL|NVIDIA_POWER_LIMIT_W|NVIDIA_GPU_ID|UPDATE_REPOSITORY|ACME_CHALLENGE|DB_PASSWORD|NEXTCLOUD_ADMIN_PASSWORD|RESTIC_PASSWORD) ;;
             *) fail "Unknown config key: $key" ;;
         esac
         [[ ! -v "seen[$key]" ]] || fail "Duplicate config key: $key"
@@ -94,6 +95,9 @@ review_installation() {
         printf '  WARNING: shared media/backup storage is allowed; disk failure can lose both.\n'
     fi
     printf '\nOptional services\n  KeePass: %s\n  Fluxer: %s\n  qBittorrent: %s\n  Private AI: %s\n' "$KEEPASS_ENABLED" "$FLUXER_ENABLED" "$QBITTORRENT_ENABLED" "$AI_ENABLED"
+    if [[ -n "${TV_CIDR:-}" ]]; then
+        printf '  Isolated TV network: %s (DNS and Jellyfin only; router isolation required).\n' "$TV_CIDR"
+    fi
     if [[ "$FLUXER_ENABLED" == yes ]]; then
         printf '  PUBLIC chat/calls: https://chat.%s (TCP 7881 and UDP 7882).\n' "$DOMAIN"
     fi
@@ -117,6 +121,7 @@ prepare_installation() {
     while true; do
         setup_section 'DEN setup - settings and host checks'
         read_settings "$settings_file"
+        require_tv_infrastructure
         check_host
         request_server_hostname
         review_installation
@@ -160,6 +165,36 @@ request_server_hostname() {
         fi
         printf 'DEN: Use 1-63 letters, digits, or hyphens; do not start or end with a hyphen.\n' >&2
     done
+}
+
+validate_tv_subnet() {
+    [[ -n "${TV_CIDR:-}" ]] || return 0
+    local prefix network mask last other other_prefix other_mask other_last
+    [[ "$TV_CIDR" == */* ]] || fail 'TV_CIDR must be empty or an IPv4 subnet.'
+    prefix="${TV_CIDR##*/}"
+    [[ "$prefix" =~ ^(8|9|[12][0-9]|30)$ ]] || fail 'TV_CIDR must use a prefix from 8 to 30.'
+    network="$(ipv4_number "${TV_CIDR%/*}")" || fail 'Invalid TV_CIDR.'
+    mask=$(( (0xffffffff << (32 - prefix)) & 0xffffffff ))
+    (( (network & mask) == network )) || fail 'TV_CIDR must be canonical (use the network address).'
+    if ! (( ((network >> 24) == 10 && prefix >= 8) ||
+            ((network >> 20) == 2753 && prefix >= 12) ||
+            ((network >> 16) == 49320 && prefix >= 16) )); then
+        fail 'TV_CIDR must be an RFC1918 private subnet.'
+    fi
+    last=$(( network | (0xffffffff ^ mask) ))
+    for other in "$LAN_CIDR" 10.44.0.0/24 172.30.44.0/24 172.30.45.0/24; do
+        other_prefix="${other##*/}"
+        other_mask=$(( (0xffffffff << (32 - other_prefix)) & 0xffffffff ))
+        other="$(ipv4_number "${other%/*}")" || return 1
+        other_last=$(( other | (0xffffffff ^ other_mask) ))
+        (( last < other || network > other_last )) || fail 'TV_CIDR overlaps the trusted LAN or a DEN VPN/container subnet.'
+    done
+}
+
+require_tv_infrastructure() {
+    [[ -n "${TV_CIDR:-}" ]] || return 0
+    [[ -f "$DEPLOY_DIR/private/external-edge" && -f "$DEPLOY_DIR/private/infrastructure/compose.yml" ]] ||
+        fail 'TV_CIDR requires independent AdGuard infrastructure; see docs/networking.md.'
 }
 
 ipv4_number() {
@@ -218,6 +253,7 @@ validate_settings() {
     [[ "$private" == true ]] || fail 'LAN_CIDR must be an RFC1918 private subnet.'
     (( (network & mask) != (170655744 & mask) )) || fail 'LAN overlaps the DEN VPN subnet (10.44.0.0/24).'
     (( (network & mask) != (((172 << 24) | (30 << 16) | (44 << 8)) & mask) )) || fail 'LAN overlaps the DEN container subnet (172.30.44.0/24).'
+    validate_tv_subnet
     [[ "$BACKUP_MOUNT" =~ ^/mnt/[a-zA-Z0-9_-]+$ || "$BACKUP_MOUNT" =~ ^/media/[a-zA-Z0-9_-]+$ ]] || fail 'BACKUP_MOUNT must be a simple absolute path under /mnt or /media.'
     if [[ -n "${MEDIA_MOUNT:-}" ]]; then
         [[ "$MEDIA_MOUNT" =~ ^/mnt/[a-zA-Z0-9_-]+$ ]] || fail 'MEDIA_MOUNT must be a simple absolute path under /mnt, or empty for single-disk storage.'
@@ -241,7 +277,8 @@ write_environment() {
     NEXTCLOUD_ADMIN_PASSWORD="$(openssl rand -hex 24)"
     RESTIC_PASSWORD="$(openssl rand -hex 24)"
     ALLOW_SHARED_MEDIA_BACKUP="${ALLOW_SHARED_MEDIA_BACKUP:-no}"
-    for key in DOMAIN EMAIL LAN_IP LAN_CIDR MEDIA_MOUNT BACKUP_MOUNT ALLOW_SHARED_MEDIA_BACKUP KEEPASS_ENABLED FLUXER_ENABLED QBITTORRENT_ENABLED QBITTORRENT_VPN_ENABLED AI_ENABLED AI_MODEL AI_REMOTE_OLLAMA_URL NVIDIA_POWER_LIMIT_W NVIDIA_GPU_ID UPDATE_REPOSITORY ACME_CHALLENGE; do
+    TV_CIDR="${TV_CIDR:-}"
+    for key in DOMAIN EMAIL LAN_IP LAN_CIDR TV_CIDR MEDIA_MOUNT BACKUP_MOUNT ALLOW_SHARED_MEDIA_BACKUP KEEPASS_ENABLED FLUXER_ENABLED QBITTORRENT_ENABLED QBITTORRENT_VPN_ENABLED AI_ENABLED AI_MODEL AI_REMOTE_OLLAMA_URL NVIDIA_POWER_LIMIT_W NVIDIA_GPU_ID UPDATE_REPOSITORY ACME_CHALLENGE; do
         printf '%s=%s\n' "$key" "${!key}"
     done > "$destination/.env"
     printf 'DB_PASSWORD=%s\nNEXTCLOUD_ADMIN_PASSWORD=%s\nRESTIC_PASSWORD=%s\n' \
