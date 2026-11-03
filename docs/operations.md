@@ -163,3 +163,8 @@ sudo systemctl start den.service den-backup.timer den-check.timer den-update.tim
 Do not delete data folders or Docker volumes to fix an error.
 For disk space and saved snapshots, see [backup and recovery](backup.md).
 Release maintainers: see [update contracts](architecture.md#release-updates).
+
+## Optional AI
+
+See [private AI operations](ai.md) for `sudo den ai-setup`, `sudo den ai-status`,
+model unload, workstation SSH tunnels, persistent NVIDIA power caps and lab migration.

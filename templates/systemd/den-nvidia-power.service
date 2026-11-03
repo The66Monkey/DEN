@@ -1,0 +1,13 @@
+[Unit]
+Description=Apply and verify DEN NVIDIA power limit
+After=systemd-modules-load.service nvidia-persistenced.service
+Before=docker.service den-ai-ollama.service
+ConditionPathExists=/etc/den/nvidia-power.env
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/den/nvidia-power.env
+ExecStart=/usr/bin/bash /opt/den/templates/nvidia-power-limit.sh
+
+[Install]
+WantedBy=multi-user.target

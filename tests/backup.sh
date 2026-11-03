@@ -113,6 +113,31 @@ for target in "$MEDIA_MOUNT/den/media/new" "$MEDIA_MOUNT/den/downloads/new"; do
     if grep -Fq 'restic restore' "$CALLS"; then fail 'Live HDD restore target reached Restic.'; fi
 done
 MEDIA_MOUNT=
+AI_ENABLED=yes
+AI_STATE=active
+systemctl() { [[ "$*" == 'is-active den-ai-ollama.service' ]]; printf '%s\n' "$AI_STATE"; [[ "$AI_STATE" == active ]]; }
+ai_start() { printf 'ai-start\n' >> "$CALLS"; }
+ai_stop() { printf 'ai-stop\n' >> "$CALLS"; [[ "${FAIL_AI_STOP:-no}" != yes ]]; }
+: > "$CALLS"
+backup_stack
+grep -Fxq ai-stop "$CALLS"
+grep -Fxq ai-start "$CALLS"
+[[ "$(grep -n '^ai-stop$' "$CALLS" | cut -d: -f1)" -lt "$(grep -n '^restic backup ' "$CALLS" | cut -d: -f1)" ]]
+FAIL_BACKUP=true
+: > "$CALLS"
+if backup_stack; then fail 'Failed AI backup returned success.'; fi
+grep -Fxq ai-start "$CALLS"
+FAIL_BACKUP=false
+: > "$CALLS"
+if FAIL_AI_STOP=yes backup_stack; then fail 'Snapshot succeeded while Ollama stop failed.'; fi
+! grep -Fq 'restic backup ' "$CALLS"
+grep -Fxq ai-start "$CALLS"
+AI_STATE=inactive
+: > "$CALLS"
+backup_stack
+! grep -Fq 'ai-start' "$CALLS"
+! grep -Fq 'ai-stop' "$CALLS"
+AI_ENABLED=no
 mv "$BACKUP_MOUNT" "$TEMP/unmounted"
 : > "$CALLS"
 if backup_stack; then fail 'Unmounted backup disk accepted.'; fi

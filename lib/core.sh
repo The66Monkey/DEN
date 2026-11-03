@@ -23,13 +23,18 @@ read_settings() {
     FLUXER_ENABLED=no
     QBITTORRENT_ENABLED=no
     QBITTORRENT_VPN_ENABLED=no
+    AI_ENABLED=no
+    AI_MODEL=llama3.2:3b
+    AI_REMOTE_OLLAMA_URL=
+    NVIDIA_POWER_LIMIT_W=
+    NVIDIA_GPU_ID=0
     UPDATE_REPOSITORY=https://github.com/The66Monkey/DEN.git
     while IFS= read -r line || [[ -n "$line" ]]; do
         [[ -z "$line" || "$line" == \#* ]] && continue
         [[ "$line" == *=* ]] || fail 'Use unquoted KEY=value lines in config.'
         key="${line%%=*}"; value="${line#*=}"
         case "$key" in
-            DOMAIN|EMAIL|LAN_IP|LAN_CIDR|MEDIA_MOUNT|BACKUP_MOUNT|ALLOW_SHARED_MEDIA_BACKUP|KEEPASS_ENABLED|FLUXER_ENABLED|QBITTORRENT_ENABLED|QBITTORRENT_VPN_ENABLED|UPDATE_REPOSITORY|ACME_CHALLENGE|DB_PASSWORD|NEXTCLOUD_ADMIN_PASSWORD|RESTIC_PASSWORD) ;;
+            DOMAIN|EMAIL|LAN_IP|LAN_CIDR|MEDIA_MOUNT|BACKUP_MOUNT|ALLOW_SHARED_MEDIA_BACKUP|KEEPASS_ENABLED|FLUXER_ENABLED|QBITTORRENT_ENABLED|QBITTORRENT_VPN_ENABLED|AI_ENABLED|AI_MODEL|AI_REMOTE_OLLAMA_URL|NVIDIA_POWER_LIMIT_W|NVIDIA_GPU_ID|UPDATE_REPOSITORY|ACME_CHALLENGE|DB_PASSWORD|NEXTCLOUD_ADMIN_PASSWORD|RESTIC_PASSWORD) ;;
             *) fail "Unknown config key: $key" ;;
         esac
         [[ ! -v "seen[$key]" ]] || fail "Duplicate config key: $key"
@@ -110,6 +115,15 @@ validate_settings() {
         [[ -n "${!key:-}" ]] || fail "Missing config key: $key"
     done
     [[ "$KEEPASS_ENABLED" == yes || "$KEEPASS_ENABLED" == no ]] || fail 'KEEPASS_ENABLED must be yes or no.'
+    [[ "${AI_ENABLED:-no}" == yes || "${AI_ENABLED:-no}" == no ]] || fail 'AI_ENABLED must be yes or no.'
+    [[ "${AI_MODEL:-llama3.2:3b}" =~ ^[a-zA-Z0-9][a-zA-Z0-9._:/-]{0,127}$ ]] || fail 'AI_MODEL must be an Ollama model name without whitespace.'
+    [[ -z "${AI_REMOTE_OLLAMA_URL:-}" || "$AI_REMOTE_OLLAMA_URL" =~ ^http://127\.0\.0\.1:([1-9][0-9]{0,4})$ ]] || fail 'AI_REMOTE_OLLAMA_URL must be an HTTP localhost SSH-tunnel endpoint with an explicit port.'
+    if [[ -n "${AI_REMOTE_OLLAMA_URL:-}" ]]; then
+        (( ${AI_REMOTE_OLLAMA_URL##*:} <= 65535 )) || fail 'AI remote port is out of range.'
+        [[ "${AI_REMOTE_OLLAMA_URL##*:}" != 11435 ]] || fail 'AI remote endpoint conflicts with DEN Ollama.'
+    fi
+    [[ -z "${NVIDIA_POWER_LIMIT_W:-}" || "$NVIDIA_POWER_LIMIT_W" =~ ^[1-9][0-9]{1,2}$ ]] || fail 'NVIDIA_POWER_LIMIT_W must be empty or a whole number from 10 to 999.'
+    [[ "${NVIDIA_GPU_ID:-0}" =~ ^([0-9]+|GPU-[a-fA-F0-9-]+)$ ]] || fail 'NVIDIA_GPU_ID must be an index or GPU UUID.'
     [[ "$FLUXER_ENABLED" == yes || "$FLUXER_ENABLED" == no ]] || fail 'FLUXER_ENABLED must be yes or no.'
     [[ "$QBITTORRENT_ENABLED" == yes || "$QBITTORRENT_ENABLED" == no ]] || fail 'QBITTORRENT_ENABLED must be yes or no.'
     [[ "${QBITTORRENT_VPN_ENABLED:-no}" == yes || "${QBITTORRENT_VPN_ENABLED:-no}" == no ]] || fail 'QBITTORRENT_VPN_ENABLED must be yes or no.'
@@ -161,7 +175,7 @@ write_environment() {
     NEXTCLOUD_ADMIN_PASSWORD="$(openssl rand -hex 24)"
     RESTIC_PASSWORD="$(openssl rand -hex 24)"
     ALLOW_SHARED_MEDIA_BACKUP="${ALLOW_SHARED_MEDIA_BACKUP:-no}"
-    for key in DOMAIN EMAIL LAN_IP LAN_CIDR MEDIA_MOUNT BACKUP_MOUNT ALLOW_SHARED_MEDIA_BACKUP KEEPASS_ENABLED FLUXER_ENABLED QBITTORRENT_ENABLED QBITTORRENT_VPN_ENABLED UPDATE_REPOSITORY ACME_CHALLENGE; do
+    for key in DOMAIN EMAIL LAN_IP LAN_CIDR MEDIA_MOUNT BACKUP_MOUNT ALLOW_SHARED_MEDIA_BACKUP KEEPASS_ENABLED FLUXER_ENABLED QBITTORRENT_ENABLED QBITTORRENT_VPN_ENABLED AI_ENABLED AI_MODEL AI_REMOTE_OLLAMA_URL NVIDIA_POWER_LIMIT_W NVIDIA_GPU_ID UPDATE_REPOSITORY ACME_CHALLENGE; do
         printf '%s=%s\n' "$key" "${!key}"
     done > "$destination/.env"
     printf 'DB_PASSWORD=%s\nNEXTCLOUD_ADMIN_PASSWORD=%s\nRESTIC_PASSWORD=%s\n' \

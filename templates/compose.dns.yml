@@ -12,6 +12,8 @@ services:
       - --certificatesresolvers.home.acme.storage=/certificates/acme.json
       - --certificatesresolvers.home.acme.dnschallenge.provider=desec
       - --certificatesresolvers.home.acme.dnschallenge.resolvers=1.1.1.1:53,1.0.0.1:53
+      - --certificatesresolvers.home.acme.dnschallenge.propagation.delaybeforechecks=60s
+      - --certificatesresolvers.home.acme.dnschallenge.propagation.requireallrns=true
       - --ping=true
       - --log.level=WARN
     environment:

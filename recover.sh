@@ -25,10 +25,12 @@ read_settings "$DEPLOY_DIR/.env"
 prepare_storage
 write_homepage
 write_routes
+ai_prepare
 ln -sfn /opt/den/bin/den /usr/local/bin/den
 compose config --quiet
 compose pull
 install_host_config
+ai_install
 systemctl start den.service
 fluxer_restore
 systemctl enable --now den-backup.timer den-check.timer

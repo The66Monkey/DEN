@@ -142,8 +142,10 @@ Keep `home.DOMAIN` pointing to the public IP.
   use different mountpoints and leave `ALLOW_SHARED_MEDIA_BACKUP=no`.
 
 - [ ] Set optional services to `yes` or leave them `no`:
-  `QBITTORRENT_ENABLED`, `FLUXER_ENABLED`, `KEEPASS_ENABLED`.
+  `QBITTORRENT_ENABLED`, `FLUXER_ENABLED`, `KEEPASS_ENABLED`, `AI_ENABLED`.
   Fluxer is public when enabled, including when upgrading an existing install.
+  AI stays LAN/VPN-only; read [AI setup](ai.md) for model sizing, private DNS,
+  initial admin credentials, optional workstation inference and GPU power caps.
 - [ ] Make sure root can read the configured `UPDATE_REPOSITORY` without prompts.
   A private repository needs a read-only deploy key for root; your normal
   user's Git access is not enough.

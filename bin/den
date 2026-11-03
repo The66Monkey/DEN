@@ -21,6 +21,8 @@ Usage: sudo den <command>
   status                           Show service state and service URLs
   check                            Check services, VPN, backup age and disk
   logs [service]                   Show the last 100 log lines
+  ai-status                        Show local AI service and loaded GPU models
+  ai-setup                         Provision enabled AI after editing private settings
   torrent-vpn <profile|wait|off>     Import outbound WireGuard, wait blocked, or explicitly use direct traffic
   backup                           Take an encrypted, consistent snapshot
   snapshots                        List DEN snapshots
@@ -69,7 +71,7 @@ for secret in DB_PASSWORD NEXTCLOUD_ADMIN_PASSWORD RESTIC_PASSWORD; do
     [[ -n "${!secret:-}" ]] || fail "Missing deployment secret: $secret"
 done
 case "$ACTION" in
-    start|stop|status|check|backup|snapshots|verify-backup|prune|git-admin|keepass-password|keepass-sync|fluxer-status|fluxer-upgrade|auto-update)
+    start|stop|status|check|backup|snapshots|verify-backup|prune|git-admin|keepass-password|keepass-sync|fluxer-status|fluxer-upgrade|auto-update|ai-status|ai-setup)
         [[ $# == 0 ]] || fail "$ACTION takes no arguments."
         ;;
     logs) [[ $# -le 1 ]] || fail 'logs takes at most one service.' ;;
@@ -80,7 +82,7 @@ case "$ACTION" in
 esac
 case "$ACTION" in
     start) start_stack ;;
-    stop) compose stop --timeout 120 ;;
+    stop) compose stop --timeout 120; ai_stop ;;
     status) compose ps --all; show_summary ;;
     check) health_check ;;
     logs)
@@ -104,6 +106,8 @@ case "$ACTION" in
     keepass-sync) keepass_sync_command ;;
     torrent-vpn) torrent_vpn "$1" ;;
     fluxer-status) fluxer_status ;;
+    ai-status) ai_status ;;
+    ai-setup) ai_setup ;;
     fluxer-upgrade) fluxer_upgrade ;;
     update) update_release "$1" ;;
     auto-update) automatic_update ;;

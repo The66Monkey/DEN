@@ -65,6 +65,7 @@ jq -e '
     (all(.services.traefik.command[]; contains("httpchallenge") | not)) and
     (.services.traefik.environment.DESEC_TOKEN_FILE == "/run/secrets/desec-token") and
     (.services.traefik.environment.DESEC_PROPAGATION_TIMEOUT == "600") and
+    (.services.traefik.command | index("--certificatesresolvers.home.acme.dnschallenge.propagation.requireallrns=true") != null) and
     (.services.traefik.environment.DESEC_TOKEN == null) and
     ([.services.traefik.volumes[] | select(.target == "/run/secrets/desec-token")] |
         length == 1 and .[0].read_only == true and .[0].bind.selinux == "z" and

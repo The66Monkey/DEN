@@ -87,3 +87,11 @@ until recovery is verified.
 
 This is an administrator repair, not a routine owner task. Ask for help if
 unsure; do not delete data to make a retry work.
+
+## Optional AI data
+
+Enabled AI stores WebUI accounts/chats/uploads and DEN Ollama models under
+`/srv/den/ai`. They are included in snapshots; both WebUI and a running native
+Ollama are quiesced, then restarted to their previous state. Recovery preserves
+the WebUI secret/admin database and provisions the pinned runtime again.
+Workstation model weights are not backed up by DEN. See [AI operations](ai.md).

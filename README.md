@@ -21,7 +21,9 @@ Use the apps from your phone or computer; no desktop is needed on the server.
   SSH instructions and this README.
 
 **Optional:** qBittorrent with a separate torrent-only provider VPN, Fluxer for
-chat and calls, and a KeePassXC-compatible password vault.
+chat and calls, a KeePassXC-compatible password vault, and
+[private AI chat](docs/ai.md) with Open WebUI, DEN-local Ollama and an optional
+workstation GPU backend.
 
 Everything runs on one Fedora Server PC. Photos, files, media, Git and downloads
 stay on your home network/VPN. **Enabling Fluxer makes chat and calls public**
@@ -40,8 +42,8 @@ the server to opening your apps. Print it or tick off the steps as you go.
 - [Backup and recovery](docs/backup.md)
 - [Access and privacy](docs/security.md)
 
-**Version 1.0.0 — first home-server release.** Deployed and tested on bare-metal
-Fedora Server. See [validation status](docs/testing.md#validation-status) for
+**Version 1.1.0 — optional private AI and GPU power management.** Deployed and
+tested on bare-metal Fedora Server. See [validation status](docs/testing.md#validation-status) for
 what was checked and what remains. Keep another copy of files you cannot replace.
 For contributors: [architecture](docs/architecture.md) and [testing](docs/testing.md).
 

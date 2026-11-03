@@ -56,6 +56,7 @@ health_check() {
     systemctl is-active --quiet den-firewall || fail 'DEN network guard is down.'
     nft list table inet den_guard >/dev/null || fail 'DEN network guard rules are missing.'
     fluxer_health_check
+    if [[ "${AI_ENABLED:-no}" == yes ]]; then ai_health_check || return 1; fi
     ensure_backup_mount
     snapshots="$(restic_cmd snapshots --host den --tag den-v1 --json)"
     newest="$(jq -r 'sort_by(.time) | last | .time // empty' <<< "$snapshots")"
@@ -87,6 +88,11 @@ update_release() (
     trap 'rm -rf "$stage"' EXIT
     copy_release "$source_dir" "$stage" || return 1
     cp "$DEPLOY_DIR/.env" "$stage/.env" || return 1
+    if [[ "${AI_ENABLED:-no}" == yes ]]; then
+        ai_prepare || return 1
+        install -d -m 700 "$stage/private" || return 1
+        cp "$DEPLOY_DIR/private/ai-webui.env" "$stage/private/" || return 1
+    fi
     cp "$stage/templates/compose.yml" "$stage/compose.yml" || return 1
     cp "$DEPLOY_DIR/routes.json" "$stage/routes.json" || return 1
     old_major="$(compose config --format json | jq -r '.services.nextcloud.image | split(":")[1] | split(".")[0] | tonumber')" || return 1
@@ -127,6 +133,10 @@ update_release() (
     fi
     write_homepage || return 1
     write_routes || return 1
+    configure_nvidia_power || return 1
+    if [[ "${AI_ENABLED:-no}" == yes ]]; then
+        ai_install || return 1
+    fi
     configure_fedora_host || return 1
     fluxer_configure_public_voice || return 1
     if ! start_stack; then

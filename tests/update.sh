@@ -43,7 +43,8 @@ compose() {
 backup_stack() { printf 'backup\n' >> "$CALLS"; [[ "$FAIL_BACKUP" == false ]]; }
 start_stack() { printf 'start\n' >> "$CALLS"; [[ "$FAIL_START" == false ]]; }
 prepare_storage() { printf 'storage\n' >> "$CALLS"; }
-install() { :; }
+configure_nvidia_power() { printf 'power\n' >> "$CALLS"; }
+install() { if [[ "$1" == -d ]]; then mkdir -p "${@: -1}"; fi; }
 TIMER_STATE=disabled
 systemctl() {
     printf 'systemctl %s\n' "$*" >> "$CALLS"
@@ -132,4 +133,17 @@ TIMER_STATE=masked
 : > "$CALLS"
 update_release "$SOURCE_DIR" >/dev/null
 if grep -Fxq 'systemctl enable --now den-update.timer' "$CALLS"; then fail 'Masked update timer was re-enabled.'; fi
+AI_ENABLED=yes
+ai_prepare() { mkdir -p "$DEPLOY_DIR/private"; printf 'AI secret fixture\n' > "$DEPLOY_DIR/private/ai-webui.env"; }
+ai_install() { printf 'ai-install\n' >> "$CALLS"; [[ "${FAIL_AI_INSTALL:-no}" != yes ]]; }
+: > "$CALLS"
+update_release "$SOURCE_DIR" >/dev/null
+grep -Fxq ai-install "$CALLS"
+[[ "$(grep -n '^backup$' "$CALLS" | cut -d: -f1)" -lt "$(grep -n '^ai-install$' "$CALLS" | cut -d: -f1)" ]]
+[[ "$(grep -n '^power$' "$CALLS" | cut -d: -f1)" -lt "$(grep -n '^ai-install$' "$CALLS" | cut -d: -f1)" ]]
+[[ "$(grep -n '^ai-install$' "$CALLS" | cut -d: -f1)" -lt "$(grep -n '^start$' "$CALLS" | cut -d: -f1)" ]]
+: > "$CALLS"
+if FAIL_AI_INSTALL=yes update_release "$SOURCE_DIR" >/dev/null; then fail 'Failed AI provisioning returned success.'; fi
+! grep -Fxq start "$CALLS"
+[[ -f "$DEPLOY_DIR/private/update-in-progress" ]]
 printf 'Update pull/backup gates, saved secrets, readiness and major-version checks passed.\n'
