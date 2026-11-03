@@ -145,7 +145,7 @@ Keep `home.DOMAIN` pointing to the public IP.
   `QBITTORRENT_ENABLED`, `FLUXER_ENABLED`, `KEEPASS_ENABLED`, `AI_ENABLED`.
   Fluxer is public when enabled, including when upgrading an existing install.
   AI stays LAN/VPN-only; read [AI setup](ai.md) for model sizing, private DNS,
-  initial admin credentials, optional workstation inference and GPU power caps.
+  initial admin credentials and optional workstation inference.
 - [ ] Make sure root can read the configured `UPDATE_REPOSITORY` without prompts.
   A private repository needs a read-only deploy key for root; your normal
   user's Git access is not enough.
@@ -157,10 +157,23 @@ Keep `home.DOMAIN` pointing to the public IP.
   sudo bash install.sh /tmp/den.env
   ```
 
+  The installer displays a grouped summary of the hostname, network, storage,
+  optional services and automatic updates before installing packages or services.
+  Enter `A` to accept, `R` to restart the review, or `C` to cancel.
+  To change file-based
+  choices, select `R`, edit the settings file in another terminal, save it, then
+  press Enter to reload it and repeat validation and the hostname prompt.
+  The deSEC token is requested after acceptance.
+
+  On an interactive terminal, the visible screen is cleared for the review;
+  redirected output stays plain text. Automated installs retain their existing
+  behavior: the summary is printed without a confirmation prompt, and a private
+  `DESEC_TOKEN_FILE` is still required. No extra command-line flag is needed.
+
   Leave SSH open. Downloads and certificates can take several minutes.
   SSH logins show a short DEN banner with the hostname, LAN IPv4 address, and
   service state. Run `sudo den status` for the detailed stack summary.
-  If installation fails, do not delete settings to retry; use
+  If installation fails, use
   [troubleshooting](troubleshooting.md).
 
 ## 5. Connect with WireGuard

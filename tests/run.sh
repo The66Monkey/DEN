@@ -7,6 +7,7 @@ for script in install.sh update.sh recover.sh bin/den bin/den-local lib/*.sh lib
 done
 shellcheck --severity=warning -x -P "$ROOT" install.sh update.sh recover.sh bin/den bin/den-local lib/*.sh lib/hosts/*.sh templates/*.sh templates/profile.d/*.sh tests/*.sh
 bash tests/config.sh
+python3 tests/setup-review.py
 bash tests/ai.sh
 bash tests/storage.sh
 bash tests/ddns.sh

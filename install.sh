@@ -15,10 +15,9 @@ if [[ "${1:-}" == --help || "${1:-}" == -h ]]; then
     exit 0
 fi
 [[ $# == 1 ]] || fail 'Supply a config file; see config/example.env.'
-read_settings "$1"
-check_host
-request_server_hostname
+prepare_installation "$1"
 request_ddns_token
+setup_section 'Installing DEN - packages and deployment'
 install_packages
 GIT_TERMINAL_PROMPT=0 git ls-remote --exit-code "$UPDATE_REPOSITORY" refs/heads/main >/dev/null || fail 'Automatic updates need root Git access to UPDATE_REPOSITORY; configure a read-only deploy key before installing.'
 copy_release "$ROOT" "$DEPLOY_DIR"

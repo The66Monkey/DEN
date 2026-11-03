@@ -14,18 +14,15 @@ Before a new installation, set these in your private installer settings:
 AI_ENABLED=yes
 AI_MODEL=llama3.2:3b
 AI_REMOTE_OLLAMA_URL=
-NVIDIA_POWER_LIMIT_W=
-NVIDIA_GPU_ID=0
 ```
 
-Keep the power value empty unless you have checked your GPU's supported range.
 For an existing DEN, first update to a release supporting these settings,
 back up, then edit `/opt/den/.env` and run `sudo den ai-setup`.
 This provisions AI, adds the homepage/HTTPS route and exact VPN DNS record,
 without restarting other apps. It does not import an existing standalone lab.
 Do not run it if another server already uses localhost port 11435.
 Updates and recovery use the saved AI configuration, stable WebUI secret,
-model selection and power policy; no post-update route reapply script is needed.
+and model selection; no post-update route reapply script is needed.
 
 Open WebUI uses a pinned image. Native Ollama uses a pinned, SHA-256-verified
 x86_64 Linux runtime under `/opt/den-ai`. It runs as a dedicated `den-ai` user,
@@ -71,7 +68,7 @@ VPN, add an exact `ai.YOUR-DOMAIN -> DEN-LAN-IP` rewrite to your existing resolv
 (for example AdGuard). Do not replace unrelated DNS records or wildcard your
 whole domain. No BASM configuration or DNS credentials belong in this repository.
 
-## Models, GPU memory and power
+## Models and GPU memory
 
 The default 3B model is a modest chat model, not a replacement for a large coder.
 DEN defaults to a 4096-token context, one loaded model and one inference request
@@ -84,7 +81,6 @@ sudo den ai-status
 sudo journalctl -u den-ai-ollama.service -n 50 --no-pager
 OLLAMA_HOST=127.0.0.1:11435 /opt/den-ai/ollama-0.40.13/bin/ollama ps
 OLLAMA_HOST=127.0.0.1:11435 /opt/den-ai/ollama-0.40.13/bin/ollama stop llama3.2:3b
-nvidia-smi --query-gpu=index,uuid,name,power.min_limit,power.max_limit,power.limit --format=csv
 ```
 
 Verify **actual generation**, then inspect `ollama ps` for GPU use. Older NVIDIA
@@ -93,16 +89,6 @@ includes CUDA 12 as well as CUDA 13. Do not replace a working driver merely
 because CUDA 13 skips an old GPU. A GTX 970 with a suitable 580-series driver
 was verified with the 3B model entirely on GPU; other hardware must be tested.
 GPU inference can contend with Jellyfin and other GPU workloads.
-
-To cap a GTX 970 at 125 W, set `NVIDIA_POWER_LIMIT_W=125` and select its index
-or stable UUID with `NVIDIA_GPU_ID`. This is a **board-specific example**, not
-a universal GPU default. DEN validates the device-reported range, applies the
-cap, reads it back and installs `den-nvidia-power.timer` to recheck at boot and
-every minute, including after driver resets/resume. A failed operation is an
-explicit service failure, not a silently ignored setting. This reduces the
-allowed power draw; it is not a guarantee against hardware failure.
-Removing the value intentionally retains an existing hardware policy rather
-than silently raising the limit; explicitly review/change it to undo a cap.
 
 ## Optional workstation GPU
 

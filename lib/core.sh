@@ -77,6 +77,72 @@ validate_hostname() {
     [[ "${1:-}" =~ ^[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?$ ]]
 }
 
+setup_section() {
+    printf '\n============================================================\n%s\n============================================================\n' "$1"
+}
+
+review_installation() {
+    if [[ -t 0 && -t 1 && -n "${TERM:-}" && "$TERM" != dumb ]]; then
+        printf '\033[H\033[2J'
+    fi
+    setup_section 'Review DEN setup'
+    printf 'Server hostname: %s\nDomain: %s\nAdministrator email: %s\n' "$SERVER_HOSTNAME" "$DOMAIN" "$EMAIL"
+    printf '\nNetwork\n  Server LAN address: %s\n  Trusted LAN subnet: %s\n  Certificates: %s\n' "$LAN_IP" "$LAN_CIDR" "$ACME_CHALLENGE"
+    printf '  Home: https://home.%s\n  Web: TCP 80/443\n  Home VPN: UDP %s\n' "$DOMAIN" "$WIREGUARD_PORT"
+    printf '\nStorage\n  Application data: /srv/den\n  Media disk: %s\n  Backup disk: %s\n' "${MEDIA_MOUNT:-none (media stays on the system disk)}" "$BACKUP_MOUNT"
+    if [[ "$ALLOW_SHARED_MEDIA_BACKUP" == yes ]]; then
+        printf '  WARNING: shared media/backup storage is allowed; disk failure can lose both.\n'
+    fi
+    printf '\nOptional services\n  KeePass: %s\n  Fluxer: %s\n  qBittorrent: %s\n  Private AI: %s\n' "$KEEPASS_ENABLED" "$FLUXER_ENABLED" "$QBITTORRENT_ENABLED" "$AI_ENABLED"
+    if [[ "$FLUXER_ENABLED" == yes ]]; then
+        printf '  PUBLIC chat/calls: https://chat.%s (TCP 7881 and UDP 7882).\n' "$DOMAIN"
+    fi
+    if [[ "$QBITTORRENT_ENABLED" == yes ]]; then
+        if [[ "$QBITTORRENT_VPN_ENABLED" == yes ]]; then
+            printf '  Torrent VPN: required; downloads stay blocked until a provider profile is imported.\n'
+        else
+            printf '  Torrent VPN: off; trackers and peers see your normal public IP.\n'
+        fi
+    fi
+    if [[ "$AI_ENABLED" == yes ]]; then
+        printf '  AI model: %s\n  Workstation backend: %s\n' "$AI_MODEL" "${AI_REMOTE_OLLAMA_URL:-disabled}"
+    fi
+    printf '\nAll web apps stay LAN/VPN-only except enabled Fluxer.\n'
+    printf 'Monthly automatic updates: Fedora, DEN and enabled Fluxer; a reboot may occur.\n'
+    printf 'Update source: %s\n' "$UPDATE_REPOSITORY"
+}
+
+prepare_installation() {
+    local settings_file="$1" answer
+    while true; do
+        setup_section 'DEN setup - settings and host checks'
+        read_settings "$settings_file"
+        check_host
+        request_server_hostname
+        review_installation
+        if [[ ! -t 0 ]]; then
+            log 'Non-interactive installation: continuing with the validated settings.'
+            return 0
+        fi
+        printf '\nSettings file: %s\nReview these choices before installing packages and services.\n' "$settings_file"
+        while true; do
+            read -r -p 'Accept and install (A), restart review (R), or cancel (C): ' answer ||
+                fail 'Could not read setup confirmation; installation stopped.'
+            case "${answer,,}" in
+                a|accept) return 0 ;;
+                r|restart)
+                    printf 'Edit the settings file in another terminal, save it, then return here.\n'
+                    read -r -p 'Press Enter to reload the settings and repeat host checks: ' answer ||
+                        fail 'Could not read restart confirmation; installation stopped.'
+                    break
+                    ;;
+                c|cancel) log 'Installation cancelled before installing packages or services.'; exit 0 ;;
+                *) log 'Enter A to accept, R to restart, or C to cancel.' ;;
+            esac
+        done
+    done
+}
+
 request_server_hostname() {
     local requested
     SERVER_HOSTNAME=FedoraDEN

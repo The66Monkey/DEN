@@ -46,7 +46,7 @@ the server to opening your apps. Print it or tick off the steps as you go.
 - [Backup and recovery](docs/backup.md)
 - [Access and privacy](docs/security.md)
 
-**Version 1.1.0 — optional private AI and GPU power management.** Deployed and
+**Version 1.1.0 — optional private AI.** Deployed and
 tested on bare-metal Fedora Server. See [validation status](docs/testing.md#validation-status) for
 what was checked and what remains.
 For contributors: [architecture](docs/architecture.md) and [testing](docs/testing.md).

@@ -51,6 +51,10 @@ standalone validators. Fixtures use temporary directories.
 Coverage includes config/secrets, Compose routes, optional features, storage
 mounts, encrypted backup/restore, VPN profiles, firewall rules, update gates
 and monthly maintenance failure paths.
+Setup-review tests use a pseudo-terminal to check explicit acceptance,
+restart/revalidation of edited settings, cancellation, end-of-input rejection,
+terminal clearing and unchanged unattended behavior. Summaries are checked for
+secret exclusion and public-service, torrent-VPN and shared-storage warnings.
 Homepage checks cover the installed README, HTML escaping, LAN SSH instructions,
 enabled-service links and private routing.
 Infrastructure checks cover separate Compose ownership, embedded-edge exclusion,
@@ -93,7 +97,7 @@ host reboot. Do not publish profiles or raw provider logs.
 
 `tests/ai.sh` covers opt-in defaults, invalid configuration, stable private
 admin/session secrets, local-only and dual-backend Compose rendering, private
-hostname/homepage/VPN DNS, and NVIDIA power-cap range/application/reset checks.
+hostname/homepage/VPN DNS.
 Backup/update tests cover local Ollama quiescing, prior-state restoration,
 provisioning order and failure gates. DDNS tests assert that AI does not add a
 public record.
@@ -101,7 +105,7 @@ public record.
 On a spare Fedora host, additionally verify first-admin creation with signups
 disabled, real GPU generation and reported processor, model selection with the
 workstation disconnected, trusted `ai.` HTTPS and LAN/VPN DNS, denial from
-outside the allowlist, and 125 W readback where supported. Test service
+outside the allowlist. Test service
 recreation and a host reboot separately; an enabled timer is not evidence that
 a reboot was performed. Keep any existing lab database/secret out of disposable
 test containers. Do not expose Ollama to test connectivity.

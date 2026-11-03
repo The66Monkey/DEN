@@ -165,4 +165,4 @@ Release maintainers: see [update contracts](architecture.md#release-updates).
 ## Optional AI
 
 See [private AI operations](ai.md) for `sudo den ai-setup`, `sudo den ai-status`,
-model unload, workstation SSH tunnels, persistent NVIDIA power caps and lab migration.
+model unload, workstation SSH tunnels and lab migration.

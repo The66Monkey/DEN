@@ -369,6 +369,7 @@ start_stack() {
 }
 
 show_summary() {
+    setup_section 'DEN setup complete - next steps'
     printf '\nHome: https://home.%s\nMedia: https://media.%s\nPhotos: https://photos.%s\nFiles: https://files.%s\nGit: https://git.%s\n' "$DOMAIN" "$DOMAIN" "$DOMAIN" "$DOMAIN" "$DOMAIN"
     printf '\nNextcloud user: admin. Password: sudo grep NEXTCLOUD_ADMIN_PASSWORD /opt/den/.env\n'
     printf 'VPN profile: /opt/den/private/home.conf (private; use on ONE device).\n'
