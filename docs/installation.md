@@ -17,6 +17,8 @@ Print it if useful; do not write passwords or tokens on it.
 
 - [ ] Use a PC with an x86-64-v2 CPU, at least 8 GB RAM (16 GB recommended),
   an SSD and a larger HDD. Use Ethernet if possible.
+- [ ] In BIOS/UEFI, set **Restore on AC Power Loss** (or equivalent) to
+  **Power On**, so the server starts automatically when power returns.
 - [ ] Install Fedora Server on the **SSD only**. Enable SSH and create your login.
   Select **Cockpit** if offered; DEN installs it if missing. Integration is
   enabled by default; set `COCKPIT_ENABLED=no` in your settings to opt out.
