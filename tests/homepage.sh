@@ -60,6 +60,17 @@ assert (root / "home").stat().st_mode & 0o777 == 0o755
 assert (root / "home/index.html").stat().st_mode & 0o777 == 0o644
 PY
     done
+    mkdir -p "$DEPLOY_DIR/private/infrastructure"
+    touch "$DEPLOY_DIR/private/infrastructure/compose.yml"
+    write_homepage
+    if grep -Fq "https://dns.$DOMAIN/" "$DEPLOY_DIR/home/index.html"; then fail 'AdGuard link shown without the independent edge.'; fi
+    touch "$DEPLOY_DIR/private/external-edge"
+    write_homepage
+    grep -Fq "https://dns.$DOMAIN/" "$DEPLOY_DIR/home/index.html"
+    grep -Fq 'DNS - AdGuard Home' "$DEPLOY_DIR/home/index.html"
+    rm "$DEPLOY_DIR/private/external-edge"
+    write_homepage
+    if grep -Fq "https://dns.$DOMAIN/" "$DEPLOY_DIR/home/index.html"; then fail 'Disabled infrastructure retained the AdGuard link.'; fi
 done
 printf '<script>alert("README")</script> & private text\n' > "$DEPLOY_DIR/README.md"
 write_homepage

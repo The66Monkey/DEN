@@ -111,10 +111,12 @@ EOF
 }
 
 write_homepage() {
+    local dns_admin=no
+    if [[ -f "$DEPLOY_DIR/private/external-edge" && -f "$DEPLOY_DIR/private/infrastructure/compose.yml" ]]; then dns_admin=yes; fi
     install -d -m 755 "$DEPLOY_DIR/home" || return 1
     install -m 644 "$DEPLOY_DIR/docs/images/mascot.png" "$DEPLOY_DIR/home/mascot.png" || return 1
     jq -nr --arg domain "$DOMAIN" --arg ip "$LAN_IP" \
-        --arg fluxer "${FLUXER_ENABLED:-no}" --arg torrents "${QBITTORRENT_ENABLED:-no}" --arg ai "${AI_ENABLED:-no}" \
+        --arg fluxer "${FLUXER_ENABLED:-no}" --arg torrents "${QBITTORRENT_ENABLED:-no}" --arg ai "${AI_ENABLED:-no}" --arg dns_admin "$dns_admin" \
         --rawfile template "$DEPLOY_DIR/templates/home.html" '
         ([
             {name: "media", label: "Media - Jellyfin"},
@@ -124,6 +126,7 @@ write_homepage() {
         ] + (if $fluxer == "yes" then [{name: "chat", label: "Chat - Fluxer (public, invite-only)"}] else [] end)
           + (if $torrents == "yes" then [{name: "downloads", label: "Downloads - qBittorrent"}] else [] end)
           + (if $ai == "yes" then [{name: "ai", label: "AI - Open WebUI"}] else [] end)
+          + (if $dns_admin == "yes" then [{name: "dns", label: "DNS - AdGuard Home"}] else [] end)
         | map("<li><a href=\"https://" + (.name + "." + $domain | @html) + "/\">" + (.label | @html) + "</a></li>")
         | join("\n")) as $services |
         reduce [

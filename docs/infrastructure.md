@@ -79,6 +79,7 @@ With independent infrastructure enabled, DEN generates a private HTTPS route at
 `https://dns.<configured domain>` (for example `https://dns.example.com`).
 The edge reaches AdGuard on its DNS container network; the route uses the
 existing LAN/VPN allowlist and AdGuard's own administrator login.
+The DEN home page includes an AdGuard link when this infrastructure is enabled.
 
 Apply the current infrastructure template to the saved infrastructure Compose
 file, then regenerate routes with the current release's `write_routes`.
