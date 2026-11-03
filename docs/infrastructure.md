@@ -115,6 +115,12 @@ sudo docker compose --project-name den-infrastructure \
   -f /opt/den/private/infrastructure/compose.yml ps
 ```
 
+The unit starts the containers without waiting on health and retries on failure;
+Docker's `unless-stopped` policy keeps them running. The DNS container's own
+healthcheck only queries a locally answered name, so a slow upstream at boot
+cannot mark local DNS unhealthy. Clients should keep DEN as the only LAN DNS
+server: a second public resolver would bypass private names and filtering.
+
 DEN health checks include infrastructure when the marker exists. Its regular
 encrypted snapshot includes the infrastructure Compose/env files, custom routes,
 AdGuard configuration and both certificate stores. AdGuard's live work directory

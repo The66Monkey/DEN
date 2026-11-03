@@ -8,8 +8,10 @@ ConditionPathExists=/opt/den/private/external-edge
 [Service]
 Type=oneshot
 RemainAfterExit=yes
+Restart=on-failure
+RestartSec=15
 WorkingDirectory=/opt/den/private/infrastructure
-ExecStart=/usr/bin/docker compose --project-name den-infrastructure --env-file .env -f compose.yml up -d --wait --wait-timeout 180 edge dns
+ExecStart=/usr/bin/docker compose --project-name den-infrastructure --env-file .env -f compose.yml up -d edge dns
 ExecStop=/usr/bin/docker compose --project-name den-infrastructure --env-file .env -f compose.yml stop --timeout 60
 TimeoutStartSec=240
 TimeoutStopSec=150

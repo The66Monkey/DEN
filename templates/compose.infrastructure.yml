@@ -60,7 +60,7 @@ services:
       - ${DEN_DATA_DIR:-/srv/den}/infrastructure/adguard/work:/opt/adguardhome/work:z
     networks: [dns]
     healthcheck:
-      test: [CMD-SHELL, 'nslookup example.com 127.0.0.1 >/dev/null']
+      test: [CMD-SHELL, 'nslookup localhost 127.0.0.1 >/dev/null']
       interval: 30s
       timeout: 5s
       retries: 5
