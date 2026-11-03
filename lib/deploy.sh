@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/torrent-vpn.sh"
+
 compose() {
     local -a profiles=()
     local -a files=(-f "$DEPLOY_DIR/compose.yml")
@@ -7,6 +9,9 @@ compose() {
     if [[ "${QBITTORRENT_ENABLED:-no}" == yes ]]; then
         profiles=(--profile torrents)
         files+=(-f "$DEPLOY_DIR/templates/compose.torrents.yml")
+        if [[ "${QBITTORRENT_VPN_ENABLED:-no}" == yes ]]; then
+            files+=(-f "$DEPLOY_DIR/templates/compose.torrent-vpn.yml")
+        fi
     fi
     if [[ "${ACME_CHALLENGE:-http}" == dns-desec ]]; then
         files+=(-f "$DEPLOY_DIR/templates/compose.dns.yml")
@@ -123,7 +128,9 @@ write_homepage() {
 }
 
 write_routes() {
-    jq -n --arg domain "$DOMAIN" --arg ip "$LAN_IP" --arg lan "$LAN_CIDR" --arg fluxer "${FLUXER_ENABLED:-no}" --arg torrents "${QBITTORRENT_ENABLED:-no}" --arg qbit "http://qbittorrent:$QBITTORRENT_WEBUI_PORT" --arg chat "http://172.30.44.1:$FLUXER_PROXY_PORT" '
+    local torrent_host=qbittorrent
+    if [[ "${QBITTORRENT_VPN_ENABLED:-no}" == yes ]]; then torrent_host=torrent-vpn; fi
+    jq -n --arg domain "$DOMAIN" --arg ip "$LAN_IP" --arg lan "$LAN_CIDR" --arg fluxer "${FLUXER_ENABLED:-no}" --arg torrents "${QBITTORRENT_ENABLED:-no}" --arg qbit "http://$torrent_host:$QBITTORRENT_WEBUI_PORT" --arg chat "http://172.30.44.1:$FLUXER_PROXY_PORT" '
         {http: {
             middlewares: {
                 private: {ipAllowList: {sourceRange: [$lan, "10.44.0.0/24"]}},
@@ -315,7 +322,14 @@ install_host_config() {
 }
 
 start_stack() {
-    compose up -d --wait --wait-timeout 900 || return 1
+    local -a services=()
+    if [[ "${QBITTORRENT_VPN_ENABLED:-no}" == yes ]] && ! torrent_vpn_profile_ready; then
+        log 'Torrent VPN profile is missing: qBittorrent remains stopped. Import it with den torrent-vpn /absolute/path.conf.'
+        compose stop --timeout 120 qbittorrent torrent-vpn || return 1
+        mapfile -t services < <(compose config --services | grep -Ev '^(qbittorrent|torrent-vpn)$')
+        [[ ${#services[@]} -gt 0 ]] || fail 'Could not identify services to start without the torrent VPN.'
+    fi
+    compose up -d --wait --wait-timeout 900 "${services[@]}" || return 1
     compose exec -T -u www-data nextcloud php occ background:cron
 }
 
@@ -338,7 +352,15 @@ show_summary() {
     fi
     if [[ "${QBITTORRENT_ENABLED:-no}" == yes ]]; then
         printf 'Downloads: https://downloads.%s (qBittorrent admin; temporary password in sudo den logs qbittorrent).\n' "$DOMAIN"
-        printf 'Set a permanent password immediately. No outbound VPN or torrent port forwarding is configured.\n'
+        if [[ "${QBITTORRENT_VPN_ENABLED:-no}" == yes ]]; then
+            printf 'Torrent-only WireGuard required (kill switch; no direct fallback). Profile: /opt/den/private/torrent-vpn/wg0.conf.\n'
+            if ! torrent_vpn_profile_ready; then
+                printf 'BLOCKED pending profile: sudo den torrent-vpn /absolute/path/to/provider.conf\n'
+            fi
+        else
+            printf 'Direct mode: trackers/peers see your normal public IP. Optional protection: sudo den torrent-vpn /path/to/provider.conf\n'
+        fi
+        printf 'Set a permanent Web UI password. Do not forward torrent ports or enable UPnP.\n'
     fi
 }
 

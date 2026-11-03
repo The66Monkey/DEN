@@ -33,7 +33,7 @@ backup_stack() (
     fi
     fluxer_backup || exit 1
     restic_cmd snapshots >/dev/null || exit 1
-    local -a running=()
+    local -a running=() other_services=()
     local result=0 stopped=false running_services active
     running_services="$(compose ps --status running --services)" || exit 1
     if [[ -n "$running_services" ]]; then
@@ -43,7 +43,19 @@ backup_stack() (
         result=$?
         trap - EXIT INT TERM
         if [[ "$stopped" == true && ${#running[@]} -gt 0 ]]; then
-            compose start --wait --wait-timeout 900 "${running[@]}" || result=1
+            if [[ "${QBITTORRENT_VPN_ENABLED:-no}" == yes ]] &&
+                [[ " ${running[*]} " == *" qbittorrent "* ]]; then
+                local service
+                for service in "${running[@]}"; do
+                    case "$service" in qbittorrent|torrent-vpn) ;; *) other_services+=("$service") ;; esac
+                done
+                if [[ ${#other_services[@]} -gt 0 ]]; then
+                    compose start --wait --wait-timeout 900 "${other_services[@]}" || result=1
+                fi
+                compose up -d --force-recreate --wait --wait-timeout 900 torrent-vpn qbittorrent || result=1
+            else
+                compose start --wait --wait-timeout 900 "${running[@]}" || result=1
+            fi
         fi
         exit "$result"
     }

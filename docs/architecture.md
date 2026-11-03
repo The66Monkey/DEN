@@ -72,6 +72,15 @@ Shared media/backup storage requires `ALLOW_SHARED_MEDIA_BACKUP=yes`.
 Jellyfin only when qBittorrent is enabled. Fluxer live volumes stay in Docker's
 data root, not `MEDIA_MOUNT`.
 
+With `QBITTORRENT_VPN_ENABLED=yes`, `templates/compose.torrent-vpn.yml` adds a
+pinned Gluetun sidecar. qBittorrent shares its network namespace; Traefik routes
+the private downloads Web UI to the sidecar's port 18427. No host ports are
+published. Only the sidecar receives NET_ADMIN and `/dev/net/tun`; its firewall
+blocks non-tunnel egress, with no LAN outbound bypass. IPv6 is disabled and
+qBittorrent's resolver points to the sidecar's loopback DNS. Profiles are parsed
+as data under `private/torrent-vpn`, never executed with wg-quick. Missing
+profiles leave torrent services stopped. See [upload and modes](qbittorrent.md#optional-torrent-vpn).
+
 ## Release Updates
 
 `bin/den` serializes operations with a lock. Config is parsed as data, not shell.

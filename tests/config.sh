@@ -33,6 +33,7 @@ request_server_hostname </dev/null
 [[ "$KEEPASS_ENABLED" == no ]]
 [[ "$FLUXER_ENABLED" == no ]]
 [[ "$QBITTORRENT_ENABLED" == no ]]
+[[ "$QBITTORRENT_VPN_ENABLED" == no ]]
 [[ "$MEDIA_MOUNT" == /mnt/den-storage ]]
 [[ "$ACME_CHALLENGE" == http ]]
 [[ "$ALLOW_SHARED_MEDIA_BACKUP" == no ]]
@@ -49,7 +50,7 @@ read_settings "$TEMP/deployment/.env"
 [[ "$QBITTORRENT_ENABLED" == no ]]
 [[ "$MEDIA_MOUNT" == /mnt/den-storage ]]
 if (write_environment "$TEMP/deployment") 2>/dev/null; then exit 1; fi
-for invalid in 'LAN_IP=192.168.1.999' 'LAN_IP=192.168.2.10' 'LAN_IP=192.168.1.0' 'LAN_CIDR=0.0.0.0/8' 'LAN_CIDR=192.168.1.1/24' 'DOMAIN=$(touch /tmp/den-injection)' 'BACKUP_MOUNT=/srv/den' 'MEDIA_MOUNT=/srv/den' 'MEDIA_MOUNT=/mnt/den-backup' 'MEDIA_MOUNT=/mnt/a/../b' 'MEDIA_MOUNT=/mnt/disk with spaces' 'KEEPASS_ENABLED=maybe' 'FLUXER_ENABLED=maybe' 'QBITTORRENT_ENABLED=maybe'; do
+for invalid in 'LAN_IP=192.168.1.999' 'LAN_IP=192.168.2.10' 'LAN_IP=192.168.1.0' 'LAN_CIDR=0.0.0.0/8' 'LAN_CIDR=192.168.1.1/24' 'DOMAIN=$(touch /tmp/den-injection)' 'BACKUP_MOUNT=/srv/den' 'MEDIA_MOUNT=/srv/den' 'MEDIA_MOUNT=/mnt/den-backup' 'MEDIA_MOUNT=/mnt/a/../b' 'MEDIA_MOUNT=/mnt/disk with spaces' 'KEEPASS_ENABLED=maybe' 'FLUXER_ENABLED=maybe' 'QBITTORRENT_ENABLED=maybe' 'QBITTORRENT_VPN_ENABLED=maybe'; do
     if (printf -v "${invalid%%=*}" '%s' "${invalid#*=}"; validate_settings) 2>/dev/null; then
         fail "Accepted invalid setting: $invalid"
     fi
@@ -65,17 +66,23 @@ printf 'DOMAIN=home.example.net\nEMAIL=you@example.net\nLAN_IP=192.168.1.10\nLAN
 read_settings "$TEMP/keepass.env"
 [[ -z "$MEDIA_MOUNT" ]]
 [[ "$ALLOW_SHARED_MEDIA_BACKUP" == no ]]
+[[ "$QBITTORRENT_VPN_ENABLED" == no ]]
+if (QBITTORRENT_ENABLED=no; QBITTORRENT_VPN_ENABLED=yes; validate_settings) 2>/dev/null; then
+    fail 'Accepted torrent VPN without qBittorrent.'
+fi
+QBITTORRENT_VPN_ENABLED=yes
 DESEC_TOKEN=abcdefghijklmnopqrstuvwxyz12
 write_environment "$TEMP/keepass-deployment"
 grep -Fxq 'KEEPASS_ENABLED=yes' "$TEMP/keepass-deployment/.env"
 grep -Fxq 'FLUXER_ENABLED=yes' "$TEMP/keepass-deployment/.env"
 grep -Fxq 'QBITTORRENT_ENABLED=yes' "$TEMP/keepass-deployment/.env"
+grep -Fxq 'QBITTORRENT_VPN_ENABLED=yes' "$TEMP/keepass-deployment/.env"
 grep -Fxq 'MEDIA_MOUNT=' "$TEMP/keepass-deployment/.env"
 grep -Fxq 'UPDATE_REPOSITORY=https://github.com/The66Monkey/DEN.git' "$TEMP/keepass-deployment/.env"
 for invalid in 'file:///tmp/release.git' 'https://user:password@github.com/test/DEN.git' 'https://github.com/test/DEN.git;touch /tmp/den-injection'; do
     if (UPDATE_REPOSITORY="$invalid"; validate_settings) 2>/dev/null; then fail 'Invalid automatic update source accepted.'; fi
 done
-grep -v 'QBITTORRENT_ENABLED=' "$TEMP/keepass-deployment/.env" > "$TEMP/legacy.env"
+grep -Ev '^QBITTORRENT(_VPN)?_ENABLED=' "$TEMP/keepass-deployment/.env" > "$TEMP/legacy.env"
 read_settings "$TEMP/legacy.env"
 [[ "$QBITTORRENT_ENABLED" == no ]]
 [[ "$ACME_CHALLENGE" == http ]]

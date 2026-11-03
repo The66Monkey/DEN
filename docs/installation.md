@@ -212,7 +212,7 @@ Complete only the services you enabled:
 | [ ] | Immich | `https://photos.DOMAIN` | Create admin; connect the mobile app for photo uploads. |
 | [ ] | Nextcloud | `https://files.DOMAIN` | Sign in as `admin` with the password below. |
 | [ ] | Forgejo | `https://git.DOMAIN` | Run `sudo den git-admin` over SSH, then use HTTPS Git. |
-| [ ] | qBittorrent | `https://downloads.DOMAIN` | Sign in as `admin`; get temporary password below and set a permanent one. |
+| [ ] | qBittorrent | `https://downloads.DOMAIN` | Sign in as `admin`; get temporary password below and set a permanent one. For torrent-only protection, [upload a provider WireGuard profile](qbittorrent.md#optional-torrent-vpn). |
 | [ ] | Fluxer | `https://chat.DOMAIN` | Public chat/calls. Use setup token below to create admin; registration is invite-only. |
 
 Retrieve credentials privately over SSH; run optional commands only if enabled:
@@ -222,6 +222,11 @@ sudo grep '^NEXTCLOUD_ADMIN_PASSWORD=' /opt/den/.env
 sudo den logs qbittorrent
 sudo rexctl --dir /opt/den/fluxer setup token
 ```
+
+If Fluxer's first-admin browser setup says registration is closed, use the
+[terminal setup workaround](troubleshooting.md). After setup, use its one-time
+sign-in link privately and save the generated recovery kit off-server in secure
+storage. Treat both as credentials; never paste them into chat or public logs.
 
 - [ ] For downloaded movies, add `/downloads/complete` as a Jellyfin Movies library
   and scan it. Metadata stays in Jellyfin's settings; seeding files remain unchanged.

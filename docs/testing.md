@@ -61,6 +61,27 @@ sudo unshare --mount --net bash tests/firewall-network.sh
 Never run network-test setup directly in the host namespace.
 CI/script tests do not prove app runtime, boot ordering or SELinux behavior.
 
+### Torrent VPN
+
+Unit checks cover the optional protected/direct modes, shared namespace,
+private profile validation, missing-profile startup and failure gates, proxy
+routing, explicit direct opt-out, and backup namespace recreation.
+
+On a Docker host with the two pinned images already pulled, run:
+
+```bash
+sudo bash tests/torrent-vpn-container.sh
+```
+
+This creates and removes only its own temporary network/containers and synthetic
+keys, never a provider profile or real torrents. It requires a working direct
+HTTP control, then verifies blocked IPv4 egress before a VPN connection and
+after sidecar stop/restart, IPv6 disablement and loopback DNS configuration.
+It does **not** prove a working provider tunnel. Before relying on protection,
+import a real profile, verify provider egress/peer IP, private Web UI access,
+DNS through the tunnel, fail-closed behavior on tunnel loss, backup/restart and
+host reboot. Do not publish profiles or raw provider logs.
+
 ## One-Command Local Test Stack
 
 On a Podman-capable Fedora machine:

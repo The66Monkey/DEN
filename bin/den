@@ -21,6 +21,7 @@ Usage: sudo den <command>
   status                           Show service state and service URLs
   check                            Check services, VPN, backup age and disk
   logs [service]                   Show the last 100 log lines
+  torrent-vpn <profile|wait|off>     Import outbound WireGuard, wait blocked, or explicitly use direct traffic
   backup                           Take an encrypted, consistent snapshot
   snapshots                        List DEN snapshots
     verify-backup                    Read and verify the encrypted repository
@@ -73,7 +74,7 @@ case "$ACTION" in
         ;;
     logs) [[ $# -le 1 ]] || fail 'logs takes at most one service.' ;;
     restore) [[ $# == 2 ]] || fail 'restore needs an explicit snapshot ID and a new directory.' ;;
-    recovery-kit|update|keepass-export) [[ $# == 1 ]] || fail "$ACTION needs one path." ;;
+    recovery-kit|update|keepass-export|torrent-vpn) [[ $# == 1 ]] || fail "$ACTION needs one path or mode." ;;
     vpn-add|vpn-remove) [[ $# == 1 ]] || fail "$ACTION needs one device name." ;;
     *) usage; fail "Unknown command: $ACTION" ;;
 esac
@@ -101,6 +102,7 @@ case "$ACTION" in
     keepass-export) keepass_export "$1" ;;
     keepass-password) keepass_password ;;
     keepass-sync) keepass_sync_command ;;
+    torrent-vpn) torrent_vpn "$1" ;;
     fluxer-status) fluxer_status ;;
     fluxer-upgrade) fluxer_upgrade ;;
     update) update_release "$1" ;;

@@ -18,8 +18,10 @@ systemctl --failed
 | Outside access fails without VPN | Expected for private apps. Enabled Fluxer needs public TCP 443 routed to DEN; if BASM owns that forward, plan the cutover first. |
 | Completed movies are missing | Add `/downloads/complete` as a Jellyfin library, then scan. Other media uses `/media/movies`, `/media/tv` or `/media/music`. |
 | qBittorrent password stopped working | Set a permanent password; the initial temporary one changes after restart. Find it with `sudo den logs qbittorrent`. |
+| Downloads unavailable with torrent VPN enabled | Check `sudo den status` and `sudo den logs torrent-vpn`. Missing/failed provider profiles block torrents, not other apps; [import a valid profile](qbittorrent.md#copy-the-profile-privately). Never disable protection just to fix availability. |
 | Nextcloud is still starting | Allow several minutes, check free space, then `sudo den logs nextcloud`. |
 | Fluxer is unavailable | Run `sudo den fluxer-status` and `sudo rexctl --dir /opt/den/fluxer doctor`. Check the `chat` DNS name. |
+| Fluxer's first-admin browser setup says registration is closed | Complete setup privately over SSH with `sudo rexctl --dir /opt/den/fluxer setup --registration invite`. Do not reinstall or enable public registration. |
 | Calls fail | Forward TCP 7881 and UDP 7882 to DEN; run `sudo rexctl --dir /opt/den/fluxer voice test`. Public voice IP discovery and router hairpin support matter; see [public calls](networking.md#public-chat-and-calls). |
 | Another operation is running | Wait for the backup or update to finish. |
 | Backup fails or disk is full | Check `df -h` and `journalctl -u den-backup.service -n 50`. See [backups](backup.md). |

@@ -1,5 +1,8 @@
 # Keep DEN Running
 
+Open `https://home.YOUR-DOMAIN/` on your LAN or VPN for the start page,
+headed **Welcome home to your DEN**, and links to your services.
+
 Most maintenance is automatic. Connect over SSH when you need to check something:
 
 ```bash

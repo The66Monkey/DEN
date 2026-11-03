@@ -84,6 +84,24 @@ if backup_stack; then fail 'Failed Compose stop returned success.'; fi
 if grep -Fq 'restic backup' "$CALLS"; then fail 'Snapshot taken while stop failed.'; fi
 grep -Fq 'compose start --wait --wait-timeout 900 nextcloud immich-server' "$CALLS"
 FAIL_STOP=false
+QBITTORRENT_VPN_ENABLED=yes
+compose() {
+    printf 'compose %s\n' "$*" >> "$CALLS"
+    case "$*" in
+        'ps --status running --services') printf 'nextcloud\ntorrent-vpn\nqbittorrent\n' ;;
+        'stop --timeout 120') touch "$STOPPED" ;;
+        'ps --status running -q') [[ -f "$STOPPED" ]] ;;
+        'up -d --force-recreate --wait --wait-timeout 900 torrent-vpn qbittorrent') [[ "$FAIL_START" == false ]] ;;
+    esac
+}
+: > "$CALLS"
+backup_stack
+grep -Fxq 'compose start --wait --wait-timeout 900 nextcloud' "$CALLS"
+grep -Fxq 'compose up -d --force-recreate --wait --wait-timeout 900 torrent-vpn qbittorrent' "$CALLS"
+FAIL_START=true
+if backup_stack; then fail 'Failed VPN resume returned success.'; fi
+FAIL_START=false
+QBITTORRENT_VPN_ENABLED=no
 for target in "$DATA_DIR" "$DATA_DIR/child" "$DEPLOY_DIR" "$BACKUP_MOUNT/new" / "$TEMP"; do
     if (restore_snapshot abcdef12 "$target") 2>/dev/null; then fail "Unsafe target accepted: $target"; fi
 done

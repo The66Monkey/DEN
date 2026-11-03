@@ -14,6 +14,7 @@ bash tests/media.sh
 bash tests/compose.sh
 bash tests/homepage.sh
 bash tests/qbittorrent.sh
+bash tests/torrent-vpn.sh
 bash tests/backup.sh
 bash tests/restic.sh
 if command -v unshare >/dev/null && unshare --user --map-root-user --mount true 2>/dev/null; then

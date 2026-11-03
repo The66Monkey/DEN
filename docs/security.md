@@ -9,8 +9,10 @@
 - Finish initial admin setup before sharing access. Use personal accounts daily.
   Email password resets are not configured.
 - Keep firewalld and SELinux enabled. Forward only the [documented ports](networking.md#port-forwarding).
-- qBittorrent uses your normal internet connection. WireGuard does not hide
-  downloads from trackers or peers.
+- qBittorrent defaults to your normal public IP; home-access WireGuard does not
+  hide it. The optional [torrent-only provider VPN](qbittorrent.md#optional-torrent-vpn)
+  has a kill switch and no automatic direct fallback. Keep its private profile
+  out of Git; a VPN is not anonymity.
 - Backups are encrypted; DEN does not encrypt live files. Sharing a media and
   backup HDD means its failure loses both.
 - Keep a KeePass vault's master password separate from its exported file.

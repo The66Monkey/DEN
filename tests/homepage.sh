@@ -49,6 +49,7 @@ if torrents == "yes":
     services.append("downloads")
 assert parsed.links == [f"https://{name}.{domain}/" for name in services] + ["https://github.com/The66Monkey/DEN"]
 text = "".join(parsed.text)
+assert "Welcome home to your DEN" in text
 assert f"ssh YOUR-FEDORA-USER@{ip}" in text
 assert (root / "README.md").read_text() not in text
 assert 'src="/mascot.png"' in page

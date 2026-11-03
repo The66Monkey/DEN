@@ -39,10 +39,17 @@ enable_update_timer() {
 }
 
 health_check() {
-    local expected actual snapshots newest now used
+    local expected actual snapshots newest now used torrent_pending=no
     check_nvidia_driver || return 1
     ensure_media_storage
     expected="$(compose config --services | wc -l)"
+    if [[ "${QBITTORRENT_VPN_ENABLED:-no}" == yes ]] && ! torrent_vpn_profile_ready; then
+        expected=$((expected - 2))
+        torrent_pending=yes
+        log 'Torrent VPN profile is missing; qBittorrent must remain stopped. Other DEN services are checked below.'
+        [[ -z "$(compose ps --status running -q qbittorrent torrent-vpn)" ]] ||
+            fail 'Torrent services are unexpectedly running without the required VPN profile. Stop qBittorrent.'
+    fi
     actual="$(compose ps --all --format json | jq -s 'flatten | map(select(.State == "running" and .Health == "healthy")) | length')"
     [[ "$actual" == "$expected" ]] || fail "Only $actual/$expected containers are healthy. Run sudo den status."
     systemctl is-active --quiet wg-quick@wg0 den-dns || fail 'WireGuard or VPN DNS is down.'
@@ -62,6 +69,10 @@ health_check() {
         (( used < 90 )) || fail 'Secondary storage filesystem is at least 90% full.'
     fi
     install -d -m 755 /etc/motd.d
+    if [[ "$torrent_pending" == yes ]]; then
+        printf 'DEN: core checks healthy; torrents blocked awaiting a provider VPN profile.\n' > /etc/motd.d/den
+        fail 'Core checks passed; qBittorrent remains blocked awaiting a provider VPN profile.'
+    fi
     printf 'DEN: services healthy; recent backup present.\n' > /etc/motd.d/den
     log 'Services, VPN, backup age and free space look healthy.'
 }

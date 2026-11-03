@@ -20,8 +20,8 @@ Use the apps from your phone or computer; no desktop is needed on the server.
 - **Home page** — open `https://home.YOUR-DOMAIN` on LAN/VPN for service links,
   SSH instructions and this README.
 
-**Optional:** qBittorrent for downloads, Fluxer for chat and calls, and a
-KeePassXC-compatible password vault.
+**Optional:** qBittorrent with a separate torrent-only provider VPN, Fluxer for
+chat and calls, and a KeePassXC-compatible password vault.
 
 Everything runs on one Fedora Server PC. Photos, files, media, Git and downloads
 stay on your home network/VPN. **Enabling Fluxer makes chat and calls public**
@@ -35,7 +35,7 @@ the server to opening your apps. Print it or tick off the steps as you go.
 ## When You Need Help
 
 - [Troubleshooting](docs/troubleshooting.md)
-- [Downloads in Jellyfin](docs/qbittorrent.md)
+- [Downloads, torrent VPN and Jellyfin](docs/qbittorrent.md)
 - [Updates and maintenance](docs/operations.md)
 - [Backup and recovery](docs/backup.md)
 - [Access and privacy](docs/security.md)
