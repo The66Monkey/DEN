@@ -48,7 +48,7 @@ the server to opening your apps. Print it or tick off the steps as you go.
 
 **Version 1.1.0 — optional private AI and GPU power management.** Deployed and
 tested on bare-metal Fedora Server. See [validation status](docs/testing.md#validation-status) for
-what was checked and what remains. Keep another copy of files you cannot replace.
+what was checked and what remains.
 For contributors: [architecture](docs/architecture.md) and [testing](docs/testing.md).
 
 ## License
