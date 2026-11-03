@@ -55,7 +55,5 @@ For contributors: [architecture](docs/architecture.md) and [testing](docs/testin
 
 - Software: MIT License — [LICENSE](LICENSE)
 - Documentation: CC BY 4.0 — [LICENSE-docs](LICENSE-docs)
-- Attribution guidance: [ATTRIBUTION.md](ATTRIBUTION.md)
 
-Free to use, adapt and self-host. A mention of the DEN Framework by
-[ScandinavianHacking](https://scandinavianhacking.se/) is appreciated.
+Free to use, adapt and self-host.

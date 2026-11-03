@@ -40,7 +40,7 @@ check_media_disk() {
     [[ "$(stat -c %d "$MEDIA_MOUNT")" != "$(stat -c %d /srv)" ]] || fail 'Secondary storage must be a different filesystem from the OS data root.'
     if [[ "$(stat -c %d "$MEDIA_MOUNT")" == "$(stat -c %d "$BACKUP_MOUNT")" ]]; then
         [[ "${ALLOW_SHARED_MEDIA_BACKUP:-no}" == yes ]] || fail 'Secondary storage and backups must be on different filesystems unless ALLOW_SHARED_MEDIA_BACKUP=yes.'
-        log 'WARNING: media/downloads and backups share a filesystem; disk failure loses both. Keep an independent off-site copy.'
+        log 'WARNING: media/downloads and backups share a filesystem; disk failure loses both.'
     fi
 }
 

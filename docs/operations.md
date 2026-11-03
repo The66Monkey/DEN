@@ -53,9 +53,7 @@ device, use `sudo den vpn-add DEVICE-NAME` and follow the private profile/QR
 instructions, rather than sharing one profile across devices.
 
 DEN's backup does not automatically include a libvirt VM or BASM's guest
-repository. Arrange an independent encrypted copy of BASM backups and test
-guest recovery; neither an unchecked live VM-disk copy nor a VM snapshot on
-the same disk is an independent backup. Schedule Fedora host updates/reboots
+repository. BASM manages its own guest backups. Schedule Fedora host updates/reboots
 around guest backups and availability requirements.
 
 ## Media codecs and NVIDIA

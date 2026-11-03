@@ -140,5 +140,5 @@ recovery_kit() {
     install -d -m 700 "$destination/den-recovery-kit"
     cp -a "$DEPLOY_DIR/." "$destination/den-recovery-kit/"
     chmod 700 "$destination/den-recovery-kit"
-    log 'Recovery kit saved. It contains passwords and VPN keys: keep it private, with an off-site copy.'
+    log 'Recovery kit saved. It contains passwords and VPN keys.'
 }

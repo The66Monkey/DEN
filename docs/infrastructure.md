@@ -120,7 +120,6 @@ encrypted snapshot includes the infrastructure Compose/env files, custom routes,
 AdGuard configuration and both certificate stores. AdGuard's live work directory
 (query logs, statistics and downloadable filter cache) is intentionally excluded;
 filters rebuild on recovery. Edge and DNS are not paused for app snapshots.
-Keep private migration archives until an independent encrypted backup is verified.
 
 Infrastructure images are pinned and **updated separately**, not implicitly by
 application updates. Review/copy a newer infrastructure template, validate Compose

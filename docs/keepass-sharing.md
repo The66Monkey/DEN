@@ -83,8 +83,8 @@ editing. Keep recovery material outside the vault it is needed to unlock.
 ## Backup and recovery
 
 DEN snapshots copy the deployment tree, including `vaults/admin/`, into the
-encrypted backup. Keep an independent master-password copy: the Restic key is
-itself inside the admin vault.
+encrypted backup. Opening the snapshot requires the Restic key, which is also
+stored inside the admin vault.
 Recovery restores this vault directory alongside the private saved settings;
 older snapshots containing only the legacy vault remain supported.
 
