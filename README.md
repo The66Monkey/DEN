@@ -25,10 +25,9 @@ chat and calls, a KeePassXC-compatible password vault, and
 [private AI chat](docs/ai.md) with Open WebUI, DEN-local Ollama and an optional
 workstation GPU backend.
 
-For a host sharing its public IP with a business VM, use the optional
+For a host sharing its public IP with a VM, use the optional
 [independent DNS and shared edge topology](docs/infrastructure.md): infrastructure
-runs on DEN, while the VM remains an application backend. BASM is not required
-for a standalone DEN installation.
+runs on DEN, while the VM remains an application backend.
 
 Everything runs on one Fedora Server PC. Photos, files, media, Git and downloads
 stay on your home network/VPN. **Enabling Fluxer makes chat and calls public**
