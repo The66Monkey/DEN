@@ -67,6 +67,16 @@ TV-subnet checks cover rejected overlaps, saved/legacy settings, Jellyfin-only
 HTTPS allowlists, firewall-zone replacement, disabling and failure gates.
 Isolated network tests exercise TV DNS/HTTPS access and denial of host
 administration, voice ports and direct container/VPN addresses.
+Cockpit checks cover default/opt-out settings, replacement-host restoration,
+configuration preservation,
+verified backend certificates, private routes, proxy CA mounts and DNS updates.
+Isolated traffic tests restrict its backend to the edge container. When Cockpit
+is installed, isolated runtime tests verify the login page and accepted/rejected
+WebSocket origins:
+
+```bash
+sudo unshare --mount --net env DEN_ISOLATED_COCKPIT_TEST=yes python3 tests/cockpit-runtime.py
+```
 
 Real mount tests require user/mount namespaces. Real network tests also need
 nftables, iproute2 and network namespaces; unavailable tests print a skip.

@@ -2,6 +2,7 @@
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/torrent-vpn.sh"
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/ai.sh"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/cockpit.sh"
 
 compose() {
     local -a profiles=()
@@ -116,7 +117,7 @@ write_homepage() {
     install -d -m 755 "$DEPLOY_DIR/home" || return 1
     install -m 644 "$DEPLOY_DIR/docs/images/mascot.png" "$DEPLOY_DIR/home/mascot.png" || return 1
     jq -nr --arg domain "$DOMAIN" --arg ip "$LAN_IP" \
-        --arg fluxer "${FLUXER_ENABLED:-no}" --arg torrents "${QBITTORRENT_ENABLED:-no}" --arg ai "${AI_ENABLED:-no}" --arg dns_admin "$dns_admin" \
+        --arg fluxer "${FLUXER_ENABLED:-no}" --arg torrents "${QBITTORRENT_ENABLED:-no}" --arg ai "${AI_ENABLED:-no}" --arg dns_admin "$dns_admin" --arg cockpit "${COCKPIT_ENABLED:-yes}" \
         --rawfile template "$DEPLOY_DIR/templates/home.html" '
         ([
             {name: "media", label: "Media - Jellyfin"},
@@ -127,6 +128,7 @@ write_homepage() {
           + (if $torrents == "yes" then [{name: "downloads", label: "Downloads - qBittorrent"}] else [] end)
           + (if $ai == "yes" then [{name: "ai", label: "AI - Open WebUI"}] else [] end)
           + (if $dns_admin == "yes" then [{name: "dns", label: "DNS - AdGuard Home"}] else [] end)
+          + (if $cockpit == "yes" then [{name: "server", label: "Server administration - Cockpit"}] else [] end)
         | map("<li><a href=\"https://" + (.name + "." + $domain | @html) + "/\">" + (.label | @html) + "</a></li>")
         | join("\n")) as $services |
         reduce [
@@ -145,7 +147,7 @@ write_routes() {
     merged="$(mktemp)" || { rm -f "$candidate"; return 1; }
     if [[ "${QBITTORRENT_VPN_ENABLED:-no}" == yes ]]; then torrent_host=torrent-vpn; fi
     if [[ -f "$DEPLOY_DIR/private/external-edge" && -f "$DEPLOY_DIR/private/infrastructure/compose.yml" ]]; then dns_admin=yes; fi
-    jq -n --arg domain "$DOMAIN" --arg ip "$LAN_IP" --arg lan "$LAN_CIDR" --arg tv "${TV_CIDR:-}" --arg fluxer "${FLUXER_ENABLED:-no}" --arg torrents "${QBITTORRENT_ENABLED:-no}" --arg ai "${AI_ENABLED:-no}" --arg dns_admin "$dns_admin" --arg ai_url "http://172.30.44.1:28413" --arg qbit "http://$torrent_host:$QBITTORRENT_WEBUI_PORT" --arg chat "http://172.30.44.1:$FLUXER_PROXY_PORT" '
+    jq -n --arg domain "$DOMAIN" --arg ip "$LAN_IP" --arg lan "$LAN_CIDR" --arg tv "${TV_CIDR:-}" --arg cockpit "${COCKPIT_ENABLED:-yes}" --arg fluxer "${FLUXER_ENABLED:-no}" --arg torrents "${QBITTORRENT_ENABLED:-no}" --arg ai "${AI_ENABLED:-no}" --arg dns_admin "$dns_admin" --arg ai_url "http://172.30.44.1:28413" --arg qbit "http://$torrent_host:$QBITTORRENT_WEBUI_PORT" --arg chat "http://172.30.44.1:$FLUXER_PROXY_PORT" '
         {http: {
             middlewares: {
                 private: {ipAllowList: {sourceRange: [$lan, "10.44.0.0/24"]}},
@@ -156,7 +158,10 @@ write_routes() {
             } + (if $tv != "" then {
                 "media-private": {ipAllowList: {sourceRange: [$lan, "10.44.0.0/24", $tv]}}
             } else {} end),
-            routers: (reduce (["home", "media", "photos", "files", "git"] + (if $fluxer == "yes" then ["chat"] else [] end) + (if $torrents == "yes" then ["downloads"] else [] end) + (if $ai == "yes" then ["ai"] else [] end) + (if $dns_admin == "yes" then ["dns"] else [] end))[] as $name ({};
+            serversTransports: (if $cockpit == "yes" then {
+                cockpit: {rootCAs: ["/etc/traefik/cockpit/ca.crt"], serverName: "den-cockpit"}
+            } else {} end),
+            routers: (reduce (["home", "media", "photos", "files", "git"] + (if $fluxer == "yes" then ["chat"] else [] end) + (if $torrents == "yes" then ["downloads"] else [] end) + (if $ai == "yes" then ["ai"] else [] end) + (if $dns_admin == "yes" then ["dns"] else [] end) + (if $cockpit == "yes" then ["server"] else [] end))[] as $name ({};
                 .[$name] = {rule: ("Host(`" + (if $name == "chat" then "chat." else $name + "." end) + $domain + "`)") ,
                     entryPoints: ["websecure"], service: $name,
                     middlewares: ((if $name == "chat" then ["headers"] elif $name == "media" and $tv != "" then ["media-private", "headers"] else ["private", "headers"] end) + (if $name == "files" then ["dav"] else [] end)),
@@ -175,6 +180,7 @@ write_routes() {
               + (if $torrents == "yes" then {downloads: {loadBalancer: {servers: [{url: $qbit}]}}} else {} end))
               + (if $ai == "yes" then {ai: {loadBalancer: {servers: [{url: $ai_url}]}}} else {} end)
               + (if $dns_admin == "yes" then {dns: {loadBalancer: {servers: [{url: "http://dns:3000"}]}}} else {} end)
+              + (if $cockpit == "yes" then {server: {loadBalancer: {servers: [{url: "https://172.30.44.1:9090"}], serversTransport: "cockpit"}}} else {} end)
         }}' > "$candidate" || { rm -f "$candidate" "$merged"; return 1; }
     if [[ -f "$DEPLOY_DIR/private/routes-custom.json" ]]; then
         if ! jq -s -e -f "$DEPLOY_DIR/templates/merge-routes.jq" \
@@ -194,7 +200,7 @@ infrastructure_compose() {
         --project-name den-infrastructure \
         --project-directory "$DEPLOY_DIR/private/infrastructure" \
         --env-file "$DEPLOY_DIR/private/infrastructure/.env" \
-        -f "$DEPLOY_DIR/private/infrastructure/compose.yml" "$@"
+        -f "${DEN_INFRASTRUCTURE_COMPOSE_FILE:-$DEPLOY_DIR/private/infrastructure/compose.yml}" "$@"
 }
 
 prepare_storage() {
@@ -349,6 +355,9 @@ EOF
     if [[ -f "$DEPLOY_DIR/private/external-edge" && -f "$DEPLOY_DIR/private/infrastructure/compose.yml" ]]; then
         printf 'host-record=dns.%s,%s\n' "$DOMAIN" "$LAN_IP"
     fi
+    if [[ "${COCKPIT_ENABLED:-yes}" == yes ]]; then
+        printf 'host-record=server.%s,%s\n' "$DOMAIN" "$LAN_IP"
+    fi
 }
 
 install_host_config() {
@@ -382,6 +391,9 @@ start_stack() {
 show_summary() {
     setup_section 'DEN setup complete - next steps'
     printf '\nHome: https://home.%s\nMedia: https://media.%s\nPhotos: https://photos.%s\nFiles: https://files.%s\nGit: https://git.%s\n' "$DOMAIN" "$DOMAIN" "$DOMAIN" "$DOMAIN" "$DOMAIN"
+    if [[ "${COCKPIT_ENABLED:-yes}" == yes ]]; then
+        printf 'Server administration: https://server.%s (Fedora login; trusted LAN/VPN).\n' "$DOMAIN"
+    fi
     if [[ -f "$DEPLOY_DIR/private/external-edge" && -f "$DEPLOY_DIR/private/infrastructure/compose.yml" ]]; then
         printf 'DNS administration: https://dns.%s (trusted LAN/VPN).\n' "$DOMAIN"
     fi

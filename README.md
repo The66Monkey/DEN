@@ -17,6 +17,8 @@ Use the apps from your phone or computer; no desktop is needed on the server.
 - **Forgejo** — keep your Git projects at home.
 - **WireGuard** — connect privately from your phone or computer.
 - **Automatic backups and updates** — routine maintenance is built in.
+- **Cockpit** — Fedora host administration at `https://server.YOUR-DOMAIN` on
+  LAN/VPN, enabled by default with [opt-out](docs/operations.md#cockpit-administration).
 - **Home page** — open `https://home.YOUR-DOMAIN` on LAN/VPN for service links,
   SSH instructions and this README.
 

@@ -15,6 +15,40 @@ DEN checks health hourly. Problems appear in the system journal and may show
 on SSH login; there are no email or phone alerts.
 If another operation is running, wait for it to finish.
 
+## Cockpit administration
+
+Open **Server administration - Cockpit** on the home page, or
+`https://server.YOUR-DOMAIN/`. Use your Fedora login; administrative actions
+retain Fedora's permission checks. Cockpit provides host storage, networking,
+system services, logs and updates. DEN backups and coordinated service upgrades
+remain `sudo den backup` and `sudo den auto-update`.
+
+New installs and recovery enable integration by default. For an existing install,
+update DEN, add the exact AdGuard/LAN DNS rewrite
+`server.YOUR-DOMAIN → SERVER-LAN-IP`, then run:
+
+```bash
+sudo den cockpit-setup
+```
+
+DEN installs Cockpit, enables its socket, configures the HTTPS origin and uses a
+verified private TLS backend. Standalone and infrastructure proxies receive the
+backend CA; VPN DNS and DDNS are updated. deSEC token permissions must include
+`server` and `_acme-challenge.server`. The existing certificate challenge method
+applies; HTTP validation uses the normal TCP 80 forwarding.
+
+To opt out, set `COCKPIT_ENABLED=no` in `/opt/den/.env` and run the same command.
+DEN removes the route, link and VPN DNS record and restores the pre-integration
+Cockpit configuration/socket listener. It keeps Cockpit installed. Remove the
+LAN rewrite and the public `server` A record if no longer used. Existing custom
+socket overrides or subsequent edits to DEN-managed Cockpit files require
+explicit reconciliation before applying changes.
+
+Backend certificate/key state is retained under `/opt/den/private/cockpit-state`;
+DEN's recovery kit includes it. The certificate lasts ten years; setup reports
+near-expiry rather than bypassing verification. Replace `backend.crt` and
+`backend.key` there together (CN and DNS SAN `den-cockpit`), then rerun setup.
+
 For passwords, use a single owner/admin vault and separate family/personal
 vaults. See [KeePass sharing](keepass-sharing.md). Close a directly shared vault
 before synchronization, upgrades or VPN profile creation.

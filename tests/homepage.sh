@@ -47,6 +47,7 @@ if fluxer == "yes":
     services.append("chat")
 if torrents == "yes":
     services.append("downloads")
+services.append("server")
 assert parsed.links == [f"https://{name}.{domain}/" for name in services] + ["https://github.com/The66Monkey/DEN"]
 text = "".join(parsed.text)
 assert "Welcome home to your DEN" in text
@@ -76,6 +77,9 @@ printf '<script>alert("README")</script> & private text\n' > "$DEPLOY_DIR/README
 write_homepage
 if grep -Fq '<script>' "$DEPLOY_DIR/home/index.html"; then fail 'README HTML leaked into homepage.'; fi
 rm "$DEPLOY_DIR/README.md"
+COCKPIT_ENABLED=no
+write_homepage
+if grep -Fq "https://server.$DOMAIN/" "$DEPLOY_DIR/home/index.html"; then fail 'Opt-out retained Cockpit link.'; fi
 write_homepage
 rm "$DEPLOY_DIR/docs/images/mascot.png"
 if write_homepage 2>/dev/null; then fail 'Missing mascot returned success.'; fi

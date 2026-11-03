@@ -29,7 +29,7 @@ ai_prepare
 ln -sfn /opt/den/bin/den /usr/local/bin/den
 compose config --quiet
 compose pull
-install_host_config
+DEN_COCKPIT_RECOVERY=yes install_host_config
 ai_install
 systemctl start den.service
 fluxer_restore

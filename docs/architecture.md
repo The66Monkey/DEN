@@ -8,6 +8,8 @@ For administrators and contributors. For normal use, start with
 One Fedora Server host runs Docker Compose for Jellyfin, Immich, Nextcloud,
 Forgejo and optional qBittorrent. Traefik handles HTTPS without a Docker socket.
 Fluxer uses its own upstream `rexctl` stack. WireGuard and VPN DNS run on the host.
+Cockpit runs as a Fedora socket-activated host service by default. Traefik exposes
+`server.DOMAIN` through the private middleware with a verified TLS backend.
 Core images are pinned by digest in `templates/compose.yml`.
 An internal nginx container serves the LAN/VPN-only `home.DOMAIN` landing page.
 Installation, release updates and recovery generate `/opt/den/home/index.html`
@@ -23,6 +25,7 @@ deployment secrets are not served. No extra host port is published.
 | Docker bridge | `172.30.44.0/24`, gateway `.1`, allocation `.128/25` |
 | Traefik | Fixed `172.30.44.2`; host TCP 80/443 bound to `LAN_IP` |
 | Fluxer backend | `172.30.44.1:29461` |
+| Cockpit backend | `172.30.44.1:9090`, TLS; edge `.2` only |
 | Fluxer voice | TCP 7881, UDP 7882, public when enabled |
 | qBittorrent Web UI | Internal 18427; no published UI/peer ports |
 
@@ -39,8 +42,9 @@ Enabled Fluxer also admits IPv4 TCP 443/7881 and UDP 7882 addressed to `LAN_IP`.
 Only chat omits Traefik's private middleware; the other apps remain allowlisted.
 IPv6 application access is blocked.
 
-Firewalld's `den-vpn` zone accepts traffic admitted by the guard. Internal Docker
-bridges remain trusted; this is not inter-container isolation.
+Firewalld's `den-vpn` zone accepts traffic admitted by the guard. The Cockpit
+backend restriction precedes LAN/VPN and bridge allowances. Other internal Docker
+traffic remains trusted; this is not general inter-container isolation.
 
 ```bash
 sudo nft list table inet den_guard

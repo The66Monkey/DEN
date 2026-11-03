@@ -18,6 +18,8 @@ Print it if useful; do not write passwords or tokens on it.
 - [ ] Use a PC with an x86-64-v2 CPU, at least 8 GB RAM (16 GB recommended),
   an SSD and a larger HDD. Use Ethernet if possible.
 - [ ] Install Fedora Server on the **SSD only**. Enable SSH and create your login.
+  Select **Cockpit** if offered; DEN installs it if missing. Integration is
+  enabled by default; set `COCKPIT_ENABLED=no` in your settings to opt out.
 - [ ] Reserve the server's LAN IP in your router so it does not change.
   For example, the router might be `192.168.1.1` and the server `192.168.1.10`,
   on subnet `192.168.1.0/24`. Use your own network's values, not the router's
@@ -88,6 +90,7 @@ DEN does not upgrade it, enroll Secure Boot keys or enable GPU passthrough.
   follow deSEC's nameserver instructions without removing records you still use.
 - [ ] Create these **A records**, each pointing to your router's **public IPv4**:
   `vpn`, `home`, `media`, `photos`, `files`, `git`.
+  Add `server` for the default Cockpit integration.
   Add `downloads` for qBittorrent and `chat` for Fluxer if wanted.
   Do not add AAAA records for DEN names.
 - [ ] Create a deSEC API token with permission to update those records and

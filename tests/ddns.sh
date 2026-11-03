@@ -28,7 +28,7 @@ STATE_FILE="$TEMP/state/last-ip"
 
 bash "$ROOT/templates/ddns-update.sh" "$STATE_FILE"
 grep -Fq 'hostname=vpn.scandinavianhacking.dedyn.io,home.scandinavianhacking.dedyn.io,media.scandinavianhacking.dedyn.io,photos.scandinavianhacking.dedyn.io,files.scandinavianhacking.dedyn.io,git.scandinavianhacking.dedyn.io,chat.scandinavianhacking.dedyn.io' "$DDNS_REQUEST_LOG"
-grep -Fq ',downloads.scandinavianhacking.dedyn.io&myipv4=' "$DDNS_REQUEST_LOG"
+grep -Fq ',downloads.scandinavianhacking.dedyn.io,server.scandinavianhacking.dedyn.io&myipv4=' "$DDNS_REQUEST_LOG"
 ! grep -Fq 'hostname=scandinavianhacking.dedyn.io' "$DDNS_REQUEST_LOG"
 ! grep -Fq "ai.$DOMAIN" "$DDNS_REQUEST_LOG"
 ! grep -Fq "dns.$DOMAIN" "$DDNS_REQUEST_LOG"
@@ -51,6 +51,11 @@ bash "$ROOT/templates/ddns-update.sh" "$STATE_FILE"
 ! grep -Fq 'downloads.scandinavianhacking.dedyn.io' "$DDNS_REQUEST_LOG"
 grep -Fq "myipv4=$DDNS_TEST_IP" "$DDNS_REQUEST_LOG"
 [[ "$(head -1 "$STATE_FILE")" == "$DDNS_TEST_IP" ]]
+
+export COCKPIT_ENABLED=no
+: > "$DDNS_REQUEST_LOG"
+bash "$ROOT/templates/ddns-update.sh" "$STATE_FILE"
+! grep -Fq "server.$DOMAIN" "$DDNS_REQUEST_LOG"
 
 export DDNS_TEST_IP=999.66.61.107
 if bash "$ROOT/templates/ddns-update.sh" "$STATE_FILE" 2>/dev/null; then

@@ -327,8 +327,13 @@ admits public HTTPS and voice. Leave firewalld and
 SELinux enabled. Avoid source-hiding proxies/CDNs or router rules that make
 outside traffic appear to come from a LAN device.
 
-Existing Cockpit is available at `https://SERVER-LAN-IP:9090` with your Fedora
-login. It uses its own certificate, not the app certificates.
+With `COCKPIT_ENABLED=yes` (default), open `https://server.YOUR-DOMAIN/`
+from the trusted LAN or VPN and log in with your Fedora account.
+Add the exact LAN DNS rewrite `server.YOUR-DOMAIN → SERVER-LAN-IP`;
+DEN manages the matching VPN record and public A record for certificate issuance.
+The TV subnet is excluded. Cockpit listens on DEN's Docker gateway, accessible
+only to its HTTPS proxy; the backend certificate is verified.
+Opt-out and existing-install activation: [Cockpit administration](operations.md#cockpit-administration).
 For firewall internals, see [architecture](architecture.md).
 
 ## WireGuard Away from Home

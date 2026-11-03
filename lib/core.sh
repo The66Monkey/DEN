@@ -18,6 +18,7 @@ read_settings() {
     unset DOMAIN EMAIL LAN_IP LAN_CIDR MEDIA_MOUNT BACKUP_MOUNT ALLOW_SHARED_MEDIA_BACKUP KEEPASS_ENABLED FLUXER_ENABLED QBITTORRENT_ENABLED QBITTORRENT_VPN_ENABLED UPDATE_REPOSITORY ACME_CHALLENGE DB_PASSWORD NEXTCLOUD_ADMIN_PASSWORD RESTIC_PASSWORD
     MEDIA_MOUNT=
     TV_CIDR=
+    COCKPIT_ENABLED=yes
     ALLOW_SHARED_MEDIA_BACKUP=no
     ACME_CHALLENGE=http
     KEEPASS_ENABLED=no
@@ -35,7 +36,7 @@ read_settings() {
         [[ "$line" == *=* ]] || fail 'Use unquoted KEY=value lines in config.'
         key="${line%%=*}"; value="${line#*=}"
         case "$key" in
-            DOMAIN|EMAIL|LAN_IP|LAN_CIDR|TV_CIDR|MEDIA_MOUNT|BACKUP_MOUNT|ALLOW_SHARED_MEDIA_BACKUP|KEEPASS_ENABLED|FLUXER_ENABLED|QBITTORRENT_ENABLED|QBITTORRENT_VPN_ENABLED|AI_ENABLED|AI_MODEL|AI_REMOTE_OLLAMA_URL|NVIDIA_POWER_LIMIT_W|NVIDIA_GPU_ID|UPDATE_REPOSITORY|ACME_CHALLENGE|DB_PASSWORD|NEXTCLOUD_ADMIN_PASSWORD|RESTIC_PASSWORD) ;;
+            DOMAIN|EMAIL|LAN_IP|LAN_CIDR|TV_CIDR|COCKPIT_ENABLED|MEDIA_MOUNT|BACKUP_MOUNT|ALLOW_SHARED_MEDIA_BACKUP|KEEPASS_ENABLED|FLUXER_ENABLED|QBITTORRENT_ENABLED|QBITTORRENT_VPN_ENABLED|AI_ENABLED|AI_MODEL|AI_REMOTE_OLLAMA_URL|NVIDIA_POWER_LIMIT_W|NVIDIA_GPU_ID|UPDATE_REPOSITORY|ACME_CHALLENGE|DB_PASSWORD|NEXTCLOUD_ADMIN_PASSWORD|RESTIC_PASSWORD) ;;
             *) fail "Unknown config key: $key" ;;
         esac
         [[ ! -v "seen[$key]" ]] || fail "Duplicate config key: $key"
@@ -95,6 +96,7 @@ review_installation() {
         printf '  WARNING: shared media/backup storage is allowed; disk failure can lose both.\n'
     fi
     printf '\nOptional services\n  KeePass: %s\n  Fluxer: %s\n  qBittorrent: %s\n  Private AI: %s\n' "$KEEPASS_ENABLED" "$FLUXER_ENABLED" "$QBITTORRENT_ENABLED" "$AI_ENABLED"
+    printf '  Cockpit integration: %s\n' "$COCKPIT_ENABLED"
     if [[ -n "${TV_CIDR:-}" ]]; then
         printf '  Isolated TV network: %s (DNS and Jellyfin only; router isolation required).\n' "$TV_CIDR"
     fi
@@ -216,6 +218,7 @@ validate_settings() {
         [[ -n "${!key:-}" ]] || fail "Missing config key: $key"
     done
     [[ "$KEEPASS_ENABLED" == yes || "$KEEPASS_ENABLED" == no ]] || fail 'KEEPASS_ENABLED must be yes or no.'
+    [[ "${COCKPIT_ENABLED:-yes}" == yes || "${COCKPIT_ENABLED:-yes}" == no ]] || fail 'COCKPIT_ENABLED must be yes or no.'
     [[ "${AI_ENABLED:-no}" == yes || "${AI_ENABLED:-no}" == no ]] || fail 'AI_ENABLED must be yes or no.'
     [[ "${AI_MODEL:-llama3.2:3b}" =~ ^[a-zA-Z0-9][a-zA-Z0-9._:/-]{0,127}$ ]] || fail 'AI_MODEL must be an Ollama model name without whitespace.'
     [[ -z "${AI_REMOTE_OLLAMA_URL:-}" || "$AI_REMOTE_OLLAMA_URL" =~ ^http://127\.0\.0\.1:([1-9][0-9]{0,4})$ ]] || fail 'AI_REMOTE_OLLAMA_URL must be an HTTP localhost SSH-tunnel endpoint with an explicit port.'
@@ -278,14 +281,15 @@ write_environment() {
     RESTIC_PASSWORD="$(openssl rand -hex 24)"
     ALLOW_SHARED_MEDIA_BACKUP="${ALLOW_SHARED_MEDIA_BACKUP:-no}"
     TV_CIDR="${TV_CIDR:-}"
-    for key in DOMAIN EMAIL LAN_IP LAN_CIDR TV_CIDR MEDIA_MOUNT BACKUP_MOUNT ALLOW_SHARED_MEDIA_BACKUP KEEPASS_ENABLED FLUXER_ENABLED QBITTORRENT_ENABLED QBITTORRENT_VPN_ENABLED AI_ENABLED AI_MODEL AI_REMOTE_OLLAMA_URL NVIDIA_POWER_LIMIT_W NVIDIA_GPU_ID UPDATE_REPOSITORY ACME_CHALLENGE; do
+    COCKPIT_ENABLED="${COCKPIT_ENABLED:-yes}"
+    for key in DOMAIN EMAIL LAN_IP LAN_CIDR TV_CIDR COCKPIT_ENABLED MEDIA_MOUNT BACKUP_MOUNT ALLOW_SHARED_MEDIA_BACKUP KEEPASS_ENABLED FLUXER_ENABLED QBITTORRENT_ENABLED QBITTORRENT_VPN_ENABLED AI_ENABLED AI_MODEL AI_REMOTE_OLLAMA_URL NVIDIA_POWER_LIMIT_W NVIDIA_GPU_ID UPDATE_REPOSITORY ACME_CHALLENGE; do
         printf '%s=%s\n' "$key" "${!key}"
     done > "$destination/.env"
     printf 'DB_PASSWORD=%s\nNEXTCLOUD_ADMIN_PASSWORD=%s\nRESTIC_PASSWORD=%s\n' \
         "$DB_PASSWORD" "$NEXTCLOUD_ADMIN_PASSWORD" "$RESTIC_PASSWORD" >> "$destination/.env"
     chmod 600 "$destination/.env"
-    printf 'DOMAIN=%s\nFLUXER_ENABLED=%s\nQBITTORRENT_ENABLED=%s\nDESEC_TOKEN=%s\n' \
-        "$DOMAIN" "$FLUXER_ENABLED" "$QBITTORRENT_ENABLED" "$DESEC_TOKEN" > "$destination/private/ddns.env"
+    printf 'DOMAIN=%s\nFLUXER_ENABLED=%s\nQBITTORRENT_ENABLED=%s\nCOCKPIT_ENABLED=%s\nDESEC_TOKEN=%s\n' \
+        "$DOMAIN" "$FLUXER_ENABLED" "$QBITTORRENT_ENABLED" "$COCKPIT_ENABLED" "$DESEC_TOKEN" > "$destination/private/ddns.env"
     chmod 600 "$destination/private/ddns.env"
     if [[ "$ACME_CHALLENGE" == dns-desec ]]; then
         printf '%s\n' "$DESEC_TOKEN" > "$destination/private/desec-token"

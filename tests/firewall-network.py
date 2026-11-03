@@ -109,6 +109,9 @@ try:
         run("ip", "netns", "exec", namespace, "python3", "-c", CLIENT,
             source, target, str(port), protocol, expected)
 
+    check("den-backend", "172.30.44.2", "172.30.44.1", 9090)
+    check("den-client", "192.168.50.20", "172.30.44.1", 9090, expected="deny")
+    check("den-vpn-client", "10.44.0.2", "172.30.44.1", 9090, expected="deny")
     for port in [22, 80, 443, 9090, 7881, 18427]:
         check("den-client", "192.168.50.20", "192.168.50.58", port)
         check("den-client", "198.51.100.20", "192.168.50.58", port,

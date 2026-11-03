@@ -7,6 +7,7 @@ STATE_FILE="${1:?Usage: ddns-update.sh <state-file>}"
 : "${DESEC_TOKEN:?DESEC_TOKEN is required}"
 : "${FLUXER_ENABLED:=no}"
 : "${QBITTORRENT_ENABLED:=no}"
+: "${COCKPIT_ENABLED:=yes}"
 
 valid_ipv4() {
     local octet
@@ -33,6 +34,9 @@ if [[ "$FLUXER_ENABLED" == yes ]]; then
 fi
 if [[ "$QBITTORRENT_ENABLED" == yes ]]; then
     hostnames+=",downloads.$DOMAIN"
+fi
+if [[ "$COCKPIT_ENABLED" == yes ]]; then
+    hostnames+=",server.$DOMAIN"
 fi
 last_ip=''
 last_hostnames=''

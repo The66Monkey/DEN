@@ -28,6 +28,7 @@ jq -e '
     (.services.traefik.networks.home.ipv4_address == "172.30.44.2") and
     (.services.traefik.command | index("--providers.file.filename=/etc/traefik/routes.yml") != null) and
     (any(.services.traefik.volumes[]; .target == "/etc/traefik/routes.yml" and .read_only == true)) and
+    (any(.services.traefik.volumes[]; .target == "/etc/traefik/cockpit" and .read_only == true)) and
     (all(.services[]; .restart == "unless-stopped")) and
     (all(.services[]; .healthcheck != null)) and
     (all(.services[]; (.image | test(":(latest|release|stable)$") | not))) and
@@ -39,7 +40,7 @@ jq -e '
     (all(.services[] | .volumes[]? | select(.source | startswith("/srv/den/")); .bind.selinux == "z"))
 ' "$DEPLOY_DIR/rendered.json" >/dev/null
 jq -e '
-    (.http.routers | length == 6) and
+    (.http.routers | length == 7) and
     (all(.http.routers | to_entries[] | select(.key != "home-lan-ip");
         .value.tls.certResolver == "home" and .value.middlewares[0] == "private")) and
     (.http.routers["home-lan-ip"].rule == "Host(`192.168.1.10`)") and

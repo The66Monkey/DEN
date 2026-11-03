@@ -73,6 +73,7 @@ jq -e '
     (.services | keys) == ["dns", "edge"] and
     .networks.home.external == true and
     .services.edge.networks.home.ipv4_address == "172.30.44.2" and
+    (any(.services.edge.volumes[]; .target == "/etc/traefik/cockpit" and .read_only == true)) and
     (.services.edge.networks | has("dns")) and
     (.services.dns.networks | keys) == ["dns"] and
     ([.services.edge.ports[].published] == ["80", "443"]) and
@@ -81,4 +82,19 @@ jq -e '
     (all(.services[]; .image | test("@sha256:[a-f0-9]{64}$"))) and
     (all(.services[] | .volumes[]; (.source | contains("docker.sock") | not)))
 ' "$DEPLOY_DIR/infra.json" >/dev/null
+touch "$DEPLOY_DIR/private/external-edge"
+cp "$DEPLOY_DIR/.env" "$DEPLOY_DIR/private/infrastructure/.env"
+cockpit_prepare_infrastructure
+infrastructure_compose config --format json > "$DEPLOY_DIR/migrated.json"
+jq -e --arg path "$DEPLOY_DIR/private/cockpit" '
+    [.services.edge.volumes[] | select(.target == "/etc/traefik/cockpit")] |
+    length == 1 and .[0].source == $path and .[0].read_only == true
+' "$DEPLOY_DIR/migrated.json" >/dev/null
+cockpit_prepare_infrastructure
+cp "$DEPLOY_DIR/private/infrastructure/compose.yml" "$DEPLOY_DIR/good-compose"
+mkdir "$DEPLOY_DIR/bin"
+printf '#!/usr/bin/env bash\nexit 1\n' > "$DEPLOY_DIR/bin/docker"
+chmod +x "$DEPLOY_DIR/bin/docker"
+if PATH="$DEPLOY_DIR/bin:$PATH" cockpit_prepare_infrastructure 2>/dev/null; then fail 'Failed infrastructure render returned success.'; fi
+cmp "$DEPLOY_DIR/good-compose" "$DEPLOY_DIR/private/infrastructure/compose.yml"
 printf 'Independent infrastructure, exact custom routes, error preservation and private bindings passed.\n'

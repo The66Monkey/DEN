@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/cockpit.sh"
+
 install_media_codecs() {
     local fedora_version
     fedora_version="$(rpm -E %fedora)" || return 1
@@ -62,6 +64,13 @@ table inet den_guard {
     chain ingress {
         type filter hook prerouting priority -110; policy accept;
         iifname "lo" return
+EOF
+    if [[ "${COCKPIT_ENABLED:-yes}" == yes ]]; then
+        cat <<'EOF'
+        ip daddr 172.30.44.1 tcp dport 9090 ip saddr != 172.30.44.2 counter drop
+EOF
+    fi
+    cat <<EOF
         iifname "docker0" return
         iifname "br-*" return
         ct state invalid counter drop
@@ -197,6 +206,7 @@ configure_fedora_host() {
     firewall-cmd --permanent --zone=den-vpn --change-interface=wg0 || return 1
     configure_network_guard || return 1
     configure_tv_zone || return 1
+    cockpit_configure || return 1
     firewall-cmd --reload || return 1
 
     if semanage fcontext -l -C | grep -Fq '/opt/den/private/dnsmasq\.conf'; then

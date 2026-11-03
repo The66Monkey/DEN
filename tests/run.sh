@@ -7,6 +7,7 @@ for script in install.sh update.sh recover.sh bin/den bin/den-local lib/*.sh lib
 done
 shellcheck --severity=warning -x -P "$ROOT" install.sh update.sh recover.sh bin/den bin/den-local lib/*.sh lib/hosts/*.sh templates/*.sh templates/profile.d/*.sh tests/*.sh
 bash tests/config.sh
+bash tests/cockpit.sh
 python3 tests/setup-review.py
 bash tests/ai.sh
 bash tests/storage.sh
@@ -30,6 +31,12 @@ if command -v nft >/dev/null && unshare --user --map-root-user --mount --net tru
     unshare --user --map-root-user --mount --net bash tests/firewall-network.sh
 else
     printf 'Real network guard checks skipped: nftables or user/network namespaces unavailable.\n'
+fi
+if [[ -x /usr/libexec/cockpit-ws ]] && command -v ip >/dev/null &&
+    unshare --user --map-root-user --mount --net true 2>/dev/null; then
+    unshare --user --map-root-user --mount --net env DEN_ISOLATED_COCKPIT_TEST=yes python3 tests/cockpit-runtime.py
+else
+    printf 'Real Cockpit WebSocket checks skipped: Cockpit or isolated network namespaces unavailable.\n'
 fi
 bash tests/vpn.sh
 bash tests/keepass.sh

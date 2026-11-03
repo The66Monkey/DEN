@@ -33,6 +33,7 @@ services:
     volumes:
       - ${DEN_DEPLOY_DIR:-/opt/den}/routes.json:/etc/traefik/routes.yml:ro,z
       - ${DEN_DATA_DIR:-/srv/den}/traefik:/certificates:z
+      - ${DEN_DEPLOY_DIR:-/opt/den}/private/cockpit:/etc/traefik/cockpit:ro,z
       - ../desec-token:/run/secrets/desec-token:ro,z
     networks:
       home:
