@@ -29,14 +29,12 @@ cp "$DEPLOY_DIR/templates/compose.yml" "$DEPLOY_DIR/compose.yml"
 write_homepage
 write_routes
 write_vpn
-ai_prepare
 sync_keepass
 ln -sfn /opt/den/bin/den /usr/local/bin/den
 compose config --quiet
 compose pull
 initialize_backup
 install_host_config
-ai_install
 hostnamectl set-hostname "$SERVER_HOSTNAME" || fail "Could not set the server hostname to $SERVER_HOSTNAME."
 systemctl start den.service
 fluxer_install

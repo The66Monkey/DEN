@@ -147,10 +147,10 @@ Keep `home.DOMAIN` pointing to the public IP.
   use different mountpoints and leave `ALLOW_SHARED_MEDIA_BACKUP=no`.
 
 - [ ] Set optional services to `yes` or leave them `no`:
-  `QBITTORRENT_ENABLED`, `FLUXER_ENABLED`, `KEEPASS_ENABLED`, `AI_ENABLED`.
+  `QBITTORRENT_ENABLED`, `FLUXER_ENABLED`, `KEEPASS_ENABLED`.
   Fluxer is public when enabled, including when upgrading an existing install.
-  AI stays LAN/VPN-only; read [AI setup](ai.md) for model sizing, private DNS,
-  initial admin credentials and optional workstation inference.
+  AI, narration and optional GPU power policy belong to the separate
+  [DEN+ add-on](addons.md), not core settings.
 - [ ] Leave `TV_CIDR` empty for the normal home-LAN setup. For a separate TV
   Wi-Fi network with Jellyfin, follow the
   [TV network setup](networking.md#optional-balanced-iot-protection) after

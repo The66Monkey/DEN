@@ -22,7 +22,6 @@ grep -Fq 'requires independent AdGuard infrastructure' "$TEMP/error"
 touch "$DEPLOY_DIR/private/external-edge" "$DEPLOY_DIR/private/infrastructure/compose.yml"
 FLUXER_ENABLED=yes
 QBITTORRENT_ENABLED=yes
-AI_ENABLED=yes
 write_routes
 jq -e '
     .http.middlewares.private.ipAllowList.sourceRange == ["192.168.1.0/24", "10.44.0.0/24"] and
@@ -77,7 +76,6 @@ tv_setup
 jq -e '.http.middlewares["media-private"] == null and .http.routers.media.middlewares == ["private", "headers"]' "$DEPLOY_DIR/routes.json" >/dev/null
 FLUXER_ENABLED=no
 QBITTORRENT_ENABLED=no
-AI_ENABLED=no
 rm "$DEPLOY_DIR/private/external-edge" "$DEPLOY_DIR/private/infrastructure/compose.yml"
 write_routes
 cmp "$TEMP/default.json" "$DEPLOY_DIR/routes.json"

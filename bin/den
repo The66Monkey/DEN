@@ -21,8 +21,6 @@ Usage: sudo den <command>
   status                           Show service state and service URLs
   check                            Check services, VPN, backup age and disk
   logs [service]                   Show the last 100 log lines
-  ai-status                        Show local AI service and loaded GPU models
-  ai-setup                         Provision enabled AI after editing private settings
   tv-setup                         Apply saved isolated-TV DNS/Jellyfin access policy
   cockpit-setup                    Apply saved Cockpit integration and VPN DNS
   torrent-vpn <profile|wait|off>     Import outbound WireGuard, wait blocked, or explicitly use direct traffic
@@ -73,7 +71,7 @@ for secret in DB_PASSWORD NEXTCLOUD_ADMIN_PASSWORD RESTIC_PASSWORD; do
     [[ -n "${!secret:-}" ]] || fail "Missing deployment secret: $secret"
 done
 case "$ACTION" in
-    start|stop|status|check|backup|snapshots|verify-backup|prune|git-admin|keepass-password|keepass-sync|fluxer-status|fluxer-upgrade|auto-update|ai-status|ai-setup|tv-setup|cockpit-setup)
+    start|stop|status|check|backup|snapshots|verify-backup|prune|git-admin|keepass-password|keepass-sync|fluxer-status|fluxer-upgrade|auto-update|tv-setup|cockpit-setup)
         [[ $# == 0 ]] || fail "$ACTION takes no arguments."
         ;;
     logs) [[ $# -le 1 ]] || fail 'logs takes at most one service.' ;;
@@ -84,7 +82,7 @@ case "$ACTION" in
 esac
 case "$ACTION" in
     start) start_stack ;;
-    stop) compose stop --timeout 120; ai_stop ;;
+    stop) addon_hook stop; compose stop --timeout 120 ;;
     status)
         compose ps --all
         if [[ -f "$DEPLOY_DIR/private/external-edge" ]]; then infrastructure_compose ps --all; fi
@@ -111,8 +109,6 @@ case "$ACTION" in
     keepass-sync) keepass_sync_command ;;
     torrent-vpn) torrent_vpn "$1" ;;
     fluxer-status) fluxer_status ;;
-    ai-status) ai_status ;;
-    ai-setup) ai_setup ;;
     tv-setup) tv_setup ;;
     cockpit-setup) cockpit_setup ;;
     fluxer-upgrade) fluxer_upgrade ;;

@@ -1,8 +1,16 @@
 #!/usr/bin/env bash
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/torrent-vpn.sh"
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/ai.sh"
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/cockpit.sh"
+
+addon_hook() {
+    local hook="$DEPLOY_DIR/private/addon-hook"
+    [[ -e "$hook" || -L "$hook" ]] || return 0
+    [[ -f "$hook" && ! -L "$hook" && "$(stat -c %u "$hook")" == "$EUID" ]] ||
+        fail 'Add-on hook must be a regular file owned by the DEN administrator.'
+    (( (8#$(stat -c %a "$hook") & 022) == 0 )) || fail 'Add-on hook cannot be writable by group or others.'
+    bash "$hook" "$1"
+}
 
 compose() {
     local -a profiles=()
@@ -18,11 +26,14 @@ compose() {
     if [[ "${ACME_CHALLENGE:-http}" == dns-desec ]]; then
         files+=(-f "$DEPLOY_DIR/templates/compose.dns.yml")
     fi
-    if [[ "${AI_ENABLED:-no}" == yes ]]; then
-        files+=(-f "$DEPLOY_DIR/templates/compose.ai.yml")
-    fi
     if [[ -f "$DEPLOY_DIR/private/external-edge" ]]; then
         files+=(-f "$DEPLOY_DIR/templates/compose.external-edge.yml")
+    fi
+    if [[ -f "$DEPLOY_DIR/private/compose-custom.yml" ]]; then
+        files+=(-f "$DEPLOY_DIR/private/compose-custom.yml")
+    fi
+    if [[ -f "$DEPLOY_DIR/private/compose-addon.yml" ]]; then
+        files+=(-f "$DEPLOY_DIR/private/compose-addon.yml")
     fi
     env -i PATH="$PATH" HOME="${HOME:-/root}" docker compose \
         --project-name den --project-directory "$DEPLOY_DIR" \
@@ -117,7 +128,7 @@ write_homepage() {
     install -d -m 755 "$DEPLOY_DIR/home" || return 1
     install -m 644 "$DEPLOY_DIR/docs/images/mascot.png" "$DEPLOY_DIR/home/mascot.png" || return 1
     jq -nr --arg domain "$DOMAIN" --arg ip "$LAN_IP" \
-        --arg fluxer "${FLUXER_ENABLED:-no}" --arg torrents "${QBITTORRENT_ENABLED:-no}" --arg ai "${AI_ENABLED:-no}" --arg dns_admin "$dns_admin" --arg cockpit "${COCKPIT_ENABLED:-yes}" \
+        --arg fluxer "${FLUXER_ENABLED:-no}" --arg torrents "${QBITTORRENT_ENABLED:-no}" --arg dns_admin "$dns_admin" --arg cockpit "${COCKPIT_ENABLED:-yes}" \
         --rawfile template "$DEPLOY_DIR/templates/home.html" '
         ([
             {name: "media", label: "Media - Jellyfin"},
@@ -126,7 +137,6 @@ write_homepage() {
             {name: "git", label: "Git - Forgejo"}
         ] + (if $fluxer == "yes" then [{name: "chat", label: "Chat - Fluxer (public, invite-only)"}] else [] end)
           + (if $torrents == "yes" then [{name: "downloads", label: "Downloads - qBittorrent"}] else [] end)
-          + (if $ai == "yes" then [{name: "ai", label: "AI - Open WebUI"}] else [] end)
           + (if $dns_admin == "yes" then [{name: "dns", label: "DNS - AdGuard Home"}] else [] end)
           + (if $cockpit == "yes" then [{name: "server", label: "Server administration - Cockpit"}] else [] end)
         | map("<li><a href=\"https://" + (.name + "." + $domain | @html) + "/\">" + (.label | @html) + "</a></li>")
@@ -141,13 +151,13 @@ write_homepage() {
 }
 
 write_routes() {
-    local torrent_host=qbittorrent candidate merged dns_admin=no
+    local torrent_host=qbittorrent candidate merged custom dns_admin=no
     require_tv_infrastructure
     candidate="$(mktemp)" || return 1
     merged="$(mktemp)" || { rm -f "$candidate"; return 1; }
     if [[ "${QBITTORRENT_VPN_ENABLED:-no}" == yes ]]; then torrent_host=torrent-vpn; fi
     if [[ -f "$DEPLOY_DIR/private/external-edge" && -f "$DEPLOY_DIR/private/infrastructure/compose.yml" ]]; then dns_admin=yes; fi
-    jq -n --arg domain "$DOMAIN" --arg ip "$LAN_IP" --arg lan "$LAN_CIDR" --arg tv "${TV_CIDR:-}" --arg cockpit "${COCKPIT_ENABLED:-yes}" --arg fluxer "${FLUXER_ENABLED:-no}" --arg torrents "${QBITTORRENT_ENABLED:-no}" --arg ai "${AI_ENABLED:-no}" --arg dns_admin "$dns_admin" --arg ai_url "http://172.30.44.1:28413" --arg qbit "http://$torrent_host:$QBITTORRENT_WEBUI_PORT" --arg chat "http://172.30.44.1:$FLUXER_PROXY_PORT" '
+    jq -n --arg domain "$DOMAIN" --arg ip "$LAN_IP" --arg lan "$LAN_CIDR" --arg tv "${TV_CIDR:-}" --arg cockpit "${COCKPIT_ENABLED:-yes}" --arg fluxer "${FLUXER_ENABLED:-no}" --arg torrents "${QBITTORRENT_ENABLED:-no}" --arg dns_admin "$dns_admin" --arg qbit "http://$torrent_host:$QBITTORRENT_WEBUI_PORT" --arg chat "http://172.30.44.1:$FLUXER_PROXY_PORT" '
         {http: {
             middlewares: {
                 private: {ipAllowList: {sourceRange: [$lan, "10.44.0.0/24"]}},
@@ -161,7 +171,7 @@ write_routes() {
             serversTransports: (if $cockpit == "yes" then {
                 cockpit: {rootCAs: ["/etc/traefik/cockpit/ca.crt"], serverName: "den-cockpit"}
             } else {} end),
-            routers: (reduce (["home", "media", "photos", "files", "git"] + (if $fluxer == "yes" then ["chat"] else [] end) + (if $torrents == "yes" then ["downloads"] else [] end) + (if $ai == "yes" then ["ai"] else [] end) + (if $dns_admin == "yes" then ["dns"] else [] end) + (if $cockpit == "yes" then ["server"] else [] end))[] as $name ({};
+            routers: (reduce (["home", "media", "photos", "files", "git"] + (if $fluxer == "yes" then ["chat"] else [] end) + (if $torrents == "yes" then ["downloads"] else [] end) + (if $dns_admin == "yes" then ["dns"] else [] end) + (if $cockpit == "yes" then ["server"] else [] end))[] as $name ({};
                 .[$name] = {rule: ("Host(`" + (if $name == "chat" then "chat." else $name + "." end) + $domain + "`)") ,
                     entryPoints: ["websecure"], service: $name,
                     middlewares: ((if $name == "chat" then ["headers"] elif $name == "media" and $tv != "" then ["media-private", "headers"] else ["private", "headers"] end) + (if $name == "files" then ["dav"] else [] end)),
@@ -178,20 +188,19 @@ write_routes() {
                 git: {loadBalancer: {servers: [{url: "http://forgejo:3000"}]}}
             } + (if $fluxer == "yes" then {chat: {loadBalancer: {servers: [{url: $chat}]}}} else {} end)
               + (if $torrents == "yes" then {downloads: {loadBalancer: {servers: [{url: $qbit}]}}} else {} end))
-              + (if $ai == "yes" then {ai: {loadBalancer: {servers: [{url: $ai_url}]}}} else {} end)
               + (if $dns_admin == "yes" then {dns: {loadBalancer: {servers: [{url: "http://dns:3000"}]}}} else {} end)
               + (if $cockpit == "yes" then {server: {loadBalancer: {servers: [{url: "https://172.30.44.1:9090"}], serversTransport: "cockpit"}}} else {} end)
         }}' > "$candidate" || { rm -f "$candidate" "$merged"; return 1; }
-    if [[ -f "$DEPLOY_DIR/private/routes-custom.json" ]]; then
+    for custom in "$DEPLOY_DIR/private/routes-custom.json" "$DEPLOY_DIR/private/routes-addon.json"; do
+        [[ -f "$custom" ]] || continue
         if ! jq -s -e -f "$DEPLOY_DIR/templates/merge-routes.jq" \
-            "$candidate" "$DEPLOY_DIR/private/routes-custom.json" > "$merged"; then
+            "$candidate" "$custom" > "$merged"; then
             rm -f "$candidate" "$merged"
             return 1
         fi
-    else
-        cp "$candidate" "$merged" || { rm -f "$candidate" "$merged"; return 1; }
-    fi
-    cat "$merged" > "$DEPLOY_DIR/routes.json" || { rm -f "$candidate" "$merged"; return 1; }
+        cp "$merged" "$candidate" || { rm -f "$candidate" "$merged"; return 1; }
+    done
+    cat "$candidate" > "$DEPLOY_DIR/routes.json" || { rm -f "$candidate" "$merged"; return 1; }
     rm -f "$candidate" "$merged"
 }
 
@@ -213,7 +222,8 @@ prepare_storage() {
         mkdir -p "$DATA_DIR/$directory"
     done
     chmod 700 "$DATA_DIR/system" "$DATA_DIR/traefik"
-    chown 1000:1000 "$DATA_DIR/jellyfin" "$DATA_DIR/cache/jellyfin" "$DATA_DIR/media" "$DATA_DIR/media/"* "$DATA_DIR/forgejo"
+    chown 1000:1000 "$DATA_DIR/jellyfin" "$DATA_DIR/cache/jellyfin" "$DATA_DIR/media" \
+        "$DATA_DIR/media/movies" "$DATA_DIR/media/tv" "$DATA_DIR/media/music" "$DATA_DIR/forgejo"
     if [[ "${QBITTORRENT_ENABLED:-no}" == yes ]]; then
         mkdir -p "$DATA_DIR/qbittorrent" "$DATA_DIR/downloads/incomplete" "$DATA_DIR/downloads/complete"
         prepare_qbittorrent_config "$DATA_DIR/qbittorrent" "downloads.$DOMAIN"
@@ -349,14 +359,17 @@ EOF
     if [[ "${QBITTORRENT_ENABLED:-no}" == yes ]]; then
         printf 'host-record=downloads.%s,%s\n' "$DOMAIN" "$LAN_IP"
     fi
-    if [[ "${AI_ENABLED:-no}" == yes ]]; then
-        printf 'host-record=ai.%s,%s\n' "$DOMAIN" "$LAN_IP"
-    fi
     if [[ -f "$DEPLOY_DIR/private/external-edge" && -f "$DEPLOY_DIR/private/infrastructure/compose.yml" ]]; then
         printf 'host-record=dns.%s,%s\n' "$DOMAIN" "$LAN_IP"
     fi
     if [[ "${COCKPIT_ENABLED:-yes}" == yes ]]; then
         printf 'host-record=server.%s,%s\n' "$DOMAIN" "$LAN_IP"
+    fi
+    if [[ -f "$DEPLOY_DIR/private/dns-custom.conf" ]]; then
+        cat "$DEPLOY_DIR/private/dns-custom.conf" || return 1
+    fi
+    if [[ -f "$DEPLOY_DIR/private/dns-addon.conf" ]]; then
+        cat "$DEPLOY_DIR/private/dns-addon.conf" || return 1
     fi
 }
 
@@ -371,13 +384,12 @@ install_host_config() {
     systemctl daemon-reload
     systemctl enable --now wg-quick@wg0 den-dns
     systemctl enable den.service
-    configure_nvidia_power || return 1
     systemctl enable --now den-ddns.timer
 }
 
 start_stack() {
     local -a services=()
-    ai_start || return 1
+    addon_hook prepare || return 1
     if [[ "${QBITTORRENT_VPN_ENABLED:-no}" == yes ]] && ! torrent_vpn_profile_ready; then
         log 'Torrent VPN profile is missing: qBittorrent remains stopped. Import it with den torrent-vpn /absolute/path.conf.'
         compose stop --timeout 120 qbittorrent torrent-vpn || return 1
@@ -385,7 +397,8 @@ start_stack() {
         [[ ${#services[@]} -gt 0 ]] || fail 'Could not identify services to start without the torrent VPN.'
     fi
     compose up -d --wait --wait-timeout 900 "${services[@]}" || return 1
-    compose exec -T -u www-data nextcloud php occ background:cron
+    compose exec -T -u www-data nextcloud php occ background:cron || return 1
+    addon_hook start
 }
 
 show_summary() {
@@ -410,10 +423,6 @@ show_summary() {
     fi
     if [[ "${KEEPASS_ENABLED:-no}" == yes ]]; then
         printf 'KeePass vault: /opt/den/vaults/admin/credentials.kdbx; retrieve its password separately with: sudo den keepass-password\n'
-    fi
-    if [[ "${AI_ENABLED:-no}" == yes ]]; then
-        printf 'AI: https://ai.%s (LAN/VPN only; select DEN or optional workstation model).\n' "$DOMAIN"
-        printf 'Initial AI login: EMAIL from .env; password in /opt/den/private/ai-webui.env. Change it in WebUI.\n'
     fi
     if [[ "${FLUXER_ENABLED:-no}" == yes ]]; then
         printf 'Fluxer: https://chat.%s (PUBLIC chat/calls; registration by invite).\n' "$DOMAIN"

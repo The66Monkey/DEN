@@ -5,6 +5,7 @@ source "$ROOT/lib/core.sh"
 source "$ROOT/lib/fluxer.sh"
 source "$ROOT/lib/backup.sh"
 source "$ROOT/lib/maintenance.sh"
+addon_hook() { :; }
 TEMP="$(mktemp -d)"
 trap 'rm -rf "$TEMP"' EXIT
 DEPLOY_DIR="$TEMP/deployment"
@@ -113,31 +114,32 @@ for target in "$MEDIA_MOUNT/den/media/new" "$MEDIA_MOUNT/den/downloads/new"; do
     if grep -Fq 'restic restore' "$CALLS"; then fail 'Live HDD restore target reached Restic.'; fi
 done
 MEDIA_MOUNT=
-AI_ENABLED=yes
-AI_STATE=active
-systemctl() { [[ "$*" == 'is-active den-ai-ollama.service' ]]; printf '%s\n' "$AI_STATE"; [[ "$AI_STATE" == active ]]; }
-ai_start() { printf 'ai-start\n' >> "$CALLS"; }
-ai_stop() { printf 'ai-stop\n' >> "$CALLS"; [[ "${FAIL_AI_STOP:-no}" != yes ]]; }
+addon_hook() {
+    printf 'addon %s\n' "$1" >> "$CALLS"
+    case "$1" in
+        before-backup) [[ "${FAIL_ADDON_STOP:-no}" != yes ]] ;;
+        after-backup) [[ "${FAIL_ADDON_START:-no}" != yes ]] ;;
+    esac
+}
 : > "$CALLS"
 backup_stack
-grep -Fxq ai-stop "$CALLS"
-grep -Fxq ai-start "$CALLS"
-[[ "$(grep -n '^ai-stop$' "$CALLS" | cut -d: -f1)" -lt "$(grep -n '^restic backup ' "$CALLS" | cut -d: -f1)" ]]
+grep -Fxq 'addon before-backup' "$CALLS"
+grep -Fxq 'addon after-backup' "$CALLS"
+[[ "$(grep -n '^addon before-backup$' "$CALLS" | cut -d: -f1)" -lt "$(grep -n '^restic backup ' "$CALLS" | cut -d: -f1)" ]]
 FAIL_BACKUP=true
 : > "$CALLS"
-if backup_stack; then fail 'Failed AI backup returned success.'; fi
-grep -Fxq ai-start "$CALLS"
+if backup_stack; then fail 'Failed add-on backup returned success.'; fi
+grep -Fxq 'addon after-backup' "$CALLS"
 FAIL_BACKUP=false
 : > "$CALLS"
-if FAIL_AI_STOP=yes backup_stack; then fail 'Snapshot succeeded while Ollama stop failed.'; fi
+if FAIL_ADDON_STOP=yes backup_stack; then fail 'Snapshot succeeded while add-on stop failed.'; fi
 ! grep -Fq 'restic backup ' "$CALLS"
-grep -Fxq ai-start "$CALLS"
-AI_STATE=inactive
+grep -Fxq 'addon after-backup' "$CALLS"
 : > "$CALLS"
+if FAIL_ADDON_START=yes backup_stack; then fail 'Failed add-on restoration returned success.'; fi
+printf '%s/cache/extra\n' "$DATA_DIR" > "$DEPLOY_DIR/private/backup-excludes"
 backup_stack
-! grep -Fq 'ai-start' "$CALLS"
-! grep -Fq 'ai-stop' "$CALLS"
-AI_ENABLED=no
+grep -Fq -- "--exclude-file $DEPLOY_DIR/private/backup-excludes" "$CALLS"
 mv "$BACKUP_MOUNT" "$TEMP/unmounted"
 : > "$CALLS"
 if backup_stack; then fail 'Unmounted backup disk accepted.'; fi

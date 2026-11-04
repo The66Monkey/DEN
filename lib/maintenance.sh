@@ -62,7 +62,7 @@ health_check() {
     systemctl is-active --quiet den-firewall || fail 'DEN network guard is down.'
     nft list table inet den_guard >/dev/null || fail 'DEN network guard rules are missing.'
     fluxer_health_check
-    if [[ "${AI_ENABLED:-no}" == yes ]]; then ai_health_check || return 1; fi
+    addon_hook check || return 1
     ensure_backup_mount
     snapshots="$(restic_cmd snapshots --host den --tag den-v1 --json)"
     newest="$(jq -r 'sort_by(.time) | last | .time // empty' <<< "$snapshots")"
@@ -98,13 +98,19 @@ update_release() (
         install -d -m 700 "$stage/private" || return 1
         cp "$DEPLOY_DIR/private/external-edge" "$stage/private/" || return 1
     fi
-    if [[ "${AI_ENABLED:-no}" == yes ]]; then
-        ai_prepare || return 1
-        install -d -m 700 "$stage/private" || return 1
-        cp "$DEPLOY_DIR/private/ai-webui.env" "$stage/private/" || return 1
-    fi
+    local overlay
+    for overlay in compose-custom.yml compose-addon.yml; do
+        if [[ -f "$DEPLOY_DIR/private/$overlay" ]]; then
+            install -d -m 700 "$stage/private" || return 1
+            cp "$DEPLOY_DIR/private/$overlay" "$stage/private/" || return 1
+        fi
+    done
     cp "$stage/templates/compose.yml" "$stage/compose.yml" || return 1
     cp "$DEPLOY_DIR/routes.json" "$stage/routes.json" || return 1
+    if [[ -f "$DEPLOY_DIR/private/addon-hook" ]]; then
+        grep -Fq 'addon_hook prepare' "$stage/lib/deploy.sh" ||
+            fail 'Candidate release lacks installed add-on lifecycle support.'
+    fi
     old_major="$(compose config --format json | jq -r '.services.nextcloud.image | split(":")[1] | split(".")[0] | tonumber')" || return 1
     new_major="$(DEPLOY_DIR="$stage" compose config --format json | jq -r '.services.nextcloud.image | split(":")[1] | split(".")[0] | tonumber')" || return 1
     (( new_major >= old_major && new_major <= old_major + 1 )) || fail 'Nextcloud requires sequential major upgrades; downgrades are not supported.'
@@ -143,10 +149,6 @@ update_release() (
     fi
     write_homepage || return 1
     write_routes || return 1
-    configure_nvidia_power || return 1
-    if [[ "${AI_ENABLED:-no}" == yes ]]; then
-        ai_install || return 1
-    fi
     configure_fedora_host || return 1
     fluxer_configure_public_voice || return 1
     if ! start_stack; then

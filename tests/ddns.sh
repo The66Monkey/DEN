@@ -23,14 +23,12 @@ export DOMAIN=scandinavianhacking.dedyn.io
 export DESEC_TOKEN=abcdefghijklmnopqrstuvwxyz12
 export FLUXER_ENABLED=yes
 export QBITTORRENT_ENABLED=yes
-export AI_ENABLED=yes
 STATE_FILE="$TEMP/state/last-ip"
 
 bash "$ROOT/templates/ddns-update.sh" "$STATE_FILE"
 grep -Fq 'hostname=vpn.scandinavianhacking.dedyn.io,home.scandinavianhacking.dedyn.io,media.scandinavianhacking.dedyn.io,photos.scandinavianhacking.dedyn.io,files.scandinavianhacking.dedyn.io,git.scandinavianhacking.dedyn.io,chat.scandinavianhacking.dedyn.io' "$DDNS_REQUEST_LOG"
 grep -Fq ',downloads.scandinavianhacking.dedyn.io,server.scandinavianhacking.dedyn.io&myipv4=' "$DDNS_REQUEST_LOG"
 ! grep -Fq 'hostname=scandinavianhacking.dedyn.io' "$DDNS_REQUEST_LOG"
-! grep -Fq "ai.$DOMAIN" "$DDNS_REQUEST_LOG"
 ! grep -Fq "dns.$DOMAIN" "$DDNS_REQUEST_LOG"
 grep -Fxq 'header = "Authorization: Token abcdefghijklmnopqrstuvwxyz12"' "$DDNS_CURL_CONFIG"
 [[ "$(head -1 "$STATE_FILE")" == "$DDNS_TEST_IP" ]]

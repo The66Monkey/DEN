@@ -122,10 +122,10 @@ In the router's local DNS settings, point each enabled app name to DEN's
 ```
 
 Keep `vpn.example.net` pointing to the **public IP** in every resolver.
-Optional AI uses `ai.example.net`; add an exact LAN rewrite to DEN's LAN IP.
-Its VPN DNS and private HTTPS route are generated when `AI_ENABLED=yes`.
-With DNS-challenge certificates, AI does not need a public A/AAAA record and is
-not added to DDNS. See [AI networking and GPU setup](ai.md).
+Separately installed applications manage their own exact LAN DNS rewrites,
+private routes and certificate prerequisites. Core DDNS only manages core app
+names. See [add-on integration](addons.md); never make an extra application
+public by broadening the core LAN/VPN allowlist.
 The installer and `vpn-add` now generate `vpn.DOMAIN` endpoints. Existing device
 profiles using `home.DOMAIN` must be edited before adding a private `home` rewrite:
 replace only the endpoint hostname, preserving the port, keys and AllowedIPs.

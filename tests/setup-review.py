@@ -122,7 +122,7 @@ with tempfile.TemporaryDirectory() as temporary:
 
     enabled = original.replace("MEDIA_MOUNT=/mnt/den-storage", "MEDIA_MOUNT=/mnt/den-backup")
     for key in ("ALLOW_SHARED_MEDIA_BACKUP", "KEEPASS_ENABLED", "FLUXER_ENABLED",
-                "QBITTORRENT_ENABLED", "AI_ENABLED"):
+                "QBITTORRENT_ENABLED"):
         enabled = enabled.replace(f"{key}=no", f"{key}=yes")
     for protected in ("no", "yes"):
         settings.write_text(enabled.replace(
@@ -134,7 +134,6 @@ with tempfile.TemporaryDirectory() as temporary:
         )
         assert "WARNING: shared media/backup storage" in result.stdout
         assert "PUBLIC chat/calls" in result.stdout
-        assert "AI model: llama3.2:3b" in result.stdout
         expected = ("downloads stay blocked" if protected == "yes"
                     else "trackers and peers see your normal public IP")
         assert expected in result.stdout

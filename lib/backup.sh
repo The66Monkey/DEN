@@ -33,12 +33,8 @@ backup_stack() (
     fi
     fluxer_backup || exit 1
     restic_cmd snapshots >/dev/null || exit 1
-    local -a running=() other_services=()
-    local result=0 stopped=false running_services active ai_running=false
-    if [[ "${AI_ENABLED:-no}" == yes ]]; then
-        active="$(systemctl is-active den-ai-ollama.service)" || [[ "$active" == inactive ]] || exit 1
-        if [[ "$active" == active ]]; then ai_running=true; fi
-    fi
+    local -a running=() other_services=() excludes=()
+    local result=0 stopped=false running_services active addon_paused=false
     running_services="$(compose ps --status running --services)" || exit 1
     if [[ -n "$running_services" ]]; then
         mapfile -t running <<< "$running_services"
@@ -46,9 +42,6 @@ backup_stack() (
     cleanup_backup() {
         result=$?
         trap - EXIT INT TERM
-        if [[ "$ai_running" == true ]]; then
-            ai_start || result=1
-        fi
         if [[ "$stopped" == true && ${#running[@]} -gt 0 ]]; then
             if [[ "${QBITTORRENT_VPN_ENABLED:-no}" == yes ]] &&
                 [[ " ${running[*]} " == *" qbittorrent "* ]]; then
@@ -64,19 +57,24 @@ backup_stack() (
                 compose start --wait --wait-timeout 900 "${running[@]}" || result=1
             fi
         fi
+        if [[ "$addon_paused" == true ]]; then addon_hook after-backup || result=1; fi
         exit "$result"
     }
     trap cleanup_backup EXIT
     trap 'exit 130' INT
     trap 'exit 143' TERM
+    addon_paused=true
+    addon_hook before-backup || exit 1
+    if [[ -f "$DEPLOY_DIR/private/backup-excludes" ]]; then
+        excludes=(--exclude-file "$DEPLOY_DIR/private/backup-excludes")
+    fi
     mkdir -p "$DATA_DIR/system/deployment" || exit 1
     cp -a "$DEPLOY_DIR/." "$DATA_DIR/system/deployment/" || exit 1
     stopped=true
     compose stop --timeout 120 || exit 1
     active="$(compose ps --status running -q)" || exit 1
     [[ -z "$active" ]] || fail 'Containers are still running; no snapshot was taken.'
-    if [[ "$ai_running" == true ]]; then ai_stop || exit 1; fi
-    restic_cmd backup --host den --tag den-v1 --exclude "$DATA_DIR/cache" \
+    restic_cmd backup --host den --tag den-v1 --exclude "$DATA_DIR/cache" "${excludes[@]}" \
         --exclude "$DATA_DIR/infrastructure/adguard/work" "$DATA_DIR"
 )
 

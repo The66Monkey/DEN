@@ -196,7 +196,11 @@ Do not delete data folders or Docker volumes to fix an error.
 For disk space and saved snapshots, see [backup and recovery](backup.md).
 Release maintainers: see [update contracts](architecture.md#release-updates).
 
-## Optional AI
+## Separate add-ons
 
-See [private AI operations](ai.md) for `sudo den ai-setup`, `sudo den ai-status`,
-model unload, workstation SSH tunnels and lab migration.
+AI chat, narration and their GPU power policy are maintained in the private
+[DEN+ repository](https://git.scandinavianhacking.dedyn.io/The66Monkey/DEN-plus), with a separate
+`den-plus` command and settings. Core DEN neither provisions them nor accepts
+their configuration keys. See [add-on integration](addons.md) for lifecycle
+and backup contracts. Do not update an older enhanced server without following
+DEN+'s migration guide first.

@@ -110,22 +110,12 @@ import a real profile, verify provider egress/peer IP, private Web UI access,
 DNS through the tunnel, fail-closed behavior on tunnel loss, backup/restart and
 host reboot. Do not publish profiles or raw provider logs.
 
-### Optional AI
+### Separate add-ons
 
-`tests/ai.sh` covers opt-in defaults, invalid configuration, stable private
-admin/session secrets, local-only and dual-backend Compose rendering, private
-hostname/homepage/VPN DNS.
-Backup/update tests cover local Ollama quiescing, prior-state restoration,
-provisioning order and failure gates. DDNS tests assert that AI does not add a
-public record.
-
-On a spare Fedora host, additionally verify first-admin creation with signups
-disabled, real GPU generation and reported processor, model selection with the
-workstation disconnected, trusted `ai.` HTTPS and LAN/VPN DNS, denial from
-outside the allowlist. Test service
-recreation and a host reboot separately; an enabled timer is not evidence that
-a reboot was performed. Keep any existing lab database/secret out of disposable
-test containers. Do not expose Ollama to test connectivity.
+`tests/addons.sh` checks optional lifecycle dispatch, hook permissions,
+custom/add-on route conflict checks and DNS fragments. Backup/update tests
+exercise add-on quiescing, failure propagation and candidate compatibility.
+AI/narration/GPU checks belong to the separate DEN+ repository, not core DEN.
 
 ## One-Command Local Test Stack
 

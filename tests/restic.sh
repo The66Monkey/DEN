@@ -2,6 +2,7 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$ROOT/lib/core.sh"
+source "$ROOT/lib/deploy.sh"
 source "$ROOT/lib/fluxer.sh"
 source "$ROOT/lib/backup.sh"
 TEMP="$(mktemp -d)"
@@ -18,6 +19,9 @@ QBITTORRENT_ENABLED=yes
 write_environment "$DEPLOY_DIR"
 printf 'family media\n' > "$DATA_DIR/media/movie with spaces.txt"
 printf 'regenerable cache\n' > "$DATA_DIR/cache/model"
+mkdir -p "$DATA_DIR/media/.addon-work"
+printf 'temporary add-on work\n' > "$DATA_DIR/media/.addon-work/temporary"
+printf '%s/media/.addon-work\n' "$DATA_DIR" > "$DEPLOY_DIR/private/backup-excludes"
 mkdir -p "$DATA_DIR/qbittorrent/qBittorrent" "$DATA_DIR/downloads/complete" "$DATA_DIR/downloads/incomplete"
 printf 'saved torrent preferences and password hash\n' > "$DATA_DIR/qbittorrent/qBittorrent/qBittorrent.conf"
 chmod 600 "$DATA_DIR/qbittorrent/qBittorrent/qBittorrent.conf"
@@ -43,6 +47,7 @@ cmp "$DEPLOY_DIR/.env" "$TEMP/restored$DATA_DIR/system/deployment/.env"
 [[ "$(stat -c %a "$TEMP/restored$DATA_DIR/system/deployment/.env")" == 600 ]]
 grep -Fxq 'QBITTORRENT_ENABLED=yes' "$TEMP/restored$DATA_DIR/system/deployment/.env"
 [[ ! -e "$TEMP/restored$DATA_DIR/cache/model" ]]
+[[ ! -e "$TEMP/restored$DATA_DIR/media/.addon-work/temporary" ]]
 for path in qbittorrent/qBittorrent/qBittorrent.conf downloads/complete/fixture downloads/incomplete/fixture.part; do
     cmp "$DATA_DIR/$path" "$TEMP/restored$DATA_DIR/$path"
 done

@@ -9,7 +9,7 @@ shellcheck --severity=warning -x -P "$ROOT" install.sh update.sh recover.sh bin/
 bash tests/config.sh
 bash tests/cockpit.sh
 python3 tests/setup-review.py
-bash tests/ai.sh
+bash tests/addons.sh
 bash tests/storage.sh
 bash tests/ddns.sh
 bash tests/firewall.sh

@@ -42,9 +42,6 @@ install_packages() {
         docker-compose-plugin container-selinux firewalld restic wireguard-tools qrencode \
         dnsmasq iptables-nft nftables jq openssl curl ca-certificates \
         policycoreutils-python-utils git dnf5-plugins pciutils
-    if [[ "${AI_ENABLED:-no}" == yes ]]; then
-        dnf install -y zstd || return 1
-    fi
     install_media_codecs || return 1
     check_nvidia_driver || return 1
     if [[ "$KEEPASS_ENABLED" == yes ]]; then

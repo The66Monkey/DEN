@@ -23,9 +23,14 @@ Use the apps from your phone or computer; no desktop is needed on the server.
   SSH instructions and this README.
 
 **Optional:** qBittorrent with a separate torrent-only provider VPN, Fluxer for
-chat and calls, a KeePassXC-compatible password vault, and
-[private AI chat](docs/ai.md) with Open WebUI, DEN-local Ollama and an optional
-workstation GPU backend.
+chat and calls, and a KeePassXC-compatible password vault.
+
+AI chat, workstation inference, ebook narration and AI-specific GPU power
+management live in the separate
+[DEN+ add-on repository](https://git.scandinavianhacking.dedyn.io/The66Monkey/DEN-plus).
+They are not part of the core DEN installation. Existing enhanced installations
+must follow the add-on migration guide before updating; this repository split
+does not migrate or stop a running server.
 
 For a host sharing its public IP with a VM, use the optional
 [independent DNS and shared edge topology](docs/infrastructure.md): infrastructure
@@ -59,8 +64,8 @@ topics and are ordered from common tasks to technical details:
     protect credentials, profiles and recovery kits.
 7. [Password vault sharing](docs/keepass-sharing.md) — manage separate
     administrator, family and personal vault access.
-8. [Optional private AI](docs/ai.md) — set up local AI chat and optional
-    workstation GPU support.
+8. [Add-on integration](docs/addons.md) — lifecycle, backup and private
+    configuration contracts for separately installed extensions.
 9. [Independent DNS and shared HTTPS edge](docs/infrastructure.md) — host
     DNS and route web traffic when DEN shares a public IP with another server.
 10. [Technical reference](docs/architecture.md) — review DEN's components,
@@ -68,7 +73,7 @@ topics and are ordered from common tasks to technical details:
 11. [Testing and validation](docs/testing.md) — see validation status and run
     contributor checks.
 
-**Version 1.1.0 — optional private AI.** Deployed and
+**Version 1.2.0 — focused core with separate add-ons.** Deployed and
 tested on bare-metal Fedora Server. See [validation status](docs/testing.md#validation-status) for
 what was checked and what remains.
 For contributors, see the [technical reference](docs/architecture.md) and
