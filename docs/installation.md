@@ -235,7 +235,7 @@ Complete only the services you enabled:
 | [ ] | Jellyfin | `https://media.DOMAIN` | Create admin; add `/media/movies`, `/media/tv` or `/media/music`. |
 | [ ] | Immich | `https://photos.DOMAIN` | Create admin; connect the mobile app for photo uploads. |
 | [ ] | Nextcloud | `https://files.DOMAIN` | Sign in as `admin` with the password below. |
-| [ ] | Forgejo | `https://git.DOMAIN` | Run `sudo den git-admin` over SSH, then use HTTPS Git. |
+| [ ] | Forgejo | `https://git.DOMAIN` | Run `sudo den git-admin` over SSH, then use HTTPS Git. Optional private Git SSH is documented in [operations](operations.md#forgejo-git-access). |
 | [ ] | qBittorrent | `https://downloads.DOMAIN` | Sign in as `admin`; get temporary password below and set a permanent one. For torrent-only protection, [upload a provider WireGuard profile](qbittorrent.md#optional-torrent-vpn). |
 | [ ] | Fluxer | `https://chat.DOMAIN` | Public chat/calls. Use setup token below to create admin; registration is invite-only. |
 

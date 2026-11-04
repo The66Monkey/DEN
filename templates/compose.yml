@@ -223,6 +223,7 @@ services:
       FORGEJO__database__DB_TYPE: sqlite3
       FORGEJO__server__DOMAIN: git.${DOMAIN:?required}
       FORGEJO__server__ROOT_URL: https://git.${DOMAIN:?required}/
+      FORGEJO__server__SSH_DOMAIN: git.${DOMAIN:?required}
       FORGEJO__server__DISABLE_SSH: 'true'
       FORGEJO__service__DISABLE_REGISTRATION: 'true'
       FORGEJO__security__INSTALL_LOCK: 'true'

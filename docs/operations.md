@@ -15,6 +15,100 @@ DEN checks health hourly. Problems appear in the system journal and may show
 on SSH login; there are no email or phone alerts.
 If another operation is running, wait for it to finish.
 
+## Forgejo Git access
+
+DEN defaults to **HTTPS Git**, with Forgejo SSH disabled and no Git SSH port
+published. Create the first account with `sudo den git-admin`, then copy the
+HTTPS clone URL from the repository. For HTTPS pushes, use a Forgejo access
+token through your Git credential manager; do not put tokens in clone URLs,
+shell history or project files.
+
+The host's port 22 is Fedora administration, not Forgejo. Adding a key under
+Forgejo **Settings > SSH / GPG Keys** does not by itself enable Git SSH.
+When SSH is enabled, DEN advertises `git.YOUR-DOMAIN`, not `localhost`; the
+advertised hostname alone does not provide a network path into the container.
+
+### Optional Git SSH through an existing administrative connection
+
+An administrator can opt in without publishing another port. Merge this into
+`/opt/den/private/compose-custom.yml` (create it root-owned, mode 0600 if absent;
+preserve any existing settings):
+
+```yaml
+services:
+  forgejo:
+    environment:
+      FORGEJO__server__DISABLE_SSH: 'false'
+```
+
+Validate the complete composition and recreate **only Forgejo** during a brief
+maintenance window. Use the same Compose files as the deployment: base
+`/opt/den/compose.yml`, the DNS/external-edge overlays if enabled, and all
+existing private custom/add-on overlays. For an otherwise standard deployment:
+
+```bash
+sudo docker compose --project-name den --project-directory /opt/den \
+  --env-file /opt/den/.env -f /opt/den/compose.yml \
+  -f /opt/den/private/compose-custom.yml config --quiet
+sudo docker compose --project-name den --project-directory /opt/den \
+  --env-file /opt/den/.env -f /opt/den/compose.yml \
+  -f /opt/den/private/compose-custom.yml up -d --no-deps forgejo
+```
+
+Do not edit generated `/opt/den/compose.yml` for persistent customization.
+The private override is retained and validated during DEN updates, and included
+in deployment backups. This opt-in does not require BASM, another VM, or a
+shared public edge.
+
+Register the workstation's **public** key in Forgejo. Never upload its private
+key. An SSH-capable workstation can then use a private `~/.ssh/config` alias
+like the following, replacing the uppercase placeholders locally:
+
+```sshconfig
+Host den-git
+  HostName git.YOUR-DOMAIN
+  User git
+  IdentityFile ~/.ssh/id_ed25519
+  IdentitiesOnly yes
+  HostKeyAlias den-forgejo
+  UserKnownHostsFile ~/.ssh/known_hosts_den_forgejo
+  StrictHostKeyChecking yes
+  ProxyCommand ssh -o BatchMode=yes -o StrictHostKeyChecking=yes ADMIN@DEN-HOST sudo -n docker compose --project-name den --project-directory /opt/den --env-file /opt/den/.env -f /opt/den/compose.yml exec -T forgejo nc 127.0.0.1 22
+```
+
+This uses two separate authentications: the outer connection is to DEN's
+administrator account; the inner connection authenticates the workstation key
+to Forgejo. It does not forward the SSH agent. It requires a working noninteractive
+administrative SSH connection and permission to execute the shown Docker command.
+Docker access is root-equivalent; do not grant it to ordinary Git users just
+to enable this method. Other users should use HTTPS or a separately designed
+restricted SSH transport.
+
+After verifying DEN's host key through a trusted channel, obtain the container's
+public SSH host key over that administrative connection:
+
+```bash
+sudo docker compose --project-name den --project-directory /opt/den \
+  --env-file /opt/den/.env -f /opt/den/compose.yml \
+  exec -T forgejo cat /data/ssh/ssh_host_ed25519_key.pub
+```
+
+On the workstation, put its algorithm and key after `den-forgejo` in
+`~/.ssh/known_hosts_den_forgejo`, for example
+`den-forgejo ssh-ed25519 VERIFIED-PUBLIC-HOST-KEY`, and make the file mode 0600.
+Do not disable host-key checking or accept an unverified scan. Then verify:
+
+```bash
+ssh -T den-git
+git ls-remote git@den-git:OWNER/REPOSITORY.git
+```
+
+Forgejo's greeting identifies the registered user/key and says shell access is
+unavailable; Git operations should work. A copied web-interface SSH URL does
+not include this local alias: use `git@den-git:OWNER/REPOSITORY.git` on this
+workstation. Keep actual hostnames, addresses, usernames, keys and SSH aliases
+in private operator configuration, never the public DEN repository.
+
 ## Cockpit administration
 
 Open **Server administration - Cockpit** on the home page, or

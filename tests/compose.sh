@@ -35,6 +35,9 @@ jq -e '
     (all(.services[]; .image | test("@sha256:[a-f0-9]{64}$"))) and
     (.services["immich-server"].image | split("@")[0] | endswith(":v3.3.5")) and
     (.services.nextcloud.environment.TRUSTED_PROXIES == "172.30.44.2") and
+    (.services.forgejo.environment.FORGEJO__server__SSH_DOMAIN == "git.home.example.net") and
+    (.services.forgejo.environment.FORGEJO__server__DISABLE_SSH == "true") and
+    (.services.forgejo.ports == null) and
     (all(.services[] | .volumes[]?; (.source | contains("docker.sock") | not))) and
     (all(.services[] | .volumes[]?; .type == "bind")) and
     (all(.services[] | .volumes[]? | select(.source | startswith("/srv/den/")); .bind.selinux == "z"))
@@ -77,4 +80,34 @@ jq -s -e '
     (.[0].services.traefik.command | map(select(contains("httpchallenge") | not))) ==
     (.[1].services.traefik.command | map(select(contains("dnschallenge") | not)))
 ' "$DEPLOY_DIR/rendered.json" "$DEPLOY_DIR/dns.json" >/dev/null
+mkdir -p "$DEPLOY_DIR/private"
+cat > "$DEPLOY_DIR/private/compose-custom.yml" <<'EOF'
+services:
+  forgejo:
+    environment:
+      FORGEJO__server__DISABLE_SSH: 'false'
+EOF
+if [[ -n "${COMPOSE_BIN:-}" ]]; then
+    "$COMPOSE_BIN" --env-file "$DEPLOY_DIR/.env" -f "$DEPLOY_DIR/compose.yml" \
+        -f "$DEPLOY_DIR/templates/compose.dns.yml" \
+        -f "$DEPLOY_DIR/private/compose-custom.yml" config --format json > "$DEPLOY_DIR/ssh.json"
+else
+    ACME_CHALLENGE=dns-desec compose config --format json > "$DEPLOY_DIR/ssh.json"
+fi
+jq -e '
+    (.services.forgejo.environment.FORGEJO__server__DISABLE_SSH == "false") and
+    (.services.forgejo.environment.FORGEJO__server__SSH_DOMAIN == "git.home.example.net") and
+    (.services.forgejo.ports == null) and
+    ([.services | to_entries[] | select(.value.ports != null) | .key] == ["traefik"])
+' "$DEPLOY_DIR/ssh.json" >/dev/null
+# The operator override must still apply after replacing generated Compose.
+cp "$ROOT/templates/compose.yml" "$DEPLOY_DIR/compose.yml"
+if [[ -n "${COMPOSE_BIN:-}" ]]; then
+    "$COMPOSE_BIN" --env-file "$DEPLOY_DIR/.env" -f "$DEPLOY_DIR/compose.yml" \
+        -f "$DEPLOY_DIR/templates/compose.dns.yml" \
+        -f "$DEPLOY_DIR/private/compose-custom.yml" config --format json > "$DEPLOY_DIR/ssh-regenerated.json"
+else
+    ACME_CHALLENGE=dns-desec compose config --format json > "$DEPLOY_DIR/ssh-regenerated.json"
+fi
+cmp "$DEPLOY_DIR/ssh.json" "$DEPLOY_DIR/ssh-regenerated.json"
 printf 'Compose, storage, routing and private-access checks passed.\n'

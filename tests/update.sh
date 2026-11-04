@@ -32,6 +32,10 @@ compose() {
     printf 'compose %s\n' "$*" >> "$CALLS"
     case "$*" in
         'config --format json')
+            if [[ -f "$TEMP/live/private/compose-custom.yml" ]]; then
+                cmp "$TEMP/live/private/compose-custom.yml" "$DEPLOY_DIR/private/compose-custom.yml" ||
+                    fail 'Custom Compose override missing from update candidate.'
+            fi
             database="$SOURCE_DB_MAJOR"
             [[ "$DEPLOY_DIR" != "$TEMP/live" ]] || database="$LIVE_DB_MAJOR"
             jq -n --arg image "$(cat "$DEPLOY_DIR/compose.yml")" --arg db "$database" \
@@ -65,11 +69,14 @@ if (update_release "$SOURCE_DIR") >/dev/null 2>&1; then fail 'Release without in
 ! grep -Fxq backup "$CALLS"
 grep -Fq '33.0.10' "$DEPLOY_DIR/compose.yml"
 rm "$DEPLOY_DIR/private/addon-hook"
+printf 'services:\n  forgejo:\n    environment:\n      FORGEJO__server__DISABLE_SSH: "false"\n' > "$DEPLOY_DIR/private/compose-custom.yml"
+cp "$DEPLOY_DIR/private/compose-custom.yml" "$TEMP/expected-custom.yml"
 : > "$CALLS"
 update_release "$SOURCE_DIR" >/dev/null
 grep -Fq '33.0.11' "$DEPLOY_DIR/compose.yml"
 cmp "$DEPLOY_DIR/.env" <(printf 'secret\nTV_CIDR=192.168.60.0/24\n')
 cmp "$DEPLOY_DIR/vaults/admin/credentials.kdbx" <(printf 'encrypted-vault-fixture\n')
+cmp "$DEPLOY_DIR/private/compose-custom.yml" "$TEMP/expected-custom.yml"
 grep -Fxq backup "$CALLS"
 grep -Fxq start "$CALLS"
 grep -Fxq firewall "$CALLS"
