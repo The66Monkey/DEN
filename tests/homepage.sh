@@ -52,6 +52,10 @@ assert parsed.links == [f"https://{name}.{domain}/" for name in services] + ["ht
 text = "".join(parsed.text)
 assert "Welcome home to your DEN" in text
 assert f"ssh YOUR-FEDORA-USER@{ip}" in text
+assert "sudo grep '^NEXTCLOUD_ADMIN_PASSWORD=' /opt/den/.env" in text
+assert "sudo den keepass-password" in text
+assert "sudo den vpn-add DEVICE-NAME" in text
+assert "Treat all outputs as private" in text
 assert (root / "README.md").read_text() not in text
 assert 'src="/mascot.png"' in page
 assert (root / "home/mascot.png").read_bytes() == (root / "docs/images/mascot.png").read_bytes()

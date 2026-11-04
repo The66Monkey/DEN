@@ -39,6 +39,12 @@
     </section>
     <p>Documentation and updates: <a href="https://github.com/The66Monkey/DEN">DEN on GitHub</a>.</p>
   </main>
-  <footer>No passwords, tokens or VPN profiles are shown here. Retrieve credentials privately over SSH.</footer>
+  <footer>
+    <p>No passwords, tokens or VPN profiles are shown here. Connect over SSH, then:</p>
+    <pre><code>sudo grep '^NEXTCLOUD_ADMIN_PASSWORD=' /opt/den/.env
+sudo den keepass-password
+sudo den vpn-add DEVICE-NAME</code></pre>
+    <p>The first command retrieves the initial Nextcloud password; the second prints the optional KeePass vault password; the third creates a private VPN profile for a new device. Treat all outputs as private.</p>
+  </footer>
 </body>
 </html>

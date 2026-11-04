@@ -40,18 +40,39 @@ with invite-only registration; see [router setup](docs/networking.md#port-forwar
 **[Follow the setup checklist](docs/installation.md)** — one guide from preparing
 the server to opening your apps. Print it or tick off the steps as you go.
 
-## When You Need Help
+## Other documentation
 
-- [Troubleshooting](docs/troubleshooting.md)
-- [Downloads, torrent VPN and Jellyfin](docs/qbittorrent.md)
-- [Updates and maintenance](docs/operations.md)
-- [Backup and recovery](docs/backup.md)
-- [Access and privacy](docs/security.md)
+The setup checklist above is the main guide. These references cover specific
+topics and are ordered from common tasks to technical details:
+
+1. [Router and DNS setup](docs/networking.md) — configure your domain, router,
+    local DNS and remote WireGuard access.
+2. [Operations and maintenance](docs/operations.md) — check services, manage
+    updates, backups and optional features.
+3. [Backup and recovery](docs/backup.md) — protect your data and recover files
+    or rebuild a server.
+4. [Troubleshooting](docs/troubleshooting.md) — diagnose common service and
+    browser problems.
+5. [Downloads and Jellyfin](docs/qbittorrent.md) — set up qBittorrent, its
+    optional VPN and media libraries.
+6. [Access and privacy](docs/security.md) — understand private access and
+    protect credentials, profiles and recovery kits.
+7. [Password vault sharing](docs/keepass-sharing.md) — manage separate
+    administrator, family and personal vault access.
+8. [Optional private AI](docs/ai.md) — set up local AI chat and optional
+    workstation GPU support.
+9. [Independent DNS and shared HTTPS edge](docs/infrastructure.md) — host
+    DNS and route web traffic when DEN shares a public IP with another server.
+10. [Technical reference](docs/architecture.md) — review DEN's components,
+    paths, storage and release behavior.
+11. [Testing and validation](docs/testing.md) — see validation status and run
+    contributor checks.
 
 **Version 1.1.0 — optional private AI.** Deployed and
 tested on bare-metal Fedora Server. See [validation status](docs/testing.md#validation-status) for
 what was checked and what remains.
-For contributors: [architecture](docs/architecture.md) and [testing](docs/testing.md).
+For contributors, see the [technical reference](docs/architecture.md) and
+[testing and validation](docs/testing.md).
 
 ## License
 
