@@ -2,7 +2,7 @@
 
 Work from top to bottom. Commands run on the server unless marked otherwise.
 This guide uses an SSD for apps/settings and one HDD for media and snapshots.
-Print it if useful; do not write passwords or tokens on it.
+Print it if useful.
 
 | Your details | Fill in |
 | --- | --- |
