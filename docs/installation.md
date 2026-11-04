@@ -1,8 +1,8 @@
 # DEN Setup Checklist
 
 Work from top to bottom. Commands run on the server unless marked otherwise.
-This guide uses an SSD for apps/settings and one HDD for media and snapshots.
-Print it if useful.
+A fast primary drive and a separate backup drive are recommended; two HDDs are
+fine. Print it if useful.
 
 | Your details | Fill in |
 | --- | --- |
@@ -15,11 +15,11 @@ Print it if useful.
 
 ## 1. Prepare the Server
 
-- [ ] Use a PC with an x86-64-v2 CPU, at least 8 GB RAM (16 GB recommended),
-  an SSD and a larger HDD. Use Ethernet if possible.
+- [ ] Use a PC with an x86-64-v2 CPU and at least 8 GB RAM (16 GB recommended).
+  Use Ethernet if possible.
 - [ ] In BIOS/UEFI, set **Restore on AC Power Loss** (or equivalent) to
   **Power On**, so the server starts automatically when power returns.
-- [ ] Install [Fedora Server](https://fedoraproject.org/server/download/) on the **SSD or primary drive**. Enable SSH and create your login.
+- [ ] Install [Fedora Server](https://fedoraproject.org/server/download/) on the **primary drive**. Enable SSH and create your login.
   Select **Cockpit** if offered; DEN installs it if missing. Integration is
   enabled by default; set `COCKPIT_ENABLED=no` in your settings to opt out.
 - [ ] Reserve the server's LAN IP in your router so it does not change.
@@ -34,7 +34,8 @@ Print it if useful.
 
 ### Media codecs and NVIDIA
 
-The installer and recovery enable the third-party **RPM Fusion Free** repository
+The installer and recovery enable the third-party
+[RPM Fusion Free](https://rpmfusion.org/) repository
 and install its full `ffmpeg` package by default. If Fedora's `ffmpeg-free` is
 present, DEN uses RPM Fusion's documented
 `dnf swap ffmpeg-free ffmpeg --allowerasing` transaction. Review package
@@ -52,9 +53,9 @@ recovery and `sudo den check`. A warning does not prevent software playback.
 Keep a working GPU-compatible driver branch (including 580xx where appropriate).
 DEN does not upgrade it, enroll Secure Boot keys or enable GPU passthrough.
 
-## 2. Mount the HDD
+## 2. Mount the Backup Drive
 
-- [ ] Identify the HDD's **existing filesystem and UUID**:
+- [ ] Identify the backup drive's **existing filesystem and UUID**:
 
   ```bash
   lsblk -o NAME,SIZE,FSTYPE,UUID,MOUNTPOINTS,MODEL
@@ -63,18 +64,18 @@ DEN does not upgrade it, enroll Secure Boot keys or enable GPU passthrough.
   If it has no filesystem, stop and get help preparing it. Formatting deletes
   its contents; DEN never formats disks.
 
-- [ ] For an existing ext4 HDD, create the mountpoint and edit `/etc/fstab`:
+- [ ] For an existing ext4 backup drive, create the mountpoint and edit `/etc/fstab`:
 
   ```bash
   sudo mkdir -p /mnt/den-backup
   sudo vi /etc/fstab
   ```
 
-  Add this line using the HDD's actual UUID. For XFS or Btrfs, use the matching
+  Add this line using the drive's actual UUID. For XFS or Btrfs, use the matching
   filesystem type and options instead.
 
   ```text
-  UUID=YOUR-HDD-UUID /mnt/den-backup ext4 defaults,nofail 0 2
+  UUID=YOUR-BACKUP-UUID /mnt/den-backup ext4 defaults,nofail 0 2
   ```
 
 - [ ] Mount it and confirm the correct disk appears:
@@ -142,8 +143,8 @@ Keep `home.DOMAIN` pointing to the public IP.
   ALLOW_SHARED_MEDIA_BACKUP=yes
   ```
 
-  This shares the HDD between media and snapshots: HDD failure loses both.
-  Photos and Nextcloud files stay on SSD. For separate media/backup disks,
+  This shares the drive between media and snapshots: drive failure loses both.
+  Photos and Nextcloud files stay on the primary drive. For separate media/backup disks,
   use different mountpoints and leave `ALLOW_SHARED_MEDIA_BACKUP=no`.
 
 - [ ] Set optional services to `yes` or leave them `no`:
@@ -192,7 +193,7 @@ Skip `vpn-add` if that profile already exists.
 
 ### Connect Your Phone with WireGuard
 
-- [ ] Install the WireGuard app on your phone.
+- [ ] Install the [WireGuard app](https://www.wireguard.com/install/) on your phone.
 - [ ] In your server SSH session, create and display its profile:
 
   ```bash
@@ -254,14 +255,16 @@ storage. Treat both as credentials; never paste them into chat or public logs.
 
 - [ ] For downloaded movies, add `/downloads/complete` as a Jellyfin Movies library
   and scan it. Metadata stays in Jellyfin's settings; seeding files remain unchanged.
-- [ ] If KeePass is enabled, export to a mounted USB and open it in KeePassXC:
+- [ ] If KeePass is enabled, export to a mounted USB and open it in
+  [KeePassXC](https://keepassxc.org/):
 
   ```bash
   sudo den keepass-export /media/usb/den-credentials.kdbx
   sudo den keepass-password
   ```
 
-  Keep the password separate; record app password changes in the vault yourself.
+  Keep the vault password separate from the exported file; record app password
+  changes in the vault yourself.
   For one canonical server vault and separate family/personal databases, see
   [password sharing](keepass-sharing.md). The optional private share is a manual
   integration, not enabled by the installer.

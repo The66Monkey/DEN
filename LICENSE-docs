@@ -9,5 +9,25 @@ You are free to:
 Under the following terms:
 - Attribution — You must give appropriate credit, provide a link to the license, and indicate if changes were made.
 
-For the full text of the license, see:
-https://creativecommons.org/licenses/by/4.0/
+For the full text of the license, see the
+[Creative Commons Attribution 4.0 International License](https://creativecommons.org/licenses/by/4.0/).
+
+## Acknowledgements
+
+Thank you to the producers and contributors of the tools and services DEN
+brings together:
+
+- [Fedora Server](https://fedoraproject.org/server/) and the [Fedora Project](https://fedoraproject.org/)
+- [Docker Compose](https://docs.docker.com/compose/)
+- [WireGuard](https://www.wireguard.com/)
+- [Cockpit](https://cockpit-project.org/)
+- [Traefik](https://traefik.io/traefik/) and [nginx](https://nginx.org/)
+- [Jellyfin](https://jellyfin.org/), [Immich](https://immich.app/),
+  [Nextcloud](https://nextcloud.com/) and [Forgejo](https://forgejo.org/)
+- [qBittorrent](https://www.qbittorrent.org/) and [Fluxer](https://fluxer.app/)
+- [KeePassXC](https://keepassxc.org/)
+- [AdGuard Home](https://adguard.com/en/adguard-home/overview.html)
+- [Gluetun](https://github.com/qdm12/gluetun)
+- [Restic](https://restic.net/)
+- [deSEC](https://desec.io)
+- [RPM Fusion](https://rpmfusion.org/) and [FFmpeg](https://ffmpeg.org/)
