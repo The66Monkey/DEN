@@ -24,6 +24,8 @@ Use the apps from your phone or computer; no desktop is needed on the server.
 
 **Optional:** qBittorrent with a separate torrent-only provider VPN, Fluxer for
 chat and calls, and a KeePassXC-compatible password vault.
+When Fluxer is enabled, the home page links to both its main chat interface and
+administration at `https://chat.YOUR-DOMAIN/admin`.
 
 AI chat, workstation inference, ebook narration and AI-specific GPU power
 management live in the separate

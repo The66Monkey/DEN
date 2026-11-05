@@ -48,8 +48,13 @@ if fluxer == "yes":
 if torrents == "yes":
     services.append("downloads")
 services.append("server")
-assert parsed.links == [f"https://{name}.{domain}/" for name in services] + ["https://github.com/The66Monkey/DEN"]
+expected_links = [f"https://{name}.{domain}/" for name in services]
+if fluxer == "yes":
+    expected_links.insert(services.index("chat") + 1, f"https://chat.{domain}/admin")
+assert parsed.links == expected_links + ["https://github.com/The66Monkey/DEN"]
 text = "".join(parsed.text)
+assert ("Chat - Fluxer (public, invite-only)" in text) == (fluxer == "yes")
+assert ("Chat administration - Fluxer" in text) == (fluxer == "yes")
 assert "Welcome home to your DEN" in text
 assert f"ssh YOUR-FEDORA-USER@{ip}" in text
 assert "sudo grep '^NEXTCLOUD_ADMIN_PASSWORD=' /opt/den/.env" in text

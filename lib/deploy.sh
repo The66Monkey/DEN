@@ -135,11 +135,14 @@ write_homepage() {
             {name: "photos", label: "Photos - Immich"},
             {name: "files", label: "Files - Nextcloud"},
             {name: "git", label: "Git - Forgejo"}
-        ] + (if $fluxer == "yes" then [{name: "chat", label: "Chat - Fluxer (public, invite-only)"}] else [] end)
+        ] + (if $fluxer == "yes" then [
+            {name: "chat", label: "Chat - Fluxer (public, invite-only)"},
+            {name: "chat", path: "/admin", label: "Chat administration - Fluxer"}
+        ] else [] end)
           + (if $torrents == "yes" then [{name: "downloads", label: "Downloads - qBittorrent"}] else [] end)
           + (if $dns_admin == "yes" then [{name: "dns", label: "DNS - AdGuard Home"}] else [] end)
           + (if $cockpit == "yes" then [{name: "server", label: "Server administration - Cockpit"}] else [] end)
-        | map("<li><a href=\"https://" + (.name + "." + $domain | @html) + "/\">" + (.label | @html) + "</a></li>")
+        | map("<li><a href=\"https://" + (.name + "." + $domain | @html) + ((.path // "/") | @html) + "\">" + (.label | @html) + "</a></li>")
         | join("\n")) as $services |
         reduce [
             ["{{DOMAIN}}", ($domain | @html)],
