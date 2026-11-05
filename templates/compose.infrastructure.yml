@@ -20,7 +20,10 @@ services:
       - --certificatesresolvers.home.acme.dnschallenge.propagation.requireallrns=true
       - --certificatesresolvers.business.acme.email=${EMAIL:?required}
       - --certificatesresolvers.business.acme.storage=/certificates/business-acme.json
-      - --certificatesresolvers.business.acme.tlschallenge=true
+      - --certificatesresolvers.business.acme.dnschallenge.provider=desec
+      - --certificatesresolvers.business.acme.dnschallenge.resolvers=1.1.1.1:53,1.0.0.1:53
+      - --certificatesresolvers.business.acme.dnschallenge.propagation.delaybeforechecks=60s
+      - --certificatesresolvers.business.acme.dnschallenge.propagation.requireallrns=true
       - --ping=true
       - --log.level=WARN
     environment:

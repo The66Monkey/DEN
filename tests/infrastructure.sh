@@ -16,6 +16,11 @@ cat > "$DEPLOY_DIR/private/routes-custom.json" <<'JSON'
   "routers": {"business": {"rule": "Host(`erp.example.net`)", "service": "business", "tls": {"certResolver": "business"}}},
   "services": {"business": {"loadBalancer": {"servers": [{"url": "https://192.0.2.10"}], "serversTransport": "business"}}},
   "serversTransports": {"business": {"serverName": "erp.example.net"}}
+},
+"tcp": {
+  "routers": {"basm-mail": {"rule": "HostSNI(`mx.example.net`)", "entryPoints": ["websecure"], "service": "basm-mail", "tls": {"passthrough": true}}},
+  "services": {"basm-mail": {"loadBalancer": {"servers": [{"address": "192.0.2.20:443"}], "serversTransport": "basm-mail"}}},
+  "serversTransports": {"basm-mail": {"proxyProtocol": {"version": 2}}}
 }}
 JSON
 inode="$(stat -c %i "$DEPLOY_DIR/routes.json")"
@@ -26,10 +31,13 @@ jq -s -e '
   all($base.http | to_entries[]; . as $section |
       all($section.value | to_entries[]; $merged.http[$section.key][.key] == .value)) and
   $merged.http.routers.business.tls.certResolver == "business" and
-  $merged.http.serversTransports.business.serverName == "erp.example.net"
+  $merged.http.serversTransports.business.serverName == "erp.example.net" and
+  $merged.tcp.routers["basm-mail"].tls.passthrough == true and
+  $merged.tcp.services["basm-mail"].loadBalancer.serversTransport == "basm-mail" and
+  $merged.tcp.serversTransports["basm-mail"].proxyProtocol.version == 2
 ' "$DEPLOY_DIR/original.json" "$DEPLOY_DIR/routes.json" >/dev/null
 cp "$DEPLOY_DIR/routes.json" "$DEPLOY_DIR/good.json"
-for invalid in '{"http":{"routers":{"home":{}}}}' '{"tcp":{}}' '{"http":{"services":[]}}' '{"http":{"routers":{"broken":null}}}' 'not json'; do
+for invalid in '{"http":{"routers":{"home":{}}}}' '{"udp":{}}' '{"tcp":{"services":[]}}' '{"http":{"services":[]}}' '{"http":{"routers":{"broken":null}}}' 'not json'; do
     printf '%s\n' "$invalid" > "$DEPLOY_DIR/private/routes-custom.json"
     if write_routes >"$DEPLOY_DIR/error" 2>&1; then
         fail 'Invalid or conflicting custom routes unexpectedly succeeded.'
@@ -73,6 +81,9 @@ jq -e '
     (.services | keys) == ["dns", "edge"] and
     .networks.home.external == true and
     .services.edge.networks.home.ipv4_address == "172.30.44.2" and
+    (.services.edge.command | index("--certificatesresolvers.business.acme.dnschallenge.provider=desec") != null) and
+    (.services.edge.command | index("--certificatesresolvers.business.acme.dnschallenge.propagation.requireallrns=true") != null) and
+    (all(.services.edge.command[]; contains("certificatesresolvers.business.acme.tlschallenge") | not)) and
     (any(.services.edge.volumes[]; .target == "/etc/traefik/cockpit" and .read_only == true)) and
     (.services.edge.networks | has("dns")) and
     (.services.dns.networks | keys) == ["dns"] and

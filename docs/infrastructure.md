@@ -43,21 +43,57 @@ The existing `den_home` network must exist before starting infrastructure.
    container's bridge subnet. Never expose port 53 or the management UI publicly.
 3. Keep `/srv/den/traefik/acme.json` and the private deSEC token in their existing
    locations. The edge retains `172.30.44.2`, which Nextcloud already trusts.
-   It also provides a `business` resolver using TLS-ALPN-01, stored separately
-   in `business-acme.json`. Existing business certificates can be privately
-   migrated into that resolver's ACME store, preserving the account and keys.
-   Only one running proxy may write a given ACME file; never share one writable
-   file between proxies.
-   The business backend also needs independent certificate renewal: switch its
-   proxy to DNS-01 (BASM supports a private `data/traefik/desec-token` file).
-   TLS-ALPN-01 on a backend cannot renew through a TLS-terminating outer edge.
-   On BASM, save DEN's exact LAN IPv4 in `config/traefik-edge-ip` to preserve
-   forwarded client addresses without trusting arbitrary senders.
+   It also provides a `business` resolver using deSEC DNS-01, stored separately
+   in `business-acme.json`. The business resolver uses the existing deSEC token.
+   Existing business certificates remain
+   in this store, and future renewals use DNS-01. Only one running proxy may
+   write a given ACME file; never share one writable file between proxies.
+   Backend TLS-ALPN challenges must pass through the edge unchanged; do not
+   run a competing TLS-ALPN ACME challenge for the same hostnames. A backend
+   behind an edge that terminates TLS instead needs its own DNS-01 renewal
+   configuration (BASM supports a private `data/traefik/desec-token` file).
+   On BASM, save DEN's exact LAN IPv4 in `config/traefik-edge-ip` so its
+   Traefik entrypoint accepts PROXY protocol only from the DEN edge.
 4. Put administrator-owned extra routes in
-   `/opt/den/private/routes-custom.json`. Only HTTP `routers`, `services`,
+   `/opt/den/private/routes-custom.json`. HTTP and TCP `routers`, `services`,
    `middlewares` and `serversTransports` can be added. Managed names cannot be
-   overwritten. Use exact `Host(...)` rules and verified HTTPS to VM backends;
-   specify `serversTransports.<name>.serverName` when connecting by IP.
+   overwritten. Use exact `Host(...)` and `HostSNI(...)` rules and verified
+   HTTPS to VM backends; specify `serversTransports.<name>.serverName` when
+   connecting by IP. For BASM mail TLS passthrough, attach a TCP service
+   transport that enables PROXY protocol v2 so the original client IP reaches
+   BASM through both Traefik instances. Configure Stalwart to accept PROXY
+   protocol only from BASM's isolated mail-proxy network.
+   The route has this shape (replace the hostname, IP, and SNI names):
+
+   ```json
+   {
+     "tcp": {
+       "routers": {
+         "basm-mail": {
+           "rule": "HostSNI(`mx.example.net`) || HostSNI(`autoconfig.example.net`) || HostSNI(`autodiscover.example.net`) || HostSNI(`mta-sts.example.net`) || HostSNI(`ua-auto-config.example.net`)",
+           "entryPoints": ["websecure"],
+           "service": "basm-mail",
+           "tls": {"passthrough": true}
+         }
+       },
+       "services": {
+         "basm-mail": {
+           "loadBalancer": {
+             "servers": [{"address": "192.168.1.20:443"}],
+             "serversTransport": "basm-mail"
+           }
+         }
+       },
+       "serversTransports": {
+         "basm-mail": {"proxyProtocol": {"version": 2}}
+       }
+     }
+   }
+   ```
+   If mail clients use the LAN while ports 465/993 remain unforwarded, add a
+   private AdGuard DNS rewrite for `mx.<domain>` to BASM's LAN address. Keep
+   the public `mx` record pointed at the public mail address; do not expose
+   client ports unless remote mail access is intended.
    Do not add a blanket domain wildcard or a LAN-source bypass for private apps.
    `write_routes` merges this file on updates/recovery without replacing the
    bind-mounted output inode. Invalid custom entries fail without changing
