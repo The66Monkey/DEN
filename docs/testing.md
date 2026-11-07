@@ -54,7 +54,7 @@ and monthly maintenance failure paths.
 Setup-review tests use a pseudo-terminal to check explicit acceptance,
 restart/revalidation of edited settings, cancellation, end-of-input rejection,
 terminal clearing and unchanged unattended behavior. Summaries are checked for
-secret exclusion and public-service, torrent-VPN and shared-storage warnings.
+secret exclusion, shared-storage settings, and public-service and torrent-VPN warnings.
 Homepage checks cover the installed README, HTML escaping, LAN SSH instructions,
 enabled-service links and private routing.
 Infrastructure checks cover separate Compose ownership, embedded-edge exclusion,

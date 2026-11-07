@@ -132,7 +132,8 @@ with tempfile.TemporaryDirectory() as temporary:
             ["bash", "-c", COMMAND, "bash", str(ROOT), str(settings)],
             input="", capture_output=True, text=True, check=True,
         )
-        assert "WARNING: shared media/backup storage" in result.stdout
+        assert "Shared media/backup storage: allowed." in result.stdout
+        assert "WARNING: shared media/backup storage" not in result.stdout
         assert "PUBLIC chat/calls" in result.stdout
         expected = ("downloads stay blocked" if protected == "yes"
                     else "trackers and peers see your normal public IP")

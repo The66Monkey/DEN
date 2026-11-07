@@ -20,8 +20,7 @@ sudo den backup             # optional backup now
 ```
 
 Snapshots are stored at `BACKUP_MOUNT/den-restic`. The disk must be mounted.
-It can [share the media HDD](qbittorrent.md#sharing-the-media-and-backup-hdd);
-if that disk fails, both copies of the media are lost.
+It can [share the media HDD](qbittorrent.md#sharing-the-media-and-backup-hdd).
 
 When space runs low:
 

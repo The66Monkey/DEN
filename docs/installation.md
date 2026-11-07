@@ -143,7 +143,7 @@ Keep `home.DOMAIN` pointing to the public IP.
   ALLOW_SHARED_MEDIA_BACKUP=yes
   ```
 
-  This shares the drive between media and snapshots: drive failure loses both.
+  This shares the drive between media and snapshots.
   Photos and Nextcloud files stay on the primary drive. For separate media/backup disks,
   use different mountpoints and leave `ALLOW_SHARED_MEDIA_BACKUP=no`.
 

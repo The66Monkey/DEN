@@ -133,7 +133,7 @@ ALLOW_SHARED_MEDIA_BACKUP=yes
 ```
 
 The HDD holds `den/media`, `den/downloads` and `den-restic`.
-Apps/settings remain on SSD. Disk failure loses both media and its snapshots.
+Apps/settings remain on SSD.
 
 These are installation settings, not migration commands. Changing them on an
 existing server does not move files; arrange an offline migration instead.

@@ -89,7 +89,7 @@ review_installation() {
     printf '  Home: https://home.%s\n  Web: TCP 80/443\n  Home VPN: UDP %s\n' "$DOMAIN" "$WIREGUARD_PORT"
     printf '\nStorage\n  Application data: /srv/den\n  Media disk: %s\n  Backup disk: %s\n' "${MEDIA_MOUNT:-none (media stays on the system disk)}" "$BACKUP_MOUNT"
     if [[ "$ALLOW_SHARED_MEDIA_BACKUP" == yes ]]; then
-        printf '  WARNING: shared media/backup storage is allowed; disk failure can lose both.\n'
+        printf '  Shared media/backup storage: allowed.\n'
     fi
     printf '\nOptional services\n  KeePass: %s\n  Fluxer: %s\n  qBittorrent: %s\n' "$KEEPASS_ENABLED" "$FLUXER_ENABLED" "$QBITTORRENT_ENABLED"
     printf '  Cockpit integration: %s\n' "$COCKPIT_ENABLED"

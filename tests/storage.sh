@@ -46,7 +46,8 @@ SAVED_BACKUP_MOUNT="$BACKUP_MOUNT"
 BACKUP_MOUNT="$MEDIA_MOUNT"
 if (check_media_disk) 2>/dev/null; then fail 'Accepted shared media/backup storage without consent.'; fi
 ALLOW_SHARED_MEDIA_BACKUP=yes
-check_media_disk
+[[ -z "$(check_media_disk 2>&1)" ]] || fail 'Accepted shared storage produced unexpected output.'
+[[ -z "$(ensure_media_storage 2>&1)" ]] || fail 'Accepted shared storage warned during normal use.'
 WRONG_FILESYSTEM=true
 if (check_media_disk) 2>/dev/null; then fail 'Shared-storage consent allowed the OS filesystem.'; fi
 WRONG_FILESYSTEM=false
