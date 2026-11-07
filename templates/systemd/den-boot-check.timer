@@ -1,0 +1,10 @@
+[Unit]
+Description=Schedule DEN post-boot verification
+
+[Timer]
+OnBootSec=5min
+AccuracySec=30s
+Unit=den-boot-check.service
+
+[Install]
+WantedBy=timers.target

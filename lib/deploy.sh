@@ -386,6 +386,7 @@ install_host_config() {
     systemctl daemon-reload
     systemctl enable --now wg-quick@wg0 den-dns
     systemctl enable den.service
+    systemctl enable --now den-boot-check.timer
     systemctl enable --now den-ddns.timer
 }
 

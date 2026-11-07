@@ -25,13 +25,14 @@ read_settings() {
     FLUXER_ENABLED=no
     QBITTORRENT_ENABLED=no
     QBITTORRENT_VPN_ENABLED=no
+    FEDORA_MAJOR_UPGRADES=no
     UPDATE_REPOSITORY=https://github.com/The66Monkey/DEN.git
     while IFS= read -r line || [[ -n "$line" ]]; do
         [[ -z "$line" || "$line" == \#* ]] && continue
         [[ "$line" == *=* ]] || fail 'Use unquoted KEY=value lines in config.'
         key="${line%%=*}"; value="${line#*=}"
         case "$key" in
-            DOMAIN|EMAIL|LAN_IP|LAN_CIDR|TV_CIDR|COCKPIT_ENABLED|MEDIA_MOUNT|BACKUP_MOUNT|ALLOW_SHARED_MEDIA_BACKUP|KEEPASS_ENABLED|FLUXER_ENABLED|QBITTORRENT_ENABLED|QBITTORRENT_VPN_ENABLED|UPDATE_REPOSITORY|ACME_CHALLENGE|DB_PASSWORD|NEXTCLOUD_ADMIN_PASSWORD|RESTIC_PASSWORD) ;;
+            DOMAIN|EMAIL|LAN_IP|LAN_CIDR|TV_CIDR|COCKPIT_ENABLED|MEDIA_MOUNT|BACKUP_MOUNT|ALLOW_SHARED_MEDIA_BACKUP|KEEPASS_ENABLED|FLUXER_ENABLED|QBITTORRENT_ENABLED|QBITTORRENT_VPN_ENABLED|FEDORA_MAJOR_UPGRADES|UPDATE_REPOSITORY|ACME_CHALLENGE|DB_PASSWORD|NEXTCLOUD_ADMIN_PASSWORD|RESTIC_PASSWORD) ;;
             AI_*|AUDIOBOOKS_*|NVIDIA_POWER_LIMIT_W|NVIDIA_GPU_ID) fail 'AI, audiobook and power settings moved to DEN-plus; follow its migration guide before updating core DEN.' ;;
             *) fail "Unknown config key: $key" ;;
         esac
@@ -108,6 +109,7 @@ review_installation() {
     fi
     printf '\nAll web apps stay LAN/VPN-only except enabled Fluxer.\n'
     printf 'Monthly automatic updates: Fedora, DEN and enabled Fluxer; a reboot may occur.\n'
+    printf 'Fedora major upgrades (explicit opt-in): %s\n' "$FEDORA_MAJOR_UPGRADES"
     printf 'Update source: %s\n' "$UPDATE_REPOSITORY"
 }
 
@@ -212,6 +214,7 @@ validate_settings() {
     done
     [[ "$KEEPASS_ENABLED" == yes || "$KEEPASS_ENABLED" == no ]] || fail 'KEEPASS_ENABLED must be yes or no.'
     [[ "${COCKPIT_ENABLED:-yes}" == yes || "${COCKPIT_ENABLED:-yes}" == no ]] || fail 'COCKPIT_ENABLED must be yes or no.'
+    [[ "${FEDORA_MAJOR_UPGRADES:-no}" =~ ^(yes|no)$ ]] || fail 'FEDORA_MAJOR_UPGRADES must be yes or no.'
     [[ "$FLUXER_ENABLED" == yes || "$FLUXER_ENABLED" == no ]] || fail 'FLUXER_ENABLED must be yes or no.'
     [[ "$QBITTORRENT_ENABLED" == yes || "$QBITTORRENT_ENABLED" == no ]] || fail 'QBITTORRENT_ENABLED must be yes or no.'
     [[ "${QBITTORRENT_VPN_ENABLED:-no}" == yes || "${QBITTORRENT_VPN_ENABLED:-no}" == no ]] || fail 'QBITTORRENT_VPN_ENABLED must be yes or no.'
@@ -266,7 +269,8 @@ write_environment() {
     ALLOW_SHARED_MEDIA_BACKUP="${ALLOW_SHARED_MEDIA_BACKUP:-no}"
     TV_CIDR="${TV_CIDR:-}"
     COCKPIT_ENABLED="${COCKPIT_ENABLED:-yes}"
-    for key in DOMAIN EMAIL LAN_IP LAN_CIDR TV_CIDR COCKPIT_ENABLED MEDIA_MOUNT BACKUP_MOUNT ALLOW_SHARED_MEDIA_BACKUP KEEPASS_ENABLED FLUXER_ENABLED QBITTORRENT_ENABLED QBITTORRENT_VPN_ENABLED UPDATE_REPOSITORY ACME_CHALLENGE; do
+    FEDORA_MAJOR_UPGRADES="${FEDORA_MAJOR_UPGRADES:-no}"
+    for key in DOMAIN EMAIL LAN_IP LAN_CIDR TV_CIDR COCKPIT_ENABLED MEDIA_MOUNT BACKUP_MOUNT ALLOW_SHARED_MEDIA_BACKUP KEEPASS_ENABLED FLUXER_ENABLED QBITTORRENT_ENABLED QBITTORRENT_VPN_ENABLED FEDORA_MAJOR_UPGRADES UPDATE_REPOSITORY ACME_CHALLENGE; do
         printf '%s=%s\n' "$key" "${!key}"
     done > "$destination/.env"
     printf 'DB_PASSWORD=%s\nNEXTCLOUD_ADMIN_PASSWORD=%s\nRESTIC_PASSWORD=%s\n' \

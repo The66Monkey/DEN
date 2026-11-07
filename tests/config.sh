@@ -34,6 +34,7 @@ request_server_hostname </dev/null
 [[ "$FLUXER_ENABLED" == no ]]
 [[ "$QBITTORRENT_ENABLED" == no ]]
 [[ "$QBITTORRENT_VPN_ENABLED" == no ]]
+[[ "$FEDORA_MAJOR_UPGRADES" == no ]]
 [[ "$MEDIA_MOUNT" == /mnt/den-storage ]]
 [[ "$ACME_CHALLENGE" == http ]]
 [[ "$ALLOW_SHARED_MEDIA_BACKUP" == no ]]
@@ -43,6 +44,7 @@ write_environment "$TEMP/deployment"
 [[ "$(stat -c %a "$TEMP/deployment")" == 700 ]]
 [[ "$(stat -c %a "$TEMP/deployment/private/ddns.env")" == 600 ]]
 grep -Fxq 'DESEC_TOKEN=abcdefghijklmnopqrstuvwxyz12' "$TEMP/deployment/private/ddns.env"
+grep -Fxq 'FEDORA_MAJOR_UPGRADES=no' "$TEMP/deployment/.env"
 read_settings "$TEMP/deployment/.env"
 [[ ${#DB_PASSWORD} == 48 && ${#RESTIC_PASSWORD} == 48 ]]
 [[ "$KEEPASS_ENABLED" == no ]]
@@ -56,17 +58,21 @@ for invalid in 'LAN_IP=192.168.1.999' 'LAN_IP=192.168.2.10' 'LAN_IP=192.168.1.0'
     fi
 done
 if (ALLOW_SHARED_MEDIA_BACKUP=maybe; validate_settings) 2>/dev/null; then fail 'Accepted an invalid shared-storage flag.'; fi
+if (FEDORA_MAJOR_UPGRADES=maybe; validate_settings) 2>/dev/null; then fail 'Accepted invalid major-upgrade flag.'; fi
 (MEDIA_MOUNT="$BACKUP_MOUNT"; ALLOW_SHARED_MEDIA_BACKUP=yes; validate_settings)
 ALLOW_SHARED_MEDIA_BACKUP=yes
+FEDORA_MAJOR_UPGRADES=yes
 DESEC_TOKEN=abcdefghijklmnopqrstuvwxyz12
 write_environment "$TEMP/shared-deployment"
 read_settings "$TEMP/shared-deployment/.env"
 [[ "$ALLOW_SHARED_MEDIA_BACKUP" == yes ]]
+[[ "$FEDORA_MAJOR_UPGRADES" == yes ]]
 printf 'DOMAIN=home.example.net\nEMAIL=you@example.net\nLAN_IP=192.168.1.10\nLAN_CIDR=192.168.1.0/24\nBACKUP_MOUNT=/mnt/den-backup\nKEEPASS_ENABLED=yes\nFLUXER_ENABLED=yes\nQBITTORRENT_ENABLED=yes\n' > "$TEMP/keepass.env"
 read_settings "$TEMP/keepass.env"
 [[ -z "$MEDIA_MOUNT" ]]
 [[ "$ALLOW_SHARED_MEDIA_BACKUP" == no ]]
 [[ "$QBITTORRENT_VPN_ENABLED" == no ]]
+[[ "$FEDORA_MAJOR_UPGRADES" == no ]]
 if (QBITTORRENT_ENABLED=no; QBITTORRENT_VPN_ENABLED=yes; validate_settings) 2>/dev/null; then
     fail 'Accepted torrent VPN without qBittorrent.'
 fi

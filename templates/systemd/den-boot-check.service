@@ -1,0 +1,10 @@
+[Unit]
+Description=Verify DEN services and private HTTPS after boot
+Wants=network-online.target akmods.service
+After=network-online.target docker.service den.service akmods.service
+OnFailure=den-alert.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/bash /opt/den/templates/post-boot-check.sh
+TimeoutStartSec=1h

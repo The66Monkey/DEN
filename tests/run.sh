@@ -43,6 +43,7 @@ bash tests/keepass.sh
 bash tests/fluxer.sh
 bash tests/update.sh
 bash tests/automatic.sh
+bash tests/post-boot.sh
 bash bin/den help >/dev/null
 bash bin/den-local help >/dev/null
 bash install.sh --help >/dev/null

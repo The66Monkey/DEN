@@ -163,6 +163,7 @@ update_release() (
     fi
     install -m 644 "$DEPLOY_DIR/templates/systemd/"* /etc/systemd/system/ || return 1
     systemctl daemon-reload || return 1
+    systemctl enable --now den-boot-check.timer || return 1
     systemctl restart den-dns || return 1
     if [[ -f "$DEPLOY_DIR/private/ddns.env" ]]; then
         systemctl enable --now den-ddns.timer || return 1

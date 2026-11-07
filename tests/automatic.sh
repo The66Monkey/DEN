@@ -20,6 +20,7 @@ FAIL_RELEASE=false
 FAIL_DNF=false
 REBOOT_STATUS=0
 OS_UPGRADE=false
+FEDORA_MAJOR_UPGRADES=no
 FLUXER_ENABLED=no
 health_check() { printf 'health\n' >> "$CALLS"; }
 backup_stack() { printf 'backup\n' >> "$CALLS"; [[ "$FAIL_BACKUP" == false ]]; }
@@ -68,6 +69,15 @@ if automatic_update >/dev/null; then fail 'Failed host upgrade returned success.
 if grep -q '^systemctl reboot$' "$CALLS"; then fail 'Rebooted after failed host upgrade.'; fi
 FAIL_DNF=false
 OS_UPGRADE=true
+: > "$CALLS"
+automatic_update >/dev/null
+! grep -q 'system-upgrade download' "$CALLS"
+FEDORA_MAJOR_UPGRADES=yes
+OS_UPGRADE=false
+: > "$CALLS"
+automatic_update >/dev/null
+! grep -q 'system-upgrade download' "$CALLS"
+OS_UPGRADE=true
 FLUXER_ENABLED=yes
 : > "$CALLS"
 automatic_update >/dev/null
@@ -76,6 +86,17 @@ grep -Fxq 'dnf -y system-upgrade download --releasever 44' "$CALLS"
 grep -Fxq 'dnf -y offline reboot' "$CALLS"
 [[ "$(grep -c '^backup$' "$CALLS")" == 2 ]]
 if grep -q -- '--allowerasing' "$CALLS"; then fail 'Automatic upgrade may erase required packages.'; fi
+dnf() {
+    printf 'dnf %s\n' "$*" >> "$CALLS"
+    [[ "$*" != *'system-upgrade download'* ]]
+}
+: > "$CALLS"
+if automatic_update >/dev/null; then fail 'Failed major-upgrade download returned success.'; fi
+! grep -q 'offline reboot' "$CALLS"
+curl() { printf 'invalid JSON\n' > "${@: -1}"; }
+: > "$CALLS"
+if automatic_update >/dev/null 2>&1; then fail 'Invalid release metadata returned success.'; fi
+! grep -q 'system-upgrade download' "$CALLS"
 touch "$DEPLOY_DIR/private/update-in-progress"
 if (automatic_update) >/dev/null 2>&1; then fail 'Automatic retry of interrupted release.'; fi
 rm "$DEPLOY_DIR/private/update-in-progress"

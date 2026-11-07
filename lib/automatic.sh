@@ -5,6 +5,16 @@ fedora_version_id() (
     printf '%s\n' "$VERSION_ID"
 )
 
+routine_reboot() {
+    local status=0
+    dnf needs-restarting --reboothint || status=$?
+    case "$status" in
+        0) log 'Monthly automatic maintenance completed; no reboot needed.' ;;
+        1) log 'Monthly maintenance completed; rebooting to apply host updates.'; systemctl reboot || return 1 ;;
+        *) fail "Reboot requirement check failed with exit code $status." ;;
+    esac
+}
+
 automatic_releases() (
     local stage tag version current
     stage="$(mktemp -d /opt/den-upstream.XXXXXX)" || return 1
@@ -34,7 +44,7 @@ automatic_releases() (
 )
 
 automatic_update() (
-    local stage current next status
+    local stage current next
     [[ ! -e "$DEPLOY_DIR/private/update-in-progress" ]] || fail 'A previous release update was interrupted; maintenance requires recovery.'
     health_check || return 1
     backup_stack || return 1
@@ -53,6 +63,11 @@ automatic_update() (
     health_check || return 1
     dnf -y --refresh upgrade || return 1
     health_check || return 1
+    if [[ "${FEDORA_MAJOR_UPGRADES:-no}" != yes ]]; then
+        log 'Fedora major upgrades are disabled; set FEDORA_MAJOR_UPGRADES=yes only for an approved upgrade.'
+        routine_reboot
+        return
+    fi
     stage="$(mktemp -d /opt/den-fedora.XXXXXX)" || return 1
     trap 'rm -rf "$stage"' EXIT
     curl -fsSL --retry 3 --connect-timeout 30 --max-time 180 \
@@ -69,12 +84,6 @@ automatic_update() (
         log 'Rebooting into the verified Fedora offline upgrade transaction.'
         dnf -y offline reboot || return 1
     else
-        status=0
-        dnf needs-restarting --reboothint || status=$?
-        case "$status" in
-            0) log 'Monthly automatic maintenance completed; no reboot needed.' ;;
-            1) log 'Monthly maintenance completed; rebooting to apply host updates.'; systemctl reboot || return 1 ;;
-            *) fail "Reboot requirement check failed with exit code $status." ;;
-        esac
+        routine_reboot
     fi
 )

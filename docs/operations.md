@@ -234,6 +234,34 @@ On the first of each month, between 04:00 and 04:30 server time, DEN updates
 itself, enabled Fluxer and Fedora. It takes backups and may reboot.
 Keep the storage disk connected. Missed maintenance runs when the timer resumes.
 
+Routine Fedora package updates remain automatic, but **Fedora major upgrades
+are opt-in**, including on older configurations without the new setting.
+For an approved major-upgrade window, set `FEDORA_MAJOR_UPGRADES=yes` in
+`/opt/den/.env`, run `sudo den auto-update`, and return the switch to `no`
+afterward. This allows only the next stable Fedora Server release, never a beta
+or a skipped major. Do not leave the switch enabled unintentionally.
+
+Before any major upgrade, verify an independent backup/recovery kit, console
+access and a known-good kernel in the boot menu. Retain the supported NVIDIA
+driver branch; do not erase packages or bypass Secure Boot/SELinux checks.
+Checks before reboot cannot guarantee new-kernel behavior.
+
+Five minutes after each boot, `den-boot-check.timer` verifies DEN health and
+the private homepage over HTTPS with certificate validation. It waits for
+Fedora's `akmods.service`, checks GPU readiness when a DEN+ power policy exists,
+and retries DEN startup only if its unit failed. It makes at most three attempts
+with 30-second pauses and never restarts healthy containers, rolls back
+databases, or repeatedly reboots. Failure triggers the existing local alert.
+A disabled/masked or manually stopped `den.service` is respected; the homepage
+must return exactly HTTP 200. NAS availability belongs to the
+optional DEN+ feature, not this core health requirement.
+
+Inspect `journalctl -u den-boot-check.service -b` and
+`/srv/den/cache/boot-verified` (boot ID and verification time). Run
+`sudo systemctl start den-boot-check.service` for a manual check. If disabling
+maintenance completely, stop this timer too. Reboot verification is recovery
+assistance, not a substitute for testing a restore.
+
 **Fluxer exposure change:** applying the public-chat update to an enabled
 Fluxer install makes chat/calls public and resets voice IP discovery. Review
 [direct router forwarding and cutover](networking.md#public-chat-and-calls)
