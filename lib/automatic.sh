@@ -63,11 +63,6 @@ automatic_update() (
     health_check || return 1
     dnf -y --refresh upgrade || return 1
     health_check || return 1
-    if [[ "${FEDORA_MAJOR_UPGRADES:-no}" != yes ]]; then
-        log 'Fedora major upgrades are disabled; set FEDORA_MAJOR_UPGRADES=yes only for an approved upgrade.'
-        routine_reboot
-        return
-    fi
     stage="$(mktemp -d /opt/den-fedora.XXXXXX)" || return 1
     trap 'rm -rf "$stage"' EXIT
     curl -fsSL --retry 3 --connect-timeout 30 --max-time 180 \

@@ -234,12 +234,15 @@ On the first of each month, between 04:00 and 04:30 server time, DEN updates
 itself, enabled Fluxer and Fedora. It takes backups and may reboot.
 Keep the storage disk connected. Missed maintenance runs when the timer resumes.
 
-Routine Fedora package updates remain automatic, but **Fedora major upgrades
-are opt-in**, including on older configurations without the new setting.
-For an approved major-upgrade window, set `FEDORA_MAJOR_UPGRADES=yes` in
-`/opt/den/.env`, run `sudo den auto-update`, and return the switch to `no`
-afterward. This allows only the next stable Fedora Server release, never a beta
-or a skipped major. Do not leave the switch enabled unintentionally.
+Installed add-ons can provide a validated `private/home-addon.json` feature
+manifest. The homepage renders enabled feature links in a separate section;
+disabled features appear only under the small expandable "Other features"
+list. Core upgrades preserve this private manifest. No credentials are included.
+
+Fedora package updates and **major upgrades roll forward automatically**.
+Monthly maintenance selects only the next stable Fedora Server release, never
+a beta or a skipped major, and keeps the backup and health gates before reboot.
+`sudo den auto-update` runs the same workflow manually; it can reboot the server.
 
 Before any major upgrade, verify an independent backup/recovery kit, console
 access and a known-good kernel in the boot menu. Retain the supported NVIDIA

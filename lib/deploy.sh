@@ -122,12 +122,24 @@ EOF
 }
 
 write_homepage() {
-    local dns_admin=no
+    local dns_admin=no addon='{}'
+    if [[ -f "$DEPLOY_DIR/private/home-addon.json" ]]; then
+        addon="$(jq -ce '
+            . as $manifest |
+            type == "object" and (.title | type == "string") and
+            (.features | type == "array") and all(.features[];
+                (.label | type == "string") and (.description | type == "string") and
+                (.enabled | type == "boolean") and (.url | type == "string") and
+                (.url | test("^https://[^[:space:]<>]+$")))
+            | if . then $manifest else error("Invalid homepage add-on manifest") end
+        ' "$DEPLOY_DIR/private/home-addon.json")" || return 1
+    fi
     if [[ -f "$DEPLOY_DIR/private/external-edge" && -f "$DEPLOY_DIR/private/infrastructure/compose.yml" ]]; then dns_admin=yes; fi
     install -d -m 755 "$DEPLOY_DIR/home" || return 1
     install -m 644 "$DEPLOY_DIR/docs/images/mascot.png" "$DEPLOY_DIR/home/mascot.png" || return 1
     jq -nr --arg domain "$DOMAIN" --arg ip "$LAN_IP" \
         --arg fluxer "${FLUXER_ENABLED:-no}" --arg torrents "${QBITTORRENT_ENABLED:-no}" --arg dns_admin "$dns_admin" --arg cockpit "${COCKPIT_ENABLED:-yes}" \
+        --argjson addon "$addon" \
         --rawfile template "$DEPLOY_DIR/templates/home.html" '
         ([
             {name: "media", label: "Media - Jellyfin"},
@@ -143,10 +155,24 @@ write_homepage() {
           + (if $cockpit == "yes" then [{name: "server", label: "Server administration - Cockpit"}] else [] end)
         | map("<li><a href=\"https://" + (.name + "." + $domain | @html) + ((.path // "/") | @html) + "\">" + (.label | @html) + "</a></li>")
         | join("\n")) as $services |
+        (if $addon == {} then "" else
+            "<section aria-labelledby=\"addon-heading\"><h2 id=\"addon-heading\">" +
+            ($addon.title | @html) + "</h2><nav aria-label=\"Add-on services\"><ul>" +
+            ($addon.features | map(select(.enabled) |
+                "<li><a href=\"" + (.url | @html) + "\">" + (.label | @html) +
+                "</a><small>" + (.description | @html) + "</small></li>") | join("\n")) +
+            "</ul></nav>" +
+            (if any($addon.features[]; .enabled | not) then
+                "<details><summary><small>Other features (not enabled)</small></summary><ul>" +
+                ($addon.features | map(select(.enabled | not) |
+                    "<li>" + (.label | @html) + " - " + (.description | @html) + "</li>") | join("\n")) +
+                "</ul></details>" else "" end) + "</section>"
+         end) as $addon_section |
         reduce [
             ["{{DOMAIN}}", ($domain | @html)],
             ["{{LAN_IP}}", ($ip | @html)],
-            ["{{SERVICES}}", $services]
+            ["{{SERVICES}}", $services],
+            ["{{ADDON_SECTION}}", $addon_section]
         ][] as $replacement ($template; split($replacement[0]) | join($replacement[1]))
     ' > "$DEPLOY_DIR/home/index.html" || return 1
     chmod 644 "$DEPLOY_DIR/home/index.html"

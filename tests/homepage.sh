@@ -90,6 +90,19 @@ COCKPIT_ENABLED=no
 write_homepage
 if grep -Fq "https://server.$DOMAIN/" "$DEPLOY_DIR/home/index.html"; then fail 'Opt-out retained Cockpit link.'; fi
 write_homepage
+printf '{"title":"DEN+ functions","features":[{"label":"AI <chat>","description":"Local & private","enabled":true,"url":"https://ai.home.example.net/"},{"label":"LAMP","description":"Not enabled","enabled":false,"url":"https://lamp.home.example.net/"}]}\n' > "$DEPLOY_DIR/private/home-addon.json"
+write_homepage
+grep -Fq 'DEN+ functions' "$DEPLOY_DIR/home/index.html"
+grep -Fq 'https://ai.home.example.net/' "$DEPLOY_DIR/home/index.html"
+grep -Fq 'AI &lt;chat&gt;' "$DEPLOY_DIR/home/index.html"
+grep -Fq 'Local &amp; private' "$DEPLOY_DIR/home/index.html"
+grep -Fq 'Other features (not enabled)' "$DEPLOY_DIR/home/index.html"
+! grep -Fq 'href="https://lamp.' "$DEPLOY_DIR/home/index.html"
+printf '{"title":"bad","features":[{"label":"bad","description":"","enabled":true,"url":"javascript:alert(1)"}]}\n' > "$DEPLOY_DIR/private/home-addon.json"
+if write_homepage 2>/dev/null; then fail 'Accepted invalid homepage URL.'; fi
+printf 'not json\n' > "$DEPLOY_DIR/private/home-addon.json"
+if write_homepage 2>/dev/null; then fail 'Accepted invalid homepage manifest.'; fi
+rm "$DEPLOY_DIR/private/home-addon.json"
 rm "$DEPLOY_DIR/docs/images/mascot.png"
 if write_homepage 2>/dev/null; then fail 'Missing mascot returned success.'; fi
 printf 'Homepage mascot, GitHub link, SSH instructions, optional links and generation errors passed.\n'

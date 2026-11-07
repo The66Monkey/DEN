@@ -20,7 +20,6 @@ FAIL_RELEASE=false
 FAIL_DNF=false
 REBOOT_STATUS=0
 OS_UPGRADE=false
-FEDORA_MAJOR_UPGRADES=no
 FLUXER_ENABLED=no
 health_check() { printf 'health\n' >> "$CALLS"; }
 backup_stack() { printf 'backup\n' >> "$CALLS"; [[ "$FAIL_BACKUP" == false ]]; }
@@ -68,11 +67,6 @@ FAIL_DNF=true
 if automatic_update >/dev/null; then fail 'Failed host upgrade returned success.'; fi
 if grep -q '^systemctl reboot$' "$CALLS"; then fail 'Rebooted after failed host upgrade.'; fi
 FAIL_DNF=false
-OS_UPGRADE=true
-: > "$CALLS"
-automatic_update >/dev/null
-! grep -q 'system-upgrade download' "$CALLS"
-FEDORA_MAJOR_UPGRADES=yes
 OS_UPGRADE=false
 : > "$CALLS"
 automatic_update >/dev/null
