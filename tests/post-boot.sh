@@ -7,6 +7,7 @@ trap 'rm -rf "$TEMP"' EXIT
 CALLS="$TEMP/calls"
 STATE=active
 FAIL_CHECK=no
+FAIL_START=no
 FAIL_HTTPS=no
 HTTPS_STATUS=200
 DOMAIN=home.example.net
@@ -15,6 +16,11 @@ systemctl() {
     printf 'systemctl %s\n' "$*" >> "$CALLS"
     if [[ "$1" == show ]]; then printf '%s\n' "$STATE"; fi
     if [[ "$1" == is-enabled ]]; then printf 'enabled\n'; fi
+    if [[ "$1" == start ]]; then
+        [[ "$FAIL_START" == no ]] || return 1
+        STATE=active
+    fi
+    if [[ "$1" == is-active ]]; then [[ "$STATE" == active ]]; fi
 }
 nvidia-smi() { return 0; }
 curl() { printf 'https %s\n' "$*" >> "$CALLS"; printf '%s' "$HTTPS_STATUS"; [[ "$FAIL_HTTPS" == no ]]; }
@@ -34,6 +40,13 @@ STATE=failed
 : > "$CALLS"
 verify_boot >/dev/null
 grep -Fxq 'systemctl start den.service' "$CALLS"
+STATE=failed
+FAIL_START=yes
+: > "$CALLS"
+if verify_boot >/dev/null 2>&1; then exit 1; fi
+[[ "$(grep -c '^systemctl start den.service$' "$CALLS")" == 3 ]]
+! grep -q '^health$' "$CALLS"
+FAIL_START=no
 STATE=active
 FAIL_CHECK=yes
 : > "$CALLS"

@@ -26,7 +26,8 @@ verify_boot() {
                 ;;
             *) printf 'DEN: unexpected DEN service state: %s\n' "$state" >&2; return 1 ;;
         esac
-        if /usr/local/bin/den check &&
+        if systemctl is-active --quiet den.service &&
+            /usr/local/bin/den check &&
             { [[ ! -f /etc/den-plus/nvidia-power.env ]] ||
                 nvidia-smi --query-gpu=name --format=csv,noheader >/dev/null; } &&
             response="$(curl --noproxy '*' --fail --silent --show-error --connect-timeout 5 --max-time 15 \
