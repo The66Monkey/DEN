@@ -2,8 +2,11 @@
 
 ## Everyday Backups
 
-DEN saves encrypted snapshots nightly around 03:00. Apps briefly stop during
-the backup and restart afterwards; VPN stays up. No daily action is needed.
+DEN saves encrypted snapshots every Tuesday around 03:00 server time. Apps
+briefly stop during the backup and restart afterwards; VPN stays up. A failure
+between snapshots can lose up to a week of changes. DEN also takes backups
+before its application and Fedora major-version upgrades. Health checks report
+a backup that is at least eight days old.
 Snapshots include app data/settings, media, downloads, passwords and VPN profiles,
 but not regenerable caches.
 

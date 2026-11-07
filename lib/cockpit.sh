@@ -35,7 +35,7 @@ cockpit_configure() (
     if [[ ! -f "$state/managed.conf" && -e "$socket" ]]; then
         fail 'Cockpit socket file den.conf is already in use; migrate it before enabling DEN integration.'
     fi
-    dnf install -y cockpit || return 1
+    dnf install -y cockpit cockpit-packagekit || return 1
     install -d -m 755 "$config_dir/ws-certs.d" "$systemd_dir/cockpit.socket.d" || return 1
     if [[ ! -f "$state/managed.conf" ]]; then
         [[ ! -e "$config_dir/ws-certs.d/99-den.cert" && ! -e "$config_dir/ws-certs.d/99-den.key" ]] ||

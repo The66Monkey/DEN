@@ -144,4 +144,21 @@ mv "$BACKUP_MOUNT" "$TEMP/unmounted"
 : > "$CALLS"
 if backup_stack; then fail 'Unmounted backup disk accepted.'; fi
 [[ ! -s "$CALLS" ]] || fail 'Commands ran against an unmounted backup disk.'
-printf 'Backup restart, failure propagation and restore-safety checks passed.\n'
+
+date() {
+    case "$*" in
+        '-d fixture +%s') printf '%s\n' "$SNAPSHOT_TIME" ;;
+        '+%s') printf '%s\n' "$CURRENT_TIME" ;;
+        *) command date "$@" ;;
+    esac
+}
+CURRENT_TIME=1000000
+SNAPSHOT_TIME=$((CURRENT_TIME - 691200 + 1))
+check_backup_age '[{"time":"fixture"}]'
+SNAPSHOT_TIME=$((CURRENT_TIME - 691200))
+if (check_backup_age '[{"time":"fixture"}]') 2>/dev/null; then fail 'Eight-day-old backup accepted.'; fi
+if (check_backup_age '[]') 2>/dev/null; then fail 'Missing backup accepted.'; fi
+if (check_backup_age 'invalid') 2>/dev/null; then fail 'Invalid snapshot listing accepted.'; fi
+grep -Fxq 'OnCalendar=Tue *-*-* 03:00:00' "$ROOT/templates/systemd/den-backup.timer"
+grep -Fxq 'Persistent=true' "$ROOT/templates/systemd/den-backup.timer"
+printf 'Backup scheduling, age, restart, failure propagation and restore-safety checks passed.\n'

@@ -120,7 +120,7 @@ or NFO files beside movies disabled. Do not move seeding files outside qBittorre
 | `/srv/den/qbittorrent` | `/config` |
 
 Use `sudo den start`, `stop`, `status` and `logs qbittorrent` to manage it.
-Settings and both download folders are included in nightly snapshots.
+Settings and both download folders are included in weekly snapshots.
 
 ### Sharing the Media and Backup HDD
 

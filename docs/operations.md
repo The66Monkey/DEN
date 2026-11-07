@@ -125,11 +125,17 @@ update DEN, add the exact AdGuard/LAN DNS rewrite
 sudo den cockpit-setup
 ```
 
-DEN installs Cockpit, enables its socket, configures the HTTPS origin and uses a
-verified private TLS backend. Standalone and infrastructure proxies receive the
-backend CA; VPN DNS and DDNS are updated. deSEC token permissions must include
+DEN installs Cockpit and its Software Updates component, enables its socket,
+configures the HTTPS origin and uses a verified private TLS backend. Standalone
+and infrastructure proxies receive the backend CA; VPN DNS and DDNS are updated.
+deSEC token permissions must include
 `server` and `_acme-challenge.server`. The existing certificate challenge method
 applies; HTTP validation uses the normal TCP 80 forwarding.
+
+Use Software Updates to inspect or manually apply Fedora package updates.
+Do not enable a separate automatic update schedule there while DEN's monthly
+maintenance is enabled: it would bypass DEN's backup and health checks and
+could reboot during a DEN operation.
 
 To opt out, set `COCKPIT_ENABLED=no` in `/opt/den/.env` and run the same command.
 DEN removes the route, link and VPN DNS record and restores the pre-integration

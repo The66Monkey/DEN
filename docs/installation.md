@@ -277,7 +277,7 @@ storage. Treat both as credentials; never paste them into chat or public logs.
 - [ ] Save settings and recovery password to a mounted USB if wanted:
   `sudo den recovery-kit /media/usb`. Keep it private.
 
-**Done.** Backups run nightly around 03:00; monthly updates may reboot the server.
+**Done.** Backups run Tuesdays around 03:00; monthly updates may reboot the server.
 Keep disks connected. When something fails, run `sudo den status` and
 `sudo den check`. See [troubleshooting](troubleshooting.md) or
 [recovery](backup.md) only when needed.

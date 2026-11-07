@@ -38,8 +38,17 @@ enable_update_timer() {
     esac
 }
 
+check_backup_age() {
+    local snapshots="$1" newest now
+    newest="$(jq -er 'sort_by(.time) | last | .time // empty' <<< "$snapshots")" ||
+        fail 'No successful DEN backup exists or snapshot listing is invalid.'
+    newest="$(date -d "$newest" +%s)" || fail 'Cannot parse the latest DEN backup time.'
+    now="$(date +%s)" || return 1
+    (( now - newest < 691200 )) || fail 'Last backup is at least 8 days old.'
+}
+
 health_check() {
-    local expected actual snapshots newest now used torrent_pending=no
+    local expected actual snapshots used torrent_pending=no
     check_nvidia_driver || return 1
     ensure_media_storage
     expected="$(compose config --services | wc -l)"
@@ -64,11 +73,8 @@ health_check() {
     fluxer_health_check
     addon_hook check || return 1
     ensure_backup_mount
-    snapshots="$(restic_cmd snapshots --host den --tag den-v1 --json)"
-    newest="$(jq -r 'sort_by(.time) | last | .time // empty' <<< "$snapshots")"
-    [[ -n "$newest" ]] || fail 'No successful DEN backup exists.'
-    newest="$(date -d "$newest" +%s)"; now="$(date +%s)"
-    (( now - newest < 129600 )) || fail 'Last backup is more than 36 hours old.'
+    snapshots="$(restic_cmd snapshots --host den --tag den-v1 --json)" || return 1
+    check_backup_age "$snapshots" || return 1
     used="$(df --output=pcent "$DATA_DIR" | tail -1 | tr -dc '0-9')"
     (( used < 90 )) || fail 'Data filesystem is at least 90% full.'
     if [[ -n "${MEDIA_MOUNT:-}" ]]; then

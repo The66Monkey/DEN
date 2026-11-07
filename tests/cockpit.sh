@@ -32,6 +32,7 @@ COCKPIT_ENABLED=yes
 if cockpit_configure 2>/dev/null; then fail 'Custom Cockpit socket override overwritten.'; fi
 rm "$DEN_COCKPIT_SYSTEMD_DIR/cockpit.socket.d/custom.conf"
 cockpit_configure
+grep -Fxq 'dnf install -y cockpit cockpit-packagekit' "$TEMP/calls"
 grep -Fq 'systemctl enable --now cockpit.socket' "$TEMP/calls"
 grep -Fxq 'ListenStream=172.30.44.1:9090' "$DEN_COCKPIT_SYSTEMD_DIR/cockpit.socket.d/den.conf"
 grep -Fxq 'FreeBind=yes' "$DEN_COCKPIT_SYSTEMD_DIR/cockpit.socket.d/den.conf"
