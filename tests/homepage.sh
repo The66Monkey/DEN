@@ -53,9 +53,15 @@ if fluxer == "yes":
     expected_links.insert(services.index("chat") + 1, f"https://chat.{domain}/admin")
 assert parsed.links == expected_links + ["https://github.com/The66Monkey/DEN"]
 text = "".join(parsed.text)
-assert ("Chat - Fluxer (public, invite-only)" in text) == (fluxer == "yes")
-assert ("Chat administration - Fluxer" in text) == (fluxer == "yes")
+assert ("Fluxer - Chat (public, invite-only)" in text) == (fluxer == "yes")
+assert ("Fluxer - Administration" in text) == (fluxer == "yes")
 assert "Welcome home to your DEN" in text
+assert "Jellyfin - Media" in text
+assert "Immich - Photos" in text
+assert "Nextcloud - Files" in text
+assert "Forgejo - Git" in text
+assert 'class="service-mark mark-jellyfin" aria-hidden="true">J</span>' in page
+assert 'class="service-mark mark-immich" aria-hidden="true">I</span>' in page
 assert f"ssh YOUR-FEDORA-USER@{ip}" in text
 assert "sudo grep '^NEXTCLOUD_ADMIN_PASSWORD=' /opt/den/.env" in text
 assert "sudo den keepass-password" in text
@@ -77,7 +83,7 @@ PY
     touch "$DEPLOY_DIR/private/external-edge"
     write_homepage
     grep -Fq "https://dns.$DOMAIN/" "$DEPLOY_DIR/home/index.html"
-    grep -Fq 'DNS - AdGuard Home' "$DEPLOY_DIR/home/index.html"
+    grep -Fq 'AdGuard Home - DNS' "$DEPLOY_DIR/home/index.html"
     rm "$DEPLOY_DIR/private/external-edge"
     write_homepage
     if grep -Fq "https://dns.$DOMAIN/" "$DEPLOY_DIR/home/index.html"; then fail 'Disabled infrastructure retained the AdGuard link.'; fi

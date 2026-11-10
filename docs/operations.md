@@ -234,6 +234,9 @@ On the first of each month, between 04:00 and 04:30 server time, DEN updates
 itself, enabled Fluxer and Fedora. It takes backups and may reboot.
 Keep the storage disk connected. Missed maintenance runs when the timer resumes.
 
+Application versions and digests follow DEN releases. Shared-edge and DNS
+images are [updated separately](infrastructure.md).
+
 Installed add-ons can provide a validated `private/home-addon.json` feature
 manifest. The homepage renders enabled feature links in a separate section;
 disabled features appear only under the small expandable "Other features"

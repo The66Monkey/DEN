@@ -48,8 +48,8 @@ DEN and BASM can share a zone with separate API tokens and non-overlapping
 record permissions: DEN owns the names listed above, while BASM normally owns
 the root, `erp`, `mail`, `cloud` and `mx`. If DEN owns `chat`, leave BASM Fluxer
 unselected or choose a distinct BASM hostname. DDNS only updates addresses;
-Postal's MX, SPF, DKIM and DMARC setup belongs to BASM. DNS records alone do not
-solve the shared public HTTPS forwarding limitation described below.
+Stalwart's MX, SPF, DKIM and DMARC setup belongs to BASM. DNS records alone do
+not solve the shared public HTTPS forwarding limitation described below.
 
 ## Port Forwarding
 

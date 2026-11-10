@@ -142,25 +142,25 @@ write_homepage() {
         --argjson addon "$addon" \
         --rawfile template "$DEPLOY_DIR/templates/home.html" '
         ([
-            {name: "media", label: "Media - Jellyfin"},
-            {name: "photos", label: "Photos - Immich"},
-            {name: "files", label: "Files - Nextcloud"},
-            {name: "git", label: "Git - Forgejo"}
+            {name: "media", label: "Jellyfin - Media", mark: "jellyfin", symbol: "J"},
+            {name: "photos", label: "Immich - Photos", mark: "immich", symbol: "I"},
+            {name: "files", label: "Nextcloud - Files", mark: "nextcloud", symbol: "N"},
+            {name: "git", label: "Forgejo - Git", mark: "forgejo", symbol: "F"}
         ] + (if $fluxer == "yes" then [
-            {name: "chat", label: "Chat - Fluxer (public, invite-only)"},
-            {name: "chat", path: "/admin", label: "Chat administration - Fluxer"}
+            {name: "chat", label: "Fluxer - Chat (public, invite-only)", mark: "fluxer", symbol: "F"},
+            {name: "chat", path: "/admin", label: "Fluxer - Administration", mark: "fluxer", symbol: "F"}
         ] else [] end)
-          + (if $torrents == "yes" then [{name: "downloads", label: "Downloads - qBittorrent"}] else [] end)
-          + (if $dns_admin == "yes" then [{name: "dns", label: "DNS - AdGuard Home"}] else [] end)
-          + (if $cockpit == "yes" then [{name: "server", label: "Server administration - Cockpit"}] else [] end)
-        | map("<li><a href=\"https://" + (.name + "." + $domain | @html) + ((.path // "/") | @html) + "\">" + (.label | @html) + "</a></li>")
+          + (if $torrents == "yes" then [{name: "downloads", label: "qBittorrent - Downloads", mark: "qbittorrent", symbol: "q"}] else [] end)
+          + (if $dns_admin == "yes" then [{name: "dns", label: "AdGuard Home - DNS", mark: "adguard", symbol: "A"}] else [] end)
+          + (if $cockpit == "yes" then [{name: "server", label: "Cockpit - Server administration", mark: "cockpit", symbol: "C"}] else [] end)
+        | map("<li><a class=\"service-card\" href=\"https://" + (.name + "." + $domain | @html) + ((.path // "/") | @html) + "\"><span class=\"service-mark mark-" + (.mark | @html) + "\" aria-hidden=\"true\">" + (.symbol | @html) + "</span><span class=\"service-name\">" + (.label | @html) + "</span><span class=\"service-arrow\" aria-hidden=\"true\">Open</span></a></li>")
         | join("\n")) as $services |
         (if $addon == {} then "" else
             "<section aria-labelledby=\"addon-heading\"><h2 id=\"addon-heading\">" +
             ($addon.title | @html) + "</h2><nav aria-label=\"Add-on services\"><ul>" +
             ($addon.features | map(select(.enabled) |
-                "<li><a href=\"" + (.url | @html) + "\">" + (.label | @html) +
-                "</a><small>" + (.description | @html) + "</small></li>") | join("\n")) +
+                "<li><a class=\"service-card\" href=\"" + (.url | @html) + "\"><span class=\"service-mark mark-addon\" aria-hidden=\"true\">+</span><span class=\"service-copy\"><span class=\"service-name\">" + (.label | @html) +
+                "</span><small>" + (.description | @html) + "</small></span><span class=\"service-arrow\" aria-hidden=\"true\">Open</span></a></li>") | join("\n")) +
             "</ul></nav>" +
             (if any($addon.features[]; .enabled | not) then
                 "<details><summary><small>Other features (not enabled)</small></summary><ul>" +
