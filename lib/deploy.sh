@@ -156,7 +156,7 @@ write_homepage() {
         | map("<li><a class=\"service-card\" href=\"https://" + (.name + "." + $domain | @html) + ((.path // "/") | @html) + "\"><span class=\"service-mark mark-" + (.mark | @html) + "\" aria-hidden=\"true\">" + (.symbol | @html) + "</span><span class=\"service-name\">" + (.label | @html) + "</span><span class=\"service-arrow\" aria-hidden=\"true\">Open</span></a></li>")
         | join("\n")) as $services |
         (if $addon == {} then "" else
-            "<section aria-labelledby=\"addon-heading\"><h2 id=\"addon-heading\">" +
+            "<section class=\"addon-section\" aria-labelledby=\"addon-heading\"><h2 id=\"addon-heading\">" +
             ($addon.title | @html) + "</h2><nav aria-label=\"Add-on services\"><ul>" +
             ($addon.features | map(select(.enabled) |
                 "<li><a class=\"service-card\" href=\"" + (.url | @html) + "\"><span class=\"service-mark mark-addon\" aria-hidden=\"true\">+</span><span class=\"service-copy\"><span class=\"service-name\">" + (.label | @html) +
