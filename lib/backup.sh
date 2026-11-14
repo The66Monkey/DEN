@@ -116,13 +116,16 @@ promote_restored_data() {
     if [[ -n "${MEDIA_MOUNT:-}" ]]; then
         check_media_disk
         mkdir -p "$MEDIA_MOUNT/den"
-        for directory in media downloads; do
+        while IFS= read -r directory; do
+            [[ "$(realpath -m "$restored/$directory")" == "$restored/$directory" &&
+               "$(realpath -m "$MEDIA_MOUNT/den/$directory")" == "$MEDIA_MOUNT/den/$directory" ]] || fail 'Recovered storage paths cannot contain symlinks.'
             [[ ! -L "$restored/$directory" && ! -L "$MEDIA_MOUNT/den/$directory" ]] || fail 'Recovered storage folders cannot be symlinks.'
             if [[ -d "$restored/$directory" ]]; then
                 [[ ! -e "$MEDIA_MOUNT/den/$directory" ]] || rmdir "$MEDIA_MOUNT/den/$directory"
+                mkdir -p "$(dirname "$MEDIA_MOUNT/den/$directory")"
                 mv "$restored/$directory" "$MEDIA_MOUNT/den/$directory"
             fi
-        done
+        done < <(secondary_storage_directories)
     fi
     [[ ! -e "$DATA_DIR" ]] || rmdir "$DATA_DIR"
     mv "$restored" "$DATA_DIR"

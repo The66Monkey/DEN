@@ -15,6 +15,44 @@ DEN checks health hourly. Problems appear in the system journal and may show
 on SSH login; there are no email or phone alerts.
 If another operation is running, wait for it to finish.
 
+## Secondary cache storage
+
+New installations use `SECONDARY_CACHE_ENABLED=yes` with `MEDIA_MOUNT` to
+bind these directories to matching paths under `MEDIA_MOUNT/den`:
+
+```text
+/srv/den/cache/jellyfin
+/srv/den/cache/immich
+```
+
+The paths seen by applications do not change. Core databases and Jellyfin
+settings/metadata remain on the primary filesystem. These caches are excluded
+from backups. Installed add-ons document any additional storage in their own
+repository; see [add-on integration](addons.md).
+
+Existing installations default to `SECONDARY_CACHE_ENABLED=no`. Changing the
+setting alone does not migrate data or install mounts. Stop affected writers,
+copy and verify their data and ownership/SELinux labels, then install matching
+bind-mount units before enabling the setting. DEN refuses missing or incorrect
+mounts rather than accepting primary-disk storage.
+
+Mount lifetime dependencies belong to the services that use the storage.
+Docker retains `RequiresMountsFor` to prevent its automatic container restarts
+from writing to the primary disk before bind mounts are available. Setup
+activates and verifies all mounts before attaching dependencies to services.
+Do not attach inactive mounts to a running Docker daemon: this can stop the
+independent DNS/edge and unrelated containers. Without the configured disk,
+Docker and its independent DNS/edge cannot start.
+
+Check actual placement and capacity:
+
+```bash
+findmnt /srv/den/cache/jellyfin
+findmnt /srv/den/cache/immich
+df -h /srv/den /srv/den/cache/jellyfin
+sudo den check
+```
+
 ## Forgejo Git access
 
 DEN defaults to **HTTPS Git**, with Forgejo SSH disabled and no Git SSH port

@@ -17,6 +17,7 @@ read_settings() {
     [[ -f "$file" ]] || fail "Config not found: $file"
     unset DOMAIN EMAIL LAN_IP LAN_CIDR MEDIA_MOUNT BACKUP_MOUNT ALLOW_SHARED_MEDIA_BACKUP KEEPASS_ENABLED FLUXER_ENABLED QBITTORRENT_ENABLED QBITTORRENT_VPN_ENABLED UPDATE_REPOSITORY ACME_CHALLENGE DB_PASSWORD NEXTCLOUD_ADMIN_PASSWORD RESTIC_PASSWORD
     MEDIA_MOUNT=
+    SECONDARY_CACHE_ENABLED=no
     TV_CIDR=
     COCKPIT_ENABLED=yes
     ALLOW_SHARED_MEDIA_BACKUP=no
@@ -31,7 +32,7 @@ read_settings() {
         [[ "$line" == *=* ]] || fail 'Use unquoted KEY=value lines in config.'
         key="${line%%=*}"; value="${line#*=}"
         case "$key" in
-            DOMAIN|EMAIL|LAN_IP|LAN_CIDR|TV_CIDR|COCKPIT_ENABLED|MEDIA_MOUNT|BACKUP_MOUNT|ALLOW_SHARED_MEDIA_BACKUP|KEEPASS_ENABLED|FLUXER_ENABLED|QBITTORRENT_ENABLED|QBITTORRENT_VPN_ENABLED|UPDATE_REPOSITORY|ACME_CHALLENGE|DB_PASSWORD|NEXTCLOUD_ADMIN_PASSWORD|RESTIC_PASSWORD) ;;
+            DOMAIN|EMAIL|LAN_IP|LAN_CIDR|TV_CIDR|COCKPIT_ENABLED|MEDIA_MOUNT|SECONDARY_CACHE_ENABLED|BACKUP_MOUNT|ALLOW_SHARED_MEDIA_BACKUP|KEEPASS_ENABLED|FLUXER_ENABLED|QBITTORRENT_ENABLED|QBITTORRENT_VPN_ENABLED|UPDATE_REPOSITORY|ACME_CHALLENGE|DB_PASSWORD|NEXTCLOUD_ADMIN_PASSWORD|RESTIC_PASSWORD) ;;
             AI_*|AUDIOBOOKS_*|NVIDIA_POWER_LIMIT_W|NVIDIA_GPU_ID) fail 'AI, audiobook and power settings moved to DEN-plus; follow its migration guide before updating core DEN.' ;;
             *) fail "Unknown config key: $key" ;;
         esac
@@ -88,6 +89,9 @@ review_installation() {
     printf '\nNetwork\n  Server LAN address: %s\n  Trusted LAN subnet: %s\n  Certificates: %s\n' "$LAN_IP" "$LAN_CIDR" "$ACME_CHALLENGE"
     printf '  Home: https://home.%s\n  Web: TCP 80/443\n  Home VPN: UDP %s\n' "$DOMAIN" "$WIREGUARD_PORT"
     printf '\nStorage\n  Application data: /srv/den\n  Media disk: %s\n  Backup disk: %s\n' "${MEDIA_MOUNT:-none (media stays on the system disk)}" "$BACKUP_MOUNT"
+    if [[ -n "${MEDIA_MOUNT:-}" && "${SECONDARY_CACHE_ENABLED:-no}" == yes ]]; then
+        printf '  Secondary disk: Jellyfin/Immich caches and DEN+ AI models/caches.\n'
+    fi
     if [[ "$ALLOW_SHARED_MEDIA_BACKUP" == yes ]]; then
         printf '  Shared media/backup storage: allowed.\n'
     fi
@@ -217,6 +221,7 @@ validate_settings() {
     [[ "${QBITTORRENT_VPN_ENABLED:-no}" == yes || "${QBITTORRENT_VPN_ENABLED:-no}" == no ]] || fail 'QBITTORRENT_VPN_ENABLED must be yes or no.'
     [[ "${QBITTORRENT_VPN_ENABLED:-no}" != yes || "$QBITTORRENT_ENABLED" == yes ]] || fail 'Enable qBittorrent before its outbound VPN.'
     [[ "${ALLOW_SHARED_MEDIA_BACKUP:-no}" == yes || "${ALLOW_SHARED_MEDIA_BACKUP:-no}" == no ]] || fail 'ALLOW_SHARED_MEDIA_BACKUP must be yes or no.'
+    [[ "${SECONDARY_CACHE_ENABLED:-no}" == yes || "${SECONDARY_CACHE_ENABLED:-no}" == no ]] || fail 'SECONDARY_CACHE_ENABLED must be yes or no.'
     [[ "${ACME_CHALLENGE:-http}" == http || "${ACME_CHALLENGE:-http}" == dns-desec ]] || fail 'ACME_CHALLENGE must be http or dns-desec.'
     [[ "$UPDATE_REPOSITORY" =~ ^https://[a-zA-Z0-9.-]+/[a-zA-Z0-9._/-]+\.git$ || "$UPDATE_REPOSITORY" =~ ^git@[a-zA-Z0-9.-]+:[a-zA-Z0-9._/-]+\.git$ ]] || fail 'UPDATE_REPOSITORY must be an HTTPS or SSH Git repository URL without embedded credentials.'
     [[ ${#DOMAIN} -le 253 && "$DOMAIN" == *.* && "$DOMAIN" != *.local && "$DOMAIN" != *.localhost ]] || fail 'Use a public DNS domain.'
@@ -266,7 +271,8 @@ write_environment() {
     ALLOW_SHARED_MEDIA_BACKUP="${ALLOW_SHARED_MEDIA_BACKUP:-no}"
     TV_CIDR="${TV_CIDR:-}"
     COCKPIT_ENABLED="${COCKPIT_ENABLED:-yes}"
-    for key in DOMAIN EMAIL LAN_IP LAN_CIDR TV_CIDR COCKPIT_ENABLED MEDIA_MOUNT BACKUP_MOUNT ALLOW_SHARED_MEDIA_BACKUP KEEPASS_ENABLED FLUXER_ENABLED QBITTORRENT_ENABLED QBITTORRENT_VPN_ENABLED UPDATE_REPOSITORY ACME_CHALLENGE; do
+    SECONDARY_CACHE_ENABLED="${SECONDARY_CACHE_ENABLED:-no}"
+    for key in DOMAIN EMAIL LAN_IP LAN_CIDR TV_CIDR COCKPIT_ENABLED MEDIA_MOUNT SECONDARY_CACHE_ENABLED BACKUP_MOUNT ALLOW_SHARED_MEDIA_BACKUP KEEPASS_ENABLED FLUXER_ENABLED QBITTORRENT_ENABLED QBITTORRENT_VPN_ENABLED UPDATE_REPOSITORY ACME_CHALLENGE; do
         printf '%s=%s\n' "$key" "${!key}"
     done > "$destination/.env"
     printf 'DB_PASSWORD=%s\nNEXTCLOUD_ADMIN_PASSWORD=%s\nRESTIC_PASSWORD=%s\n' \

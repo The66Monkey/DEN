@@ -9,6 +9,9 @@ before its application and Fedora major-version upgrades. Health checks report
 a backup that is at least eight days old.
 Snapshots include app data/settings, media, downloads, passwords and VPN profiles,
 but not regenerable caches.
+Secondary bind mounts keep their `/srv/den` paths in snapshots. With
+`SECONDARY_CACHE_ENABLED=yes`, recovery recreates the excluded Jellyfin/Immich
+cache directories on the secondary disk.
 
 With the optional [independent infrastructure](infrastructure.md), DNS and the
 shared edge remain running. Their private configuration and certificates are
@@ -62,6 +65,9 @@ repository folders. Remove the staging copy when finished.
 1. Install fresh Fedora Server with the original LAN IP. Mount the backup HDD
    at its original path. If `MEDIA_MOUNT` is set, also mount that disk with
    empty `den/media` and `den/downloads` folders.
+   If `SECONDARY_CACHE_ENABLED=yes`, also keep `den/cache/jellyfin` and
+   `den/cache/immich` absent or empty. For installed add-ons, check their recovery
+   documentation for additional storage paths.
 2. Attach the recovery USB. **Do not run the normal installer.**
 3. Use a snapshot ID from the backup:
 
@@ -83,9 +89,12 @@ Do not install older images over updated databases. Preserve the failed data
 until recovery is verified.
 
 1. Stop timers, DEN, Fluxer, VPN DNS and WireGuard.
-2. For HDD media: stop Docker, unmount the media/download bind mounts, and
-   preserve their unit files and Docker storage drop-in. Move the HDD's
-   `den/media` and `den/downloads` to unused holding names.
+2. Stop writers before unmounting secondary storage. Preserve its mount units
+   and the storage drop-ins under `den.service.d` and `docker.service.d`.
+   Preserve installed add-ons' native-service drop-ins and additional mounts.
+   Include cache mounts if enabled. Move each
+   secondary directory to an unused holding name. Stopping Docker also stops
+   independent DNS/edge and unrelated containers.
 3. Preserve `/srv/den`, `/opt/den`, `/etc/wireguard/wg0.conf` and the installed
    DEN service under unused holding names. Never move folders with active mounts.
 4. Reload systemd, then follow failed-server recovery with a **pre-update**

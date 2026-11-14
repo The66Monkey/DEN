@@ -68,9 +68,17 @@ Reload affects only DEN's table. Stopping the unit does not remove its rules.
 | `BACKUP_MOUNT/den-restic` | Encrypted snapshots |
 
 `MEDIA_MOUNT/den/{media,downloads}` bind to the matching `/srv/den` paths.
-systemd mount units and Docker dependencies prevent startup on missing storage.
+systemd mount units and DEN/native-service lifetime dependencies protect
+application storage. Docker also requires the mounts before starting, because
+it automatically restarts containers. Setup activates mounts before attaching
+service dependencies. A missing secondary disk prevents Docker, including
+independent DNS/edge, from starting.
 Restic follows these mounts. Empty `MEDIA_MOUNT` keeps data on SSD.
 Shared media/backup storage requires `ALLOW_SHARED_MEDIA_BACKUP=yes`.
+New example settings enable `SECONDARY_CACHE_ENABLED`: Jellyfin/Immich caches
+also bind to matching paths under `MEDIA_MOUNT/den`. Core databases and Jellyfin
+metadata remain on SSD. Existing settings without this key retain the old
+layout. Add-on storage and native services are documented by the owning add-on.
 
 `templates/compose.torrents.yml` exposes completed downloads read-only to
 Jellyfin only when qBittorrent is enabled. Fluxer live volumes stay in Docker's

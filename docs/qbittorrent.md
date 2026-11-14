@@ -133,7 +133,9 @@ ALLOW_SHARED_MEDIA_BACKUP=yes
 ```
 
 The HDD holds `den/media`, `den/downloads` and `den-restic`.
-Apps/settings remain on SSD.
+Apps/settings remain on SSD. With `SECONDARY_CACHE_ENABLED=yes`,
+[regenerable caches](operations.md#secondary-cache-storage)
+also use the HDD.
 
 These are installation settings, not migration commands. Changing them on an
 existing server does not move files; arrange an offline migration instead.

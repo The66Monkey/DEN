@@ -55,15 +55,22 @@ check_media_disk() {
     fi
 }
 
+secondary_storage_directories() {
+    printf '%s\n' media downloads
+    if [[ "${SECONDARY_CACHE_ENABLED:-no}" == yes ]]; then
+        printf '%s\n' cache/jellyfin cache/immich ai/ollama/models ai/webui/cache ai/rag/embedding
+    fi
+}
+
 ensure_media_storage() {
     [[ -n "${MEDIA_MOUNT:-}" ]] || return 0
     check_media_disk
     local directory
-    for directory in media downloads; do
+    while IFS= read -r directory; do
         mountpoint -q "$DATA_DIR/$directory" || fail "Secondary storage bind mount is missing: $DATA_DIR/$directory"
         [[ "$(realpath -e "$MEDIA_MOUNT/den/$directory")" == "$MEDIA_MOUNT/den/$directory" ]] || fail 'Secondary storage folders cannot contain symlinks.'
         [[ "$DATA_DIR/$directory" -ef "$MEDIA_MOUNT/den/$directory" ]] || fail "Wrong secondary storage bind mount: $DATA_DIR/$directory"
-    done
+    done < <(secondary_storage_directories)
 }
 
 media_mount_unit() {
@@ -90,35 +97,57 @@ EOF
 configure_media_storage() {
     [[ -n "${MEDIA_MOUNT:-}" ]] || return 0
     check_media_disk
-    local directory unit units=
-    for directory in media downloads; do
+    local directory unit units='' paths=''
+    while IFS= read -r directory; do
         [[ ! -L "$DATA_DIR" && ! -L "$DATA_DIR/$directory" ]] || fail 'DEN storage paths cannot be symlinks.'
+        [[ "$(realpath -m "$DATA_DIR/$directory")" == "$DATA_DIR/$directory" &&
+           "$(realpath -m "$MEDIA_MOUNT/den/$directory")" == "$MEDIA_MOUNT/den/$directory" ]] || fail 'Storage folders cannot contain symlinks.'
         mkdir -p "$MEDIA_MOUNT/den/$directory" "$DATA_DIR/$directory"
         [[ "$(realpath -e "$MEDIA_MOUNT/den/$directory")" == "$MEDIA_MOUNT/den/$directory" ]] || fail 'Secondary storage folders cannot contain symlinks.'
-        [[ -z "$(find "$DATA_DIR/$directory" -mindepth 1 -print -quit)" ]] || fail 'Existing media/downloads require an explicit migration; DEN will not hide them with a mount.'
+        [[ -z "$(find "$DATA_DIR/$directory" -mindepth 1 -print -quit)" ]] || fail "Existing $directory requires an explicit migration; DEN will not hide it with a mount."
         unit="$(systemd-escape --path --suffix=mount "$DATA_DIR/$directory")"
         [[ ! -e "/etc/systemd/system/$unit" ]] || fail "Storage mount unit already exists: $unit"
         units+=" $unit"
-    done
-    for directory in media downloads; do
+        paths+=" $DATA_DIR/$directory"
+    done < <(secondary_storage_directories)
+    while IFS= read -r directory; do
         unit="$(systemd-escape --path --suffix=mount "$DATA_DIR/$directory")"
         media_mount_unit "$directory" > "/etc/systemd/system/$unit"
         chmod 644 "/etc/systemd/system/$unit"
-    done
-    install -d -m 755 /etc/systemd/system/docker.service.d
-    cat > /etc/systemd/system/docker.service.d/den-storage.conf <<EOF
+    done < <(secondary_storage_directories)
+    # Attach shared-daemon dependencies only after their mounts are active.
+    systemctl daemon-reload
+    while IFS= read -r directory; do
+        unit="$(systemd-escape --path --suffix=mount "$DATA_DIR/$directory")"
+        systemctl enable --now "$unit"
+    done < <(secondary_storage_directories)
+    ensure_media_storage
+    install -d -m 755 /etc/systemd/system/den.service.d
+    cat > /etc/systemd/system/den.service.d/den-storage.conf <<EOF
 [Unit]
-RequiresMountsFor=$DATA_DIR/media $DATA_DIR/downloads
+RequiresMountsFor=${paths# }
 BindsTo=$units
 After=$units
 EOF
+    chmod 644 /etc/systemd/system/den.service.d/den-storage.conf
+    if [[ "${SECONDARY_CACHE_ENABLED:-no}" == yes ]]; then
+        install -d -m 755 /etc/systemd/system/den-ai-ollama.service.d
+        unit="$(systemd-escape --path --suffix=mount "$DATA_DIR/ai/ollama/models")"
+        cat > /etc/systemd/system/den-ai-ollama.service.d/den-storage.conf <<EOF
+[Unit]
+RequiresMountsFor=$DATA_DIR/ai/ollama/models
+BindsTo=$unit
+After=$unit
+EOF
+        chmod 644 /etc/systemd/system/den-ai-ollama.service.d/den-storage.conf
+    fi
+    install -d -m 755 /etc/systemd/system/docker.service.d
+    cat > /etc/systemd/system/docker.service.d/den-storage.conf <<EOF
+[Unit]
+RequiresMountsFor=${paths# }
+EOF
     chmod 644 /etc/systemd/system/docker.service.d/den-storage.conf
     systemctl daemon-reload
-    for directory in media downloads; do
-        unit="$(systemd-escape --path --suffix=mount "$DATA_DIR/$directory")"
-        systemctl enable --now "$unit"
-    done
-    ensure_media_storage
 }
 
 write_homepage() {
@@ -325,10 +354,11 @@ check_host() {
     [[ ! -d "$DATA_DIR" || -z "$(find "$DATA_DIR" -mindepth 1 -print -quit)" ]] || fail '/srv/den is not empty; use recovery instead.'
     check_media_disk
     if [[ -n "${MEDIA_MOUNT:-}" ]]; then
-        for flag in media downloads; do
+        while IFS= read -r flag; do
+            [[ "$(realpath -m "$MEDIA_MOUNT/den/$flag")" == "$MEDIA_MOUNT/den/$flag" ]] || fail 'Secondary storage folders cannot contain symlinks.'
             [[ ! -L "$MEDIA_MOUNT/den" && ! -L "$MEDIA_MOUNT/den/$flag" ]] || fail 'Secondary storage folders cannot be symlinks.'
-            [[ ! -d "$MEDIA_MOUNT/den/$flag" || -z "$(find "$MEDIA_MOUNT/den/$flag" -mindepth 1 -print -quit)" ]] || fail 'Secondary DEN media/downloads are not empty; use an explicit recovery or migration.'
-        done
+            [[ ! -d "$MEDIA_MOUNT/den/$flag" || -z "$(find "$MEDIA_MOUNT/den/$flag" -mindepth 1 -print -quit)" ]] || fail "Secondary DEN $flag is not empty; use an explicit recovery or migration."
+        done < <(secondary_storage_directories)
     fi
 }
 

@@ -25,7 +25,7 @@ systemctl --failed
 | Calls fail | Forward TCP 7881 and UDP 7882 to DEN; run `sudo rexctl --dir /opt/den/fluxer voice test`. Public voice IP discovery and router hairpin support matter; see [public calls](networking.md#public-chat-and-calls). |
 | Another operation is running | Wait for the backup or update to finish. |
 | Backup fails or disk is full | Check `df -h` and `journalctl -u den-backup.service -n 50`. See [backups](backup.md). |
-| HDD missing / Docker will not start | Reconnect the configured HDD. Check `findmnt /srv/den/media` and `findmnt /srv/den/downloads`, then `systemctl status srv-den-media.mount srv-den-downloads.mount docker`. |
+| Secondary storage missing / Docker or DEN will not start | Reconnect the configured disk. Check `findmnt /srv/den/media`, `findmnt /srv/den/downloads` and enabled [cache mounts](operations.md#secondary-cache-storage), then `systemctl status docker den`. Docker's storage gate also affects independent DNS/edge. |
 | Update failed | Read `journalctl -u den-update.service -n 50`. Do not remove its marker or downgrade database images; see [recovery](backup.md#recover-after-a-bad-update). |
 
 Do not delete `/opt/den/.env`, data folders or backups to retry setup.

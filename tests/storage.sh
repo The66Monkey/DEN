@@ -63,6 +63,25 @@ ln -s "$MEDIA_MOUNT/den/media" "$DATA_DIR/media"
 rmdir "$MEDIA_MOUNT/den/media"
 mv "$MEDIA_MOUNT/den/other" "$MEDIA_MOUNT/den/media"
 
+SECONDARY_CACHE_ENABLED=yes
+for directory in cache/jellyfin cache/immich ai/ollama/models ai/webui/cache ai/rag/embedding; do
+    mkdir -p "$MEDIA_MOUNT/den/$directory" "$(dirname "$DATA_DIR/$directory")"
+    ln -s "$MEDIA_MOUNT/den/$directory" "$DATA_DIR/$directory"
+done
+ensure_media_storage
+while IFS= read -r directory; do
+    MISSING="$DATA_DIR/$directory"
+    if (ensure_media_storage) 2>/dev/null; then fail "Accepted missing bulk storage: $directory"; fi
+done < <(secondary_storage_directories)
+MISSING=
+mv "$MEDIA_MOUNT/den/ai/rag/embedding" "$MEDIA_MOUNT/den/ai/rag/other"
+mkdir "$MEDIA_MOUNT/den/ai/rag/embedding"
+rm "$DATA_DIR/ai/rag/embedding"
+ln -s "$MEDIA_MOUNT/den/ai/rag/other" "$DATA_DIR/ai/rag/embedding"
+if (ensure_media_storage) 2>/dev/null; then fail 'Accepted wrong AI cache bind source.'; fi
+SECONDARY_CACHE_ENABLED=no
+ensure_media_storage
+
 media_mount_unit media > "$TEMP/media.mount"
 grep -Fxq "What=$MEDIA_MOUNT/den/media" "$TEMP/media.mount"
 grep -Fxq "Where=$DATA_DIR/media" "$TEMP/media.mount"

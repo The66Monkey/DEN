@@ -27,8 +27,7 @@ chat and calls, and a KeePassXC-compatible password vault.
 When Fluxer is enabled, the home page links to both its main chat interface and
 administration at `https://chat.YOUR-DOMAIN/admin`.
 
-AI chat, workstation inference, ebook narration and AI-specific GPU power
-management live in the separate
+Advanced enthusiast services live in the separate
 [DEN+ add-on repository](https://git.scandinavianhacking.dedyn.io/The66Monkey/DEN-plus).
 They are not part of the core DEN installation. Existing enhanced installations
 must follow the add-on migration guide before updating; this repository split

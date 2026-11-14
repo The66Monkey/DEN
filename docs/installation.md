@@ -139,19 +139,26 @@ Keep `home.DOMAIN` pointing to the public IP.
   LAN_CIDR=192.168.1.0/24
   ACME_CHALLENGE=dns-desec
   MEDIA_MOUNT=/mnt/den-backup
+  SECONDARY_CACHE_ENABLED=yes
   BACKUP_MOUNT=/mnt/den-backup
   ALLOW_SHARED_MEDIA_BACKUP=yes
   ```
 
-  This shares the drive between media and snapshots.
-  Photos and Nextcloud files stay on the primary drive. For separate media/backup disks,
+  This shares the drive between media, caches and snapshots.
+  `SECONDARY_CACHE_ENABLED=yes` places Jellyfin/Immich caches on that drive
+  using persistent bind mounts.
+  Photos, Nextcloud files, databases and Jellyfin settings/metadata
+  stay on the primary drive. For separate media/backup disks,
   use different mountpoints and leave `ALLOW_SHARED_MEDIA_BACKUP=no`.
+  Empty `MEDIA_MOUNT` keeps all application storage on the primary drive.
+  Existing installations without `SECONDARY_CACHE_ENABLED` retain their placement;
+  populated directories require an explicit migration before enabling it.
 
 - [ ] Set optional services to `yes` or leave them `no`:
   `QBITTORRENT_ENABLED`, `FLUXER_ENABLED`, `KEEPASS_ENABLED`.
   Fluxer is public when enabled, including when upgrading an existing install.
-  AI, narration and optional GPU power policy belong to the separate
-  [DEN+ add-on](addons.md), not core settings.
+  Enthusiast services belong to the separate [DEN+ add-on](addons.md), not
+  core settings. Use its documentation for add-on installation and storage.
 - [ ] Leave `TV_CIDR` empty for the normal home-LAN setup. For a separate TV
   Wi-Fi network with Jellyfin, follow the
   [TV network setup](networking.md#optional-balanced-iot-protection) after

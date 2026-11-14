@@ -1,9 +1,10 @@
 # Separate add-on integration
 
-Core DEN supplies photos, files, media, Git and private networking. AI and ebook
-narration are maintained in the separate
-[DEN+ repository](https://git.scandinavianhacking.dedyn.io/The66Monkey/DEN-plus), not enabled through
-core configuration. This interface is generic; no add-on is installed by default.
+Core DEN supplies photos, files, media, Git and private networking for a small
+home server. Optional enthusiast services are maintained in the separate
+[DEN+ repository](https://git.scandinavianhacking.dedyn.io/The66Monkey/DEN-plus).
+Use that repository's installation, storage and operations guides. This
+interface is generic; no add-on is installed by default.
 
 ## Administrator-controlled files
 
@@ -50,13 +51,12 @@ updated separately; updating DEN never updates an add-on's code.
 
 ## Migrating an older enhanced DEN
 
-Earlier versions accepted `AI_*`, `AUDIOBOOKS_*`, `NVIDIA_POWER_LIMIT_W` and
-`NVIDIA_GPU_ID` in `/opt/den/.env`. These settings no longer belong to core DEN.
-The parser refuses them with migration guidance rather than silently disabling
-working services. Back up and follow DEN+'s migration guide **before** replacing
-the live core deployment. Preserve existing WebUI data/secrets, native model
-weights, ebook/audio files and GPU power limits. Standalone labs need explicit
-migration rather than automatic adoption.
+Earlier enhanced versions stored add-on settings in `/opt/den/.env`. These
+settings no longer belong to core DEN. The parser refuses them with migration
+guidance rather than silently disabling working services. Back up and follow
+[DEN+'s migration guide](https://git.scandinavianhacking.dedyn.io/The66Monkey/DEN-plus/src/branch/main/docs/migration.md)
+**before** replacing the live core deployment. Preserve add-on data and secrets;
+standalone installations require explicit migration, not automatic adoption.
 
 The repository split itself makes no live-server changes. DEN+'s source is public
 on local Forgejo by choice; do not publish deployment secrets or SSH keys.

@@ -21,6 +21,12 @@ Business applications still require their VM; household DNS and DEN chat do not.
 The host remains a single point of failure; this is not high availability.
 DEN's existing VPN DNS stays independent.
 
+This separates application lifecycle, not the Docker daemon. Both infrastructure
+containers still depend on `docker.service`. Docker shutdown stops LAN DNS;
+its secondary-storage startup gate also prevents DNS from starting when the
+configured disk is unavailable. This deployment uses containerized AdGuard;
+native AdGuard is not currently installed or managed by DEN.
+
 ## Preparation and explicit migration
 
 Use DNS-challenge certificates (`ACME_CHALLENGE=dns-desec`). Review and back up

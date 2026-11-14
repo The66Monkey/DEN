@@ -35,6 +35,7 @@ request_server_hostname </dev/null
 [[ "$QBITTORRENT_ENABLED" == no ]]
 [[ "$QBITTORRENT_VPN_ENABLED" == no ]]
 [[ "$MEDIA_MOUNT" == /mnt/den-storage ]]
+[[ "$SECONDARY_CACHE_ENABLED" == yes ]]
 [[ "$ACME_CHALLENGE" == http ]]
 [[ "$ALLOW_SHARED_MEDIA_BACKUP" == no ]]
 DESEC_TOKEN=abcdefghijklmnopqrstuvwxyz12
@@ -49,6 +50,7 @@ read_settings "$TEMP/deployment/.env"
 [[ "$FLUXER_ENABLED" == no ]]
 [[ "$QBITTORRENT_ENABLED" == no ]]
 [[ "$MEDIA_MOUNT" == /mnt/den-storage ]]
+[[ "$SECONDARY_CACHE_ENABLED" == yes ]]
 if (write_environment "$TEMP/deployment") 2>/dev/null; then exit 1; fi
 for invalid in 'LAN_IP=192.168.1.999' 'LAN_IP=192.168.2.10' 'LAN_IP=192.168.1.0' 'LAN_CIDR=0.0.0.0/8' 'LAN_CIDR=192.168.1.1/24' 'DOMAIN=$(touch /tmp/den-injection)' 'BACKUP_MOUNT=/srv/den' 'MEDIA_MOUNT=/srv/den' 'MEDIA_MOUNT=/mnt/den-backup' 'MEDIA_MOUNT=/mnt/a/../b' 'MEDIA_MOUNT=/mnt/disk with spaces' 'KEEPASS_ENABLED=maybe' 'FLUXER_ENABLED=maybe' 'QBITTORRENT_ENABLED=maybe' 'QBITTORRENT_VPN_ENABLED=maybe'; do
     if (printf -v "${invalid%%=*}" '%s' "${invalid#*=}"; validate_settings) 2>/dev/null; then
@@ -56,6 +58,7 @@ for invalid in 'LAN_IP=192.168.1.999' 'LAN_IP=192.168.2.10' 'LAN_IP=192.168.1.0'
     fi
 done
 if (ALLOW_SHARED_MEDIA_BACKUP=maybe; validate_settings) 2>/dev/null; then fail 'Accepted an invalid shared-storage flag.'; fi
+if (SECONDARY_CACHE_ENABLED=maybe; validate_settings) 2>/dev/null; then fail 'Accepted an invalid secondary-cache flag.'; fi
 (MEDIA_MOUNT="$BACKUP_MOUNT"; ALLOW_SHARED_MEDIA_BACKUP=yes; validate_settings)
 ALLOW_SHARED_MEDIA_BACKUP=yes
 DESEC_TOKEN=abcdefghijklmnopqrstuvwxyz12
@@ -65,6 +68,7 @@ read_settings "$TEMP/shared-deployment/.env"
 printf 'DOMAIN=home.example.net\nEMAIL=you@example.net\nLAN_IP=192.168.1.10\nLAN_CIDR=192.168.1.0/24\nBACKUP_MOUNT=/mnt/den-backup\nKEEPASS_ENABLED=yes\nFLUXER_ENABLED=yes\nQBITTORRENT_ENABLED=yes\n' > "$TEMP/keepass.env"
 read_settings "$TEMP/keepass.env"
 [[ -z "$MEDIA_MOUNT" ]]
+[[ "$SECONDARY_CACHE_ENABLED" == no ]]
 [[ "$ALLOW_SHARED_MEDIA_BACKUP" == no ]]
 [[ "$QBITTORRENT_VPN_ENABLED" == no ]]
 if (QBITTORRENT_ENABLED=no; QBITTORRENT_VPN_ENABLED=yes; validate_settings) 2>/dev/null; then
