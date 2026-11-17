@@ -11,6 +11,10 @@ sudo den check
 sudo den logs nextcloud      # replace with the service you need
 ```
 
+Interactive login shows the `den.service` unit state and Cockpit address.
+The unit state alone does not establish container health; use `sudo den check`.
+When DEN manages Cockpit, it masks Fedora's default Cockpit login notice;
+customized notices are retained.
 DEN checks health hourly. Problems appear in the system journal and may show
 on SSH login; there are no email or phone alerts.
 If another operation is running, wait for it to finish.

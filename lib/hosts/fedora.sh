@@ -179,8 +179,29 @@ EOF
 
 install_login_banner() {
     local profile_dir="${DEN_PROFILE_DIR:-/etc/profile.d}"
+    local cockpit_motd="${DEN_MOTD_DIR:-/etc/motd.d}/cockpit"
+    local motd_state="${DEN_COCKPIT_MOTD_STATE:-/var/lib/den/cockpit-motd-managed}"
     install -d -m 755 "$profile_dir" || return 1
-    install -m 644 "$DEPLOY_DIR/templates/profile.d/den.sh" "$profile_dir/den.sh"
+    install -m 644 "$DEPLOY_DIR/templates/profile.d/den.sh" "$profile_dir/den.sh" || return 1
+    if [[ "${COCKPIT_ENABLED:-yes}" == yes && -n "${DOMAIN:-}" ]]; then
+        printf 'https://server.%s\n' "$DOMAIN" > "$profile_dir/den-login-url" || return 1
+    else
+        printf '%s\n' 'disabled or not configured' > "$profile_dir/den-login-url" || return 1
+    fi
+    chmod 644 "$profile_dir/den-login-url" || return 1
+    if [[ "${COCKPIT_ENABLED:-yes}" == yes ]]; then
+        if [[ -L "$cockpit_motd" && "$(readlink "$cockpit_motd")" == ../../run/cockpit/issue ]]; then
+            install -D -m 600 /dev/null "$motd_state" || return 1
+            ln -sfn /dev/null "$cockpit_motd" || return 1
+        fi
+    elif [[ -f "$motd_state" ]]; then
+        if [[ -L "$cockpit_motd" && "$(readlink "$cockpit_motd")" == /dev/null ]]; then
+            ln -sfn ../../run/cockpit/issue "$cockpit_motd" || return 1
+        elif [[ ! -L "$cockpit_motd" || "$(readlink "$cockpit_motd")" != ../../run/cockpit/issue ]]; then
+            printf 'DEN: preserving customized Cockpit MOTD entry: %s\n' "$cockpit_motd" >&2
+        fi
+        rm -f "$motd_state" || return 1
+    fi
 }
 
 configure_fedora_host() {

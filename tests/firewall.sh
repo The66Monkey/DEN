@@ -7,9 +7,29 @@ TEMP="$(mktemp -d)"
 trap 'rm -rf "$TEMP"' EXIT
 DEPLOY_DIR="$ROOT"
 DEN_PROFILE_DIR="$TEMP/profile.d"
+DEN_MOTD_DIR="$TEMP/motd.d"
+DEN_COCKPIT_MOTD_STATE="$TEMP/state/cockpit-motd-managed"
+mkdir -p "$DEN_MOTD_DIR"
+ln -s ../../run/cockpit/issue "$DEN_MOTD_DIR/cockpit"
+DOMAIN=example.test COCKPIT_ENABLED=yes
 install_login_banner
 cmp "$ROOT/templates/profile.d/den.sh" "$DEN_PROFILE_DIR/den.sh"
 [[ "$(stat -c '%a' "$DEN_PROFILE_DIR/den.sh")" == 644 ]]
+grep -Fxq 'https://server.example.test' "$DEN_PROFILE_DIR/den-login-url"
+[[ "$(readlink "$DEN_MOTD_DIR/cockpit")" == /dev/null && -f "$DEN_COCKPIT_MOTD_STATE" ]]
+banner_output="$(DEN_LOGIN_URL_FILE="$DEN_PROFILE_DIR/den-login-url" bash --noprofile --norc -ic '
+    systemctl() { printf "active\n"; }
+    source "$1"
+' bash "$DEN_PROFILE_DIR/den.sh" 2>/dev/null)"
+grep -Fq 'DEN service unit: active' <<< "$banner_output"
+grep -Fq 'Server administration: https://server.example.test' <<< "$banner_output"
+[[ -z "$(bash --noprofile --norc -c 'source "$1"' bash "$DEN_PROFILE_DIR/den.sh")" ]]
+COCKPIT_ENABLED=no install_login_banner
+grep -Fxq 'disabled or not configured' "$DEN_PROFILE_DIR/den-login-url"
+[[ "$(readlink "$DEN_MOTD_DIR/cockpit")" == ../../run/cockpit/issue && ! -e "$DEN_COCKPIT_MOTD_STATE" ]]
+ln -sfn /custom/message "$DEN_MOTD_DIR/cockpit"
+install_login_banner
+[[ "$(readlink "$DEN_MOTD_DIR/cockpit")" == /custom/message && ! -e "$DEN_COCKPIT_MOTD_STATE" ]]
 read_settings "$ROOT/config/example.env"
 write_network_guard > "$TEMP/http.nft"
 grep -Fq 'hook prerouting priority -110' "$TEMP/http.nft"

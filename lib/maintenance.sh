@@ -161,6 +161,7 @@ update_release() (
         log 'Update did not become healthy. Do not downgrade images; restore the pre-update snapshot using docs/backup.md.'
         return 1
     fi
+    install_login_banner || fail 'Could not install the DEN login banner.'
     install -m 644 "$DEPLOY_DIR/templates/systemd/"* /etc/systemd/system/ || return 1
     systemctl daemon-reload || return 1
     systemctl enable --now den-boot-check.timer || return 1

@@ -20,6 +20,7 @@ printf '0.1.1\n' > "$SOURCE_DIR/VERSION"
 printf 'write_routes() { printf "routes\\n" >> "$CALLS"; }\n' > "$SOURCE_DIR/lib/deploy.sh"
 printf 'write_homepage() { printf "homepage\\n" >> "$CALLS"; [[ "${FAIL_HOME:-no}" != yes ]]; }\n' >> "$SOURCE_DIR/lib/deploy.sh"
 printf 'configure_fedora_host() { printf "firewall\\n" >> "$CALLS"; }\n' > "$SOURCE_DIR/lib/hosts/fedora.sh"
+printf 'install_login_banner() { printf "banner\\n" >> "$CALLS"; }\n' >> "$SOURCE_DIR/lib/hosts/fedora.sh"
 printf 'fluxer_configure_public_voice() { printf "voice\\n" >> "$CALLS"; [[ "${FAIL_VOICE:-no}" != yes ]]; }\n' > "$SOURCE_DIR/lib/fluxer.sh"
 FAIL_PULL=false
 FAIL_BACKUP=false
@@ -82,6 +83,7 @@ grep -Fxq start "$CALLS"
 grep -Fxq firewall "$CALLS"
 grep -Fxq voice "$CALLS"
 grep -Fxq homepage "$CALLS"
+grep -Fxq banner "$CALLS"
 [[ "$(grep -n '^homepage$' "$CALLS" | cut -d: -f1)" -lt "$(grep -n '^start$' "$CALLS" | cut -d: -f1)" ]]
 [[ "$(grep -n '^backup$' "$CALLS" | cut -d: -f1)" -lt "$(grep -n '^firewall$' "$CALLS" | cut -d: -f1)" ]]
 [[ "$(grep -n '^firewall$' "$CALLS" | cut -d: -f1)" -lt "$(grep -n '^start$' "$CALLS" | cut -d: -f1)" ]]

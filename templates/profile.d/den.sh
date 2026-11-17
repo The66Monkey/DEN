@@ -1,3 +1,4 @@
+# shellcheck shell=sh
 case $- in
 *i*)
     server_ip="$(ip -4 route get 1.1.1.1 2>/dev/null | awk '{for (i = 1; i <= NF; i++) if ($i == "src") {print $(i + 1); exit}}')"
@@ -9,7 +10,13 @@ case $- in
     service_status="$(systemctl is-active den.service 2>/dev/null || true)"
     [ -n "$service_status" ] || service_status=unknown
 
-    printf '\n=== DEN ===\nHost: %s  |  IPv4: %s\nService: %s\nTip: sudo den status\n\n' \
+    printf '\n=== DEN ===\nHost: %s  |  IPv4: %s\nDEN service unit: %s\n' \
         "$(hostname)" "$server_ip" "$service_status"
+    if [ -r "${DEN_LOGIN_URL_FILE:-/etc/profile.d/den-login-url}" ] &&
+        IFS= read -r den_login_url < "${DEN_LOGIN_URL_FILE:-/etc/profile.d/den-login-url}" &&
+        [ -n "$den_login_url" ]; then
+        printf 'Server administration: %s\n' "$den_login_url"
+    fi
+    printf 'Details and URLs: sudo den status\n\n'
     ;;
 esac

@@ -141,5 +141,6 @@ cockpit_setup() {
     fi
     systemctl restart den-dns || fail 'Could not restart VPN DNS.'
     systemctl start den-ddns.service || fail 'Could not update Cockpit public DNS.'
+    install_login_banner || fail 'Could not update the DEN login banner.'
     log "Cockpit integration: ${COCKPIT_ENABLED:-yes}. LAN DNS: server.$DOMAIN -> $LAN_IP."
 }
