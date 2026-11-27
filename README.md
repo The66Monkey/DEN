@@ -27,12 +27,6 @@ chat and calls, and a KeePassXC-compatible password vault.
 When Fluxer is enabled, the home page links to both its main chat interface and
 administration at `https://chat.YOUR-DOMAIN/admin`.
 
-Advanced enthusiast services live in the separate
-[DEN+ add-on repository](https://git.scandinavianhacking.dedyn.io/The66Monkey/DEN-plus).
-They are not part of the core DEN installation. Existing enhanced installations
-must follow the add-on migration guide before updating; this repository split
-does not migrate or stop a running server.
-
 For a host sharing its public IP with a VM, use the optional
 [independent DNS and shared edge topology](docs/infrastructure.md): infrastructure
 runs on DEN, while the VM remains an application backend.
